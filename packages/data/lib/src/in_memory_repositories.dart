@@ -15,10 +15,14 @@ class InMemoryAuthRepository implements AuthRepository {
   Future<User?> currentUser() async => _current;
 
   @override
-  Future<User> registerAdult({required String displayName, required String email, required String password}) async {
+  Future<User> registerAdult(
+      {required String displayName,
+      required String email,
+      required String password}) async {
     final now = DateTime.now();
     _current = User(
-      metadata: EntityMetadata(id: _uuid.v4(), createdAt: now, updatedAt: now, ownerId: 'self'),
+      metadata: EntityMetadata(
+          id: _uuid.v4(), createdAt: now, updatedAt: now, ownerId: 'self'),
       displayName: displayName,
       email: email,
     );
@@ -30,10 +34,12 @@ class InMemoryFamilyRepository implements FamilyRepository {
   final Map<String, Family> _familiesByOwner = {};
 
   @override
-  Future<Family> createFamily({required String ownerUserId, required String name}) async {
+  Future<Family> createFamily(
+      {required String ownerUserId, required String name}) async {
     final now = DateTime.now();
     final family = Family(
-      metadata: EntityMetadata(id: _uuid.v4(), createdAt: now, updatedAt: now, ownerId: ownerUserId),
+      metadata: EntityMetadata(
+          id: _uuid.v4(), createdAt: now, updatedAt: now, ownerId: ownerUserId),
       name: name,
       adultUserIds: [ownerUserId],
     );
@@ -42,7 +48,8 @@ class InMemoryFamilyRepository implements FamilyRepository {
   }
 
   @override
-  Future<Family?> currentFamily(String ownerUserId) async => _familiesByOwner[ownerUserId];
+  Future<Family?> currentFamily(String ownerUserId) async =>
+      _familiesByOwner[ownerUserId];
 }
 
 class InMemoryProfileRepository implements ProfileRepository {
@@ -51,14 +58,20 @@ class InMemoryProfileRepository implements ProfileRepository {
 
   @override
   Future<List<ChildProfile>> childProfiles(String familyId) async {
-    return _children.where((profile) => profile.familyId == familyId).toList(growable: false);
+    return _children
+        .where((profile) => profile.familyId == familyId)
+        .toList(growable: false);
   }
 
   @override
-  Future<ChildProfile> createChildProfile({required String familyId, required String displayName, required int age}) async {
+  Future<ChildProfile> createChildProfile(
+      {required String familyId,
+      required String displayName,
+      required int age}) async {
     final now = DateTime.now();
     final profile = ChildProfile(
-      metadata: EntityMetadata(id: _uuid.v4(), createdAt: now, updatedAt: now, ownerId: familyId),
+      metadata: EntityMetadata(
+          id: _uuid.v4(), createdAt: now, updatedAt: now, ownerId: familyId),
       familyId: familyId,
       displayName: displayName,
       age: age,
@@ -68,10 +81,14 @@ class InMemoryProfileRepository implements ProfileRepository {
   }
 
   @override
-  Future<TeenProfile> createTeenProfile({required String familyId, required String displayName, required int age}) async {
+  Future<TeenProfile> createTeenProfile(
+      {required String familyId,
+      required String displayName,
+      required int age}) async {
     final now = DateTime.now();
     final profile = TeenProfile(
-      metadata: EntityMetadata(id: _uuid.v4(), createdAt: now, updatedAt: now, ownerId: familyId),
+      metadata: EntityMetadata(
+          id: _uuid.v4(), createdAt: now, updatedAt: now, ownerId: familyId),
       familyId: familyId,
       displayName: displayName,
       age: age,
@@ -82,7 +99,9 @@ class InMemoryProfileRepository implements ProfileRepository {
 
   @override
   Future<List<TeenProfile>> teenProfiles(String familyId) async {
-    return _teens.where((profile) => profile.familyId == familyId).toList(growable: false);
+    return _teens
+        .where((profile) => profile.familyId == familyId)
+        .toList(growable: false);
   }
 }
 
@@ -91,9 +110,13 @@ class InMemoryRoutineRepository implements RoutineRepository {
   final List<RoutineStep> _steps = [];
 
   @override
-  Future<Routine> createRoutine({required String profileId, required String title, required List<String> stepTitles}) async {
+  Future<Routine> createRoutine(
+      {required String profileId,
+      required String title,
+      required List<String> stepTitles}) async {
     if (stepTitles.length < 3) {
-      throw ArgumentError.value(stepTitles.length, 'stepTitles', 'A routine needs at least 3 steps.');
+      throw ArgumentError.value(
+          stepTitles.length, 'stepTitles', 'A routine needs at least 3 steps.');
     }
     final now = DateTime.now();
     final routineId = _uuid.v4();
@@ -103,7 +126,8 @@ class InMemoryRoutineRepository implements RoutineRepository {
       stepIds.add(stepId);
       _steps.add(
         RoutineStep(
-          metadata: EntityMetadata(id: stepId, createdAt: now, updatedAt: now, ownerId: profileId),
+          metadata: EntityMetadata(
+              id: stepId, createdAt: now, updatedAt: now, ownerId: profileId),
           routineId: routineId,
           title: stepTitles[index],
           order: index + 1,
@@ -112,7 +136,8 @@ class InMemoryRoutineRepository implements RoutineRepository {
       );
     }
     final routine = Routine(
-      metadata: EntityMetadata(id: routineId, createdAt: now, updatedAt: now, ownerId: profileId),
+      metadata: EntityMetadata(
+          id: routineId, createdAt: now, updatedAt: now, ownerId: profileId),
       profileId: profileId,
       title: title,
       stepIds: stepIds,
@@ -123,7 +148,9 @@ class InMemoryRoutineRepository implements RoutineRepository {
 
   @override
   Future<List<Routine>> routinesForProfile(String profileId) async {
-    return _routines.where((routine) => routine.profileId == profileId).toList(growable: false);
+    return _routines
+        .where((routine) => routine.profileId == profileId)
+        .toList(growable: false);
   }
 
   @override
@@ -140,7 +167,8 @@ class InMemoryRoutineSessionRepository implements RoutineSessionRepository {
   @override
   Future<RoutineSession?> activeSessionForProfile(String profileId) async {
     final sessions = _sessions.values.where((session) {
-      return session.routine.profileId == profileId && session.status != RoutineSessionStatus.completed;
+      return session.routine.profileId == profileId &&
+          session.status != RoutineSessionStatus.completed;
     }).toList();
     sessions.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
     return sessions.isEmpty ? null : sessions.first;
@@ -160,7 +188,9 @@ class InMemoryHabitRepository implements HabitRepository {
 
   @override
   Future<List<Habit>> habitsForProfile(String profileId) async {
-    return _habits.where((habit) => habit.profileId == profileId).toList(growable: false);
+    return _habits
+        .where((habit) => habit.profileId == profileId)
+        .toList(growable: false);
   }
 
   @override
@@ -172,7 +202,8 @@ class InMemoryHabitRepository implements HabitRepository {
   }) async {
     final now = DateTime.now();
     final habit = Habit(
-      metadata: EntityMetadata(id: _uuid.v4(), createdAt: now, updatedAt: now, ownerId: profileId),
+      metadata: EntityMetadata(
+          id: _uuid.v4(), createdAt: now, updatedAt: now, ownerId: profileId),
       profileId: profileId,
       title: title,
       status: status,
@@ -184,7 +215,8 @@ class InMemoryHabitRepository implements HabitRepository {
 
   @override
   Future<Habit> saveHabit(Habit habit) async {
-    final index = _habits.indexWhere((item) => item.metadata.id == habit.metadata.id);
+    final index =
+        _habits.indexWhere((item) => item.metadata.id == habit.metadata.id);
     if (index == -1) {
       _habits.add(habit);
     } else {
@@ -199,7 +231,9 @@ class InMemoryHabitProgressRepository implements HabitProgressRepository {
 
   @override
   Future<List<HabitProgressEntry>> entriesForHabit(String habitId) async {
-    return _entries.where((entry) => entry.habitId == habitId).toList(growable: false);
+    return _entries
+        .where((entry) => entry.habitId == habitId)
+        .toList(growable: false);
   }
 
   @override
@@ -208,11 +242,13 @@ class InMemoryHabitProgressRepository implements HabitProgressRepository {
   }
 }
 
-class InMemoryNotificationPreferenceRepository implements NotificationPreferenceRepository {
+class InMemoryNotificationPreferenceRepository
+    implements NotificationPreferenceRepository {
   final Map<String, NotificationConsent> _consentsByProfile = {};
 
   @override
-  Future<NotificationConsent?> consentForProfile(String profileId) async => _consentsByProfile[profileId];
+  Future<NotificationConsent?> consentForProfile(String profileId) async =>
+      _consentsByProfile[profileId];
 
   @override
   Future<NotificationConsent> saveConsent(NotificationConsent consent) async {
@@ -226,7 +262,9 @@ class InMemoryEmotionCheckInRepository implements EmotionCheckInRepository {
 
   @override
   Future<List<EmotionCheckIn>> entriesForProfile(String profileId) async {
-    return _entries.where((entry) => entry.profileId == profileId).toList(growable: false);
+    return _entries
+        .where((entry) => entry.profileId == profileId)
+        .toList(growable: false);
   }
 
   @override
@@ -241,7 +279,9 @@ class InMemorySupportRequestRepository implements SupportRequestRepository {
 
   @override
   Future<List<SupportRequest>> requestsForProfile(String profileId) async {
-    return _requests.where((request) => request.profileId == profileId).toList(growable: false);
+    return _requests
+        .where((request) => request.profileId == profileId)
+        .toList(growable: false);
   }
 
   @override
@@ -256,7 +296,9 @@ class InMemoryStoryProgressRepository implements StoryProgressRepository {
 
   @override
   Future<List<StoryProgress>> progressForProfile(String profileId) async {
-    return _progressByKey.values.where((progress) => progress.profileId == profileId).toList(growable: false);
+    return _progressByKey.values
+        .where((progress) => progress.profileId == profileId)
+        .toList(growable: false);
   }
 
   @override
@@ -273,19 +315,22 @@ class InMemoryWearableGatewayRepository implements WearableGatewayRepository {
     WearablePlatform.wearOS: WearableConnectionStatus.disconnected,
   };
 
-  WearableRoutineSnapshot? snapshotFor(WearablePlatform platform) => _snapshots[platform];
+  WearableRoutineSnapshot? snapshotFor(WearablePlatform platform) =>
+      _snapshots[platform];
 
   void setStatus(WearablePlatform platform, WearableConnectionStatus status) {
     _statuses[platform] = status;
   }
 
   @override
-  Future<List<WearableCommand>> pendingCommands(WearablePlatform platform, String sessionId) async {
+  Future<List<WearableCommand>> pendingCommands(
+      WearablePlatform platform, String sessionId) async {
     return const [];
   }
 
   @override
-  Future<void> publishSnapshot(WearablePlatform platform, WearableRoutineSnapshot snapshot) async {
+  Future<void> publishSnapshot(
+      WearablePlatform platform, WearableRoutineSnapshot snapshot) async {
     _snapshots[platform] = snapshot;
     _statuses[platform] = WearableConnectionStatus.syncing;
   }

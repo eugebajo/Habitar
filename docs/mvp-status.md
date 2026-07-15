@@ -12,6 +12,7 @@
 - Biblioteca demo de 3 cuentos.
 - Configuracion simulada de recordatorios.
 - Preparacion de wearables watchOS y Wear OS.
+- Persistencia local inicial con store JSON durable para entidades centrales.
 - Supabase schema inicial con Row Level Security.
 - App Flutter con Android, iOS y web preview.
 - Tests unitarios centrales.
@@ -19,7 +20,7 @@
 ## Simulado
 
 - Auth real.
-- Persistencia offline real con Drift.
+- Persistencia offline final con Drift.
 - Sincronizacion real con Supabase.
 - Notificaciones nativas.
 - Audio de cuentos.
@@ -29,7 +30,8 @@
 ## Pendiente antes de beta
 
 - Conectar Supabase Auth.
-- Implementar Drift y repositorios persistentes.
+- Conectar store local durable a la app movil.
+- Implementar Drift como persistencia final antes de beta.
 - Conectar sincronizacion local-remota.
 - Integrar `flutter_local_notifications`.
 - Agregar permisos reales Android/iOS.

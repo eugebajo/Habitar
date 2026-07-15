@@ -29,10 +29,11 @@ Implementado:
 - Check-in emocional opcional con apoyos breves.
 - Biblioteca demo de cuentos con lector, preguntas, actividad y progreso.
 - Preparacion de watchOS y Wear OS con contratos de snapshots y acciones rapidas.
+- Persistencia local inicial con `FileLocalStore` y repositorios locales para entidades centrales.
 
 Simulado/preparado:
 
-- Persistencia local: queda definida por contratos y repositorios en memoria para desarrollo.
+- Persistencia local: store JSON durable implementado para desarrollo; Drift/SQLite queda como destino final.
 - Persistencia de rutina: funciona en memoria y esta preparada para Drift/Supabase.
 - Supabase: configuracion, migracion y adaptador inicial preparados; requiere variables de entorno reales.
 - Auditoria de excepciones de habitos: regla de producto implementada, escritura real en `audit_logs` pendiente.
