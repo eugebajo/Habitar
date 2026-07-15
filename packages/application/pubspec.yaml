@@ -1,0 +1,24 @@
+name: habitar_application
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.6.0
+
+dependencies:
+  habitar_domain:
+    path: ../domain
+  habitar_habit_engine:
+    path: ../habit_engine
+  habitar_notifications:
+    path: ../notifications
+  habitar_routine_engine:
+    path: ../routine_engine
+  habitar_story_library:
+    path: ../story_library
+  habitar_wearable_bridge:
+    path: ../wearable_bridge
+
+dev_dependencies:
+  lints: ^5.1.1
+  test: ^1.25.14

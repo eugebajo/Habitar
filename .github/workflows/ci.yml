@@ -1,0 +1,71 @@
+name: Habitar CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  flutter-mobile:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Mobile dependencies
+        working-directory: apps/mobile
+        run: flutter pub get
+
+      - name: Mobile analyze
+        working-directory: apps/mobile
+        run: flutter analyze
+
+      - name: Mobile tests
+        working-directory: apps/mobile
+        run: flutter test
+
+  dart-packages:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        package:
+          - packages/domain
+          - packages/routine_engine
+          - packages/habit_engine
+          - packages/notifications
+          - packages/story_library
+          - packages/wearable_bridge
+          - packages/application
+          - packages/data
+          - packages/accessibility
+          - packages/analytics_core
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Dart
+        uses: dart-lang/setup-dart@v1
+
+      - name: Dependencies
+        working-directory: ${{ matrix.package }}
+        run: dart pub get
+
+      - name: Analyze
+        working-directory: ${{ matrix.package }}
+        run: dart analyze
+
+      - name: Tests when present
+        working-directory: ${{ matrix.package }}
+        shell: bash
+        run: |
+          if [ -d test ]; then
+            dart test
+          else
+            echo "No tests in ${{ matrix.package }}"
+          fi
