@@ -16,16 +16,35 @@ import 'features/wellbeing_checkin/wellbeing_checkin_screen.dart';
 final appRouter = GoRouter(
   initialLocation: '/register',
   routes: [
-    GoRoute(path: '/register', builder: (context, state) => const AdultRegistrationScreen()),
-    GoRoute(path: '/profile', builder: (context, state) => const ProfileSetupScreen()),
-    GoRoute(path: '/dashboard', builder: (context, state) => const FamilyDashboardScreen()),
-    GoRoute(path: '/habits', builder: (context, state) => const HabitSetupScreen()),
-    GoRoute(path: '/notifications', builder: (context, state) => const NotificationSettingsScreen()),
-    GoRoute(path: '/routine/create', builder: (context, state) => const RoutineSetupScreen()),
-    GoRoute(path: '/routine/player', builder: (context, state) => const RoutinePlayerScreen()),
-    GoRoute(path: '/wellbeing', builder: (context, state) => const WellbeingCheckInScreen()),
-    GoRoute(path: '/stories', builder: (context, state) => const StoryLibraryScreen()),
-    GoRoute(path: '/wearables', builder: (context, state) => const WearablesScreen()),
+    GoRoute(
+        path: '/register',
+        builder: (context, state) => const AdultRegistrationScreen()),
+    GoRoute(
+        path: '/profile',
+        builder: (context, state) => const ProfileSetupScreen()),
+    GoRoute(
+        path: '/dashboard',
+        builder: (context, state) => const FamilyDashboardScreen()),
+    GoRoute(
+        path: '/habits', builder: (context, state) => const HabitSetupScreen()),
+    GoRoute(
+        path: '/notifications',
+        builder: (context, state) => const NotificationSettingsScreen()),
+    GoRoute(
+        path: '/routine/create',
+        builder: (context, state) => const RoutineSetupScreen()),
+    GoRoute(
+        path: '/routine/player',
+        builder: (context, state) => const RoutinePlayerScreen()),
+    GoRoute(
+        path: '/wellbeing',
+        builder: (context, state) => const WellbeingCheckInScreen()),
+    GoRoute(
+        path: '/stories',
+        builder: (context, state) => const StoryLibraryScreen()),
+    GoRoute(
+        path: '/wearables',
+        builder: (context, state) => const WearablesScreen()),
   ],
 );
 

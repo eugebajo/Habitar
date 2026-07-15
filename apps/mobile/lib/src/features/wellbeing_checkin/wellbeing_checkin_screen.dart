@@ -9,10 +9,12 @@ class WellbeingCheckInScreen extends ConsumerStatefulWidget {
   const WellbeingCheckInScreen({super.key});
 
   @override
-  ConsumerState<WellbeingCheckInScreen> createState() => _WellbeingCheckInScreenState();
+  ConsumerState<WellbeingCheckInScreen> createState() =>
+      _WellbeingCheckInScreenState();
 }
 
-class _WellbeingCheckInScreenState extends ConsumerState<WellbeingCheckInScreen> {
+class _WellbeingCheckInScreenState
+    extends ConsumerState<WellbeingCheckInScreen> {
   String _emotion = 'tranquilo';
   double _energy = 3;
   double _overload = 1;
@@ -30,7 +32,8 @@ class _WellbeingCheckInScreenState extends ConsumerState<WellbeingCheckInScreen>
         child: ListView(
           padding: const EdgeInsets.all(HabitarSpacing.lg),
           children: [
-            Text('Check-in opcional', style: Theme.of(context).textTheme.headlineSmall),
+            Text('Check-in opcional',
+                style: Theme.of(context).textTheme.headlineSmall),
             const SizedBox(height: HabitarSpacing.md),
             SegmentedButton<String>(
               segments: const [
@@ -39,19 +42,35 @@ class _WellbeingCheckInScreenState extends ConsumerState<WellbeingCheckInScreen>
                 ButtonSegment(value: 'frustrado', label: Text('Frustrado')),
               ],
               selected: {_emotion},
-              onSelectionChanged: _skipped ? null : (selection) => setState(() => _emotion = selection.first),
+              onSelectionChanged: _skipped
+                  ? null
+                  : (selection) => setState(() => _emotion = selection.first),
             ),
             const SizedBox(height: HabitarSpacing.md),
-            _SliderTile(label: 'Energia', value: _energy, onChanged: _skipped ? null : (value) => setState(() => _energy = value)),
-            _SliderTile(label: 'Sobrecarga', value: _overload, onChanged: _skipped ? null : (value) => setState(() => _overload = value)),
+            _SliderTile(
+                label: 'Energia',
+                value: _energy,
+                onChanged: _skipped
+                    ? null
+                    : (value) => setState(() => _energy = value)),
+            _SliderTile(
+                label: 'Sobrecarga',
+                value: _overload,
+                onChanged: _skipped
+                    ? null
+                    : (value) => setState(() => _overload = value)),
             SwitchListTile(
               value: _needsQuiet,
-              onChanged: _skipped ? null : (value) => setState(() => _needsQuiet = value),
+              onChanged: _skipped
+                  ? null
+                  : (value) => setState(() => _needsQuiet = value),
               title: const Text('Necesito silencio'),
             ),
             SwitchListTile(
               value: _needsMovement,
-              onChanged: _skipped ? null : (value) => setState(() => _needsMovement = value),
+              onChanged: _skipped
+                  ? null
+                  : (value) => setState(() => _needsMovement = value),
               title: const Text('Necesito moverme'),
             ),
             CheckboxListTile(
@@ -64,16 +83,22 @@ class _WellbeingCheckInScreenState extends ConsumerState<WellbeingCheckInScreen>
             FilledButton(onPressed: _save, child: const Text('Guardar')),
             if (_message != null) ...[
               const SizedBox(height: HabitarSpacing.md),
-              Card(child: Padding(padding: const EdgeInsets.all(HabitarSpacing.md), child: Text(_message!))),
+              Card(
+                  child: Padding(
+                      padding: const EdgeInsets.all(HabitarSpacing.md),
+                      child: Text(_message!))),
             ],
             const SizedBox(height: HabitarSpacing.lg),
-            Text('Apoyos sugeridos', style: Theme.of(context).textTheme.titleMedium),
+            Text('Apoyos sugeridos',
+                style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: HabitarSpacing.md),
             for (final action in _actions)
               Card(
                 child: ListTile(
                   title: Text(action.label),
-                  trailing: OutlinedButton(onPressed: () => _requestSupport(action), child: const Text('Usar')),
+                  trailing: OutlinedButton(
+                      onPressed: () => _requestSupport(action),
+                      child: const Text('Usar')),
                 ),
               ),
           ],
@@ -100,7 +125,9 @@ class _WellbeingCheckInScreenState extends ConsumerState<WellbeingCheckInScreen>
     await ref.read(wellbeingServiceProvider).recordCheckIn(input);
     setState(() {
       _actions = ref.read(wellbeingServiceProvider).supportActionsFor(input);
-      _message = _skipped ? 'Podemos responder despues.' : 'Registro guardado sin interpretacion clinica.';
+      _message = _skipped
+          ? 'Podemos responder despues.'
+          : 'Registro guardado sin interpretacion clinica.';
     });
   }
 
@@ -109,13 +136,16 @@ class _WellbeingCheckInScreenState extends ConsumerState<WellbeingCheckInScreen>
     if (profileId == null) {
       return;
     }
-    await ref.read(wellbeingServiceProvider).requestSupport(profileId: profileId, action: action);
+    await ref
+        .read(wellbeingServiceProvider)
+        .requestSupport(profileId: profileId, action: action);
     setState(() => _message = 'Apoyo registrado: ${action.label}.');
   }
 }
 
 class _SliderTile extends StatelessWidget {
-  const _SliderTile({required this.label, required this.value, required this.onChanged});
+  const _SliderTile(
+      {required this.label, required this.value, required this.onChanged});
 
   final String label;
   final double value;
@@ -127,7 +157,8 @@ class _SliderTile extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('$label: ${value.round()}'),
-        Slider(value: value, min: 0, max: 5, divisions: 5, onChanged: onChanged),
+        Slider(
+            value: value, min: 0, max: 5, divisions: 5, onChanged: onChanged),
       ],
     );
   }

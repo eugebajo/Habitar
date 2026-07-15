@@ -29,26 +29,37 @@ class _WearablesScreenState extends ConsumerState<WearablesScreen> {
         child: ListView(
           padding: const EdgeInsets.all(HabitarSpacing.lg),
           children: [
-            Text('Preparacion por plataforma', style: Theme.of(context).textTheme.headlineSmall),
+            Text('Preparacion por plataforma',
+                style: Theme.of(context).textTheme.headlineSmall),
             const SizedBox(height: HabitarSpacing.md),
             SegmentedButton<WearablePlatform>(
               segments: const [
-                ButtonSegment(value: WearablePlatform.watchOS, label: Text('watchOS')),
-                ButtonSegment(value: WearablePlatform.wearOS, label: Text('Wear OS')),
+                ButtonSegment(
+                    value: WearablePlatform.watchOS, label: Text('watchOS')),
+                ButtonSegment(
+                    value: WearablePlatform.wearOS, label: Text('Wear OS')),
               ],
               selected: {selectedPlatform},
-              onSelectionChanged: (selection) => ref.read(selectedWearablePlatformProvider.notifier).state = selection.first,
+              onSelectionChanged: (selection) => ref
+                  .read(selectedWearablePlatformProvider.notifier)
+                  .state = selection.first,
             ),
             const SizedBox(height: HabitarSpacing.md),
             _CapabilityCard(capabilities: capabilities),
             const SizedBox(height: HabitarSpacing.md),
-            FilledButton(onPressed: () => _publish(selectedPlatform), child: const Text('Publicar rutina activa')),
+            FilledButton(
+                onPressed: () => _publish(selectedPlatform),
+                child: const Text('Publicar rutina activa')),
             if (_message != null) ...[
               const SizedBox(height: HabitarSpacing.md),
-              Card(child: Padding(padding: const EdgeInsets.all(HabitarSpacing.md), child: Text(_message!))),
+              Card(
+                  child: Padding(
+                      padding: const EdgeInsets.all(HabitarSpacing.md),
+                      child: Text(_message!))),
             ],
             const SizedBox(height: HabitarSpacing.lg),
-            Text('Ultimo snapshot', style: Theme.of(context).textTheme.titleMedium),
+            Text('Ultimo snapshot',
+                style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: HabitarSpacing.md),
             if (snapshot == null)
               const Text('Todavia no hay una rutina publicada para el reloj.')
@@ -59,7 +70,8 @@ class _WearablesScreenState extends ConsumerState<WearablesScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(snapshot.routineTitle, style: Theme.of(context).textTheme.titleMedium),
+                      Text(snapshot.routineTitle,
+                          style: Theme.of(context).textTheme.titleMedium),
                       Text('Ahora: ${snapshot.currentStepTitle}'),
                       Text('Despues: ${snapshot.nextStepTitle}'),
                       Text('Minutos restantes: ${snapshot.remainingMinutes}'),
@@ -88,8 +100,11 @@ class _WearablesScreenState extends ConsumerState<WearablesScreen> {
       return;
     }
 
-    final snapshot = await ref.read(wearableServiceProvider).publishRoutineSession(platform, session);
-    setState(() => _message = 'Snapshot preparado para ${platform.name}: ${snapshot.currentStepTitle}.');
+    final snapshot = await ref
+        .read(wearableServiceProvider)
+        .publishRoutineSession(platform, session);
+    setState(() => _message =
+        'Snapshot preparado para ${platform.name}: ${snapshot.currentStepTitle}.');
   }
 }
 
@@ -107,13 +122,17 @@ class _CapabilityCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Transportes', style: Theme.of(context).textTheme.titleMedium),
-            for (final transport in capabilities.transports) Text('- ${transport.name}'),
+            for (final transport in capabilities.transports)
+              Text('- ${transport.name}'),
             const SizedBox(height: HabitarSpacing.md),
-            Text('Acciones rapidas', style: Theme.of(context).textTheme.titleMedium),
-            for (final action in capabilities.quickActions) Text('- ${action.name}'),
+            Text('Acciones rapidas',
+                style: Theme.of(context).textTheme.titleMedium),
+            for (final action in capabilities.quickActions)
+              Text('- ${action.name}'),
             const SizedBox(height: HabitarSpacing.md),
             Text('Haptica: ${capabilities.supportsHaptics ? 'si' : 'no'}'),
-            Text('Tile/complicacion: ${capabilities.supportsTileOrComplication ? 'si' : 'no'}'),
+            Text(
+                'Tile/complicacion: ${capabilities.supportsTileOrComplication ? 'si' : 'no'}'),
           ],
         ),
       ),

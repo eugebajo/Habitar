@@ -31,6 +31,7 @@ dependencies:
     path: ../../packages/story_library
   habitar_wearable_bridge:
     path: ../../packages/wearable_bridge
+  path_provider: ^2.1.5
 
 dev_dependencies:
   flutter_test:

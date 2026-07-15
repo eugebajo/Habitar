@@ -41,20 +41,26 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                 key: _formKey,
                 child: ListView(
                   children: [
-                    Text('Perfil infantil o adolescente', style: Theme.of(context).textTheme.headlineSmall),
+                    Text('Perfil infantil o adolescente',
+                        style: Theme.of(context).textTheme.headlineSmall),
                     const SizedBox(height: HabitarSpacing.md),
                     SegmentedButton<ProfileKind>(
                       segments: const [
-                        ButtonSegment(value: ProfileKind.child, label: Text('Infantil')),
-                        ButtonSegment(value: ProfileKind.teen, label: Text('Adolescente')),
+                        ButtonSegment(
+                            value: ProfileKind.child, label: Text('Infantil')),
+                        ButtonSegment(
+                            value: ProfileKind.teen,
+                            label: Text('Adolescente')),
                       ],
                       selected: {_kind},
-                      onSelectionChanged: (selection) => setState(() => _kind = selection.first),
+                      onSelectionChanged: (selection) =>
+                          setState(() => _kind = selection.first),
                     ),
                     const SizedBox(height: HabitarSpacing.md),
                     TextFormField(
                       controller: _nameController,
-                      decoration: const InputDecoration(labelText: 'Nombre visible'),
+                      decoration:
+                          const InputDecoration(labelText: 'Nombre visible'),
                       validator: _required,
                     ),
                     const SizedBox(height: HabitarSpacing.md),
@@ -65,7 +71,8 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                       validator: _ageValidator,
                     ),
                     const SizedBox(height: HabitarSpacing.lg),
-                    FilledButton(onPressed: _submit, child: const Text('Crear perfil')),
+                    FilledButton(
+                        onPressed: _submit, child: const Text('Crear perfil')),
                   ],
                 ),
               ),
@@ -107,7 +114,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
             age: int.parse(_ageController.text),
             kind: _kind,
           ),
-    );
+        );
     ref.read(currentProfileIdProvider.notifier).state = profile.metadata.id;
     ref.read(currentProfileKindProvider.notifier).state = _kind;
     if (mounted) {

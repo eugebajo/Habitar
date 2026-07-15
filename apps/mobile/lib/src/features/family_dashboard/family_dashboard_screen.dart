@@ -13,11 +13,13 @@ class FamilyDashboardScreen extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.all(HabitarSpacing.lg),
           children: [
-            Text('Acompanamiento de la semana', style: Theme.of(context).textTheme.headlineSmall),
+            Text('Acompanamiento de la semana',
+                style: Theme.of(context).textTheme.headlineSmall),
             const SizedBox(height: HabitarSpacing.md),
             const _StatusCard(
               title: 'Habitos nuevos',
-              body: 'Limite recomendado activo y conectado a la creacion de habitos.',
+              body:
+                  'Limite recomendado activo y conectado a la creacion de habitos.',
             ),
             FilledButton(
               onPressed: () => context.go('/habits'),
@@ -26,7 +28,8 @@ class FamilyDashboardScreen extends StatelessWidget {
             const SizedBox(height: HabitarSpacing.md),
             const _StatusCard(
               title: 'Rutinas',
-              body: 'Crea una rutina breve y ejecutala paso a paso desde la vista infantil.',
+              body:
+                  'Crea una rutina breve y ejecutala paso a paso desde la vista infantil.',
             ),
             FilledButton(
               onPressed: () => context.go('/routine/create'),
@@ -35,11 +38,13 @@ class FamilyDashboardScreen extends StatelessWidget {
             const SizedBox(height: HabitarSpacing.md),
             const _StatusCard(
               title: 'Modo baja estimulacion',
-              body: 'Tema visual calmado preparado. Los controles finos llegan con preferencias persistentes.',
+              body:
+                  'Tema visual calmado preparado. Los controles finos llegan con preferencias persistentes.',
             ),
             const _StatusCard(
               title: 'Recordatorios',
-              body: 'Configura consentimiento e intensidad. Las integraciones nativas quedan marcadas por plataforma.',
+              body:
+                  'Configura consentimiento e intensidad. Las integraciones nativas quedan marcadas por plataforma.',
             ),
             FilledButton(
               onPressed: () => context.go('/notifications'),
@@ -48,7 +53,8 @@ class FamilyDashboardScreen extends StatelessWidget {
             const SizedBox(height: HabitarSpacing.md),
             const _StatusCard(
               title: 'Emociones y apoyos',
-              body: 'Check-in opcional con energia, sobrecarga y acciones breves.',
+              body:
+                  'Check-in opcional con energia, sobrecarga y acciones breves.',
             ),
             FilledButton(
               onPressed: () => context.go('/wellbeing'),
@@ -57,7 +63,8 @@ class FamilyDashboardScreen extends StatelessWidget {
             const SizedBox(height: HabitarSpacing.md),
             const _StatusCard(
               title: 'Cuentos',
-              body: 'Biblioteca demo con preguntas, actividad y progreso simple.',
+              body:
+                  'Biblioteca demo con preguntas, actividad y progreso simple.',
             ),
             FilledButton(
               onPressed: () => context.go('/stories'),
@@ -66,7 +73,8 @@ class FamilyDashboardScreen extends StatelessWidget {
             const SizedBox(height: HabitarSpacing.md),
             const _StatusCard(
               title: 'Wearables',
-              body: 'Preparacion separada para watchOS y Wear OS con acciones rapidas.',
+              body:
+                  'Preparacion separada para watchOS y Wear OS con acciones rapidas.',
             ),
             FilledButton(
               onPressed: () => context.go('/wearables'),

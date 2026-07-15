@@ -11,7 +11,8 @@ class RoutinePlayerScreen extends ConsumerStatefulWidget {
   const RoutinePlayerScreen({super.key});
 
   @override
-  ConsumerState<RoutinePlayerScreen> createState() => _RoutinePlayerScreenState();
+  ConsumerState<RoutinePlayerScreen> createState() =>
+      _RoutinePlayerScreenState();
 }
 
 class _RoutinePlayerScreenState extends ConsumerState<RoutinePlayerScreen> {
@@ -36,13 +37,20 @@ class _RoutinePlayerScreenState extends ConsumerState<RoutinePlayerScreen> {
                 ? _EmptyRoutine(onCreate: () => context.go('/routine/create'))
                 : _RoutineBody(
                     session: session,
-                    onDone: () => _update((service) => service.completeStep(session)),
-                    onMoreTime: () => _update((service) => service.requestMoreTime(session)),
-                    onPause: () => _update((service) => service.pause(session, RoutinePauseReason.sensory)),
-                    onResume: () => _update((service) => service.resume(session)),
-                    onHelp: () => _update((service) => service.requestHelp(session)),
-                    onPostpone: () => _update((service) => service.postpone(session, const Duration(minutes: 5))),
-                    onSkip: () => _update((service) => service.skipStep(session)),
+                    onDone: () =>
+                        _update((service) => service.completeStep(session)),
+                    onMoreTime: () =>
+                        _update((service) => service.requestMoreTime(session)),
+                    onPause: () => _update((service) =>
+                        service.pause(session, RoutinePauseReason.sensory)),
+                    onResume: () =>
+                        _update((service) => service.resume(session)),
+                    onHelp: () =>
+                        _update((service) => service.requestHelp(session)),
+                    onPostpone: () => _update((service) =>
+                        service.postpone(session, const Duration(minutes: 5))),
+                    onSkip: () =>
+                        _update((service) => service.skipStep(session)),
                   ),
       ),
     );
@@ -53,7 +61,9 @@ class _RoutinePlayerScreenState extends ConsumerState<RoutinePlayerScreen> {
     final profileId = ref.read(currentProfileIdProvider);
     final repository = ref.read(routineSessionRepositoryProvider);
     final session = sessionId != null ? await repository.byId(sessionId) : null;
-    final fallback = profileId != null ? await repository.activeSessionForProfile(profileId) : null;
+    final fallback = profileId != null
+        ? await repository.activeSessionForProfile(profileId)
+        : null;
     if (mounted) {
       setState(() {
         _session = session ?? fallback;
@@ -62,7 +72,8 @@ class _RoutinePlayerScreenState extends ConsumerState<RoutinePlayerScreen> {
     }
   }
 
-  Future<void> _update(Future<RoutineSession> Function(RoutineService service) action) async {
+  Future<void> _update(
+      Future<RoutineSession> Function(RoutineService service) action) async {
     final service = ref.read(routineServiceProvider);
     final updated = await action(service);
     ref.read(currentRoutineSessionIdProvider.notifier).state = updated.id;
@@ -97,38 +108,57 @@ class _RoutineBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final activeStep = session.activeStep;
     final nextStep = session.nextStep;
-    final isPaused = session.status == RoutineSessionStatus.paused || session.status == RoutineSessionStatus.postponed;
+    final isPaused = session.status == RoutineSessionStatus.paused ||
+        session.status == RoutineSessionStatus.postponed;
     final isComplete = session.status == RoutineSessionStatus.completed;
 
     return ListView(
       padding: const EdgeInsets.all(HabitarSpacing.lg),
       children: [
-        Text(session.routine.title, style: Theme.of(context).textTheme.headlineSmall),
+        Text(session.routine.title,
+            style: Theme.of(context).textTheme.headlineSmall),
         const SizedBox(height: HabitarSpacing.lg),
-        LinearProgressIndicator(value: session.progressFraction.clamp(0, 1).toDouble()),
+        LinearProgressIndicator(
+            value: session.progressFraction.clamp(0, 1).toDouble()),
         const SizedBox(height: HabitarSpacing.lg),
         if (isComplete)
-          const _MainStepCard(title: 'Rutina completa', subtitle: 'Hoy retomamos desde aqui cuando lo necesites.')
+          const _MainStepCard(
+              title: 'Rutina completa',
+              subtitle: 'Hoy retomamos desde aqui cuando lo necesites.')
         else
           _MainStepCard(
             title: activeStep?.title ?? 'Sin paso activo',
-            subtitle: isPaused ? 'Pausa activa. El progreso esta guardado.' : 'Ahora',
+            subtitle:
+                isPaused ? 'Pausa activa. El progreso esta guardado.' : 'Ahora',
           ),
         const SizedBox(height: HabitarSpacing.md),
-        _TimerPanel(minutes: session.estimatedRemainingMinutes, isPaused: isPaused),
+        _TimerPanel(
+            minutes: session.estimatedRemainingMinutes, isPaused: isPaused),
         const SizedBox(height: HabitarSpacing.md),
-        _NowNextPanel(nowTitle: activeStep?.title ?? 'Listo', nextTitle: nextStep?.title ?? 'Despues terminamos'),
+        _NowNextPanel(
+            nowTitle: activeStep?.title ?? 'Listo',
+            nextTitle: nextStep?.title ?? 'Despues terminamos'),
         const SizedBox(height: HabitarSpacing.lg),
         if (!isComplete) ...[
-          FilledButton(onPressed: isPaused ? onResume : onDone, child: Text(isPaused ? 'Reanudar' : 'Hecho')),
+          FilledButton(
+              onPressed: isPaused ? onResume : onDone,
+              child: Text(isPaused ? 'Reanudar' : 'Hecho')),
           const SizedBox(height: HabitarSpacing.sm),
-          OutlinedButton(onPressed: onMoreTime, child: const Text('Necesito mas tiempo')),
+          OutlinedButton(
+              onPressed: onMoreTime, child: const Text('Necesito mas tiempo')),
           const SizedBox(height: HabitarSpacing.sm),
-          OutlinedButton(onPressed: onHelp, child: Text(session.helpRequested ? 'Ayuda solicitada' : 'Necesito ayuda')),
+          OutlinedButton(
+              onPressed: onHelp,
+              child: Text(session.helpRequested
+                  ? 'Ayuda solicitada'
+                  : 'Necesito ayuda')),
           const SizedBox(height: HabitarSpacing.sm),
-          OutlinedButton(onPressed: isPaused ? onResume : onPause, child: Text(isPaused ? 'Volver a la rutina' : 'Pausa sensorial')),
+          OutlinedButton(
+              onPressed: isPaused ? onResume : onPause,
+              child: Text(isPaused ? 'Volver a la rutina' : 'Pausa sensorial')),
           const SizedBox(height: HabitarSpacing.sm),
-          OutlinedButton(onPressed: onPostpone, child: const Text('5 minutos despues')),
+          OutlinedButton(
+              onPressed: onPostpone, child: const Text('5 minutos despues')),
           const SizedBox(height: HabitarSpacing.sm),
           TextButton(onPressed: onSkip, child: const Text('Omitir este paso')),
         ],
@@ -177,11 +207,14 @@ class _TimerPanel extends StatelessWidget {
             SizedBox(
               width: 64,
               height: 64,
-              child: CircularProgressIndicator(value: isPaused ? 0 : 0.65, strokeWidth: 8),
+              child: CircularProgressIndicator(
+                  value: isPaused ? 0 : 0.65, strokeWidth: 8),
             ),
             const SizedBox(width: HabitarSpacing.md),
             Expanded(
-              child: Text(isPaused ? 'Temporizador pausado' : 'Tiempo aproximado restante: $minutes min'),
+              child: Text(isPaused
+                  ? 'Temporizador pausado'
+                  : 'Tiempo aproximado restante: $minutes min'),
             ),
           ],
         ),
@@ -247,7 +280,8 @@ class _EmptyRoutine extends StatelessWidget {
           children: [
             const Text('Todavia no hay una rutina activa.'),
             const SizedBox(height: HabitarSpacing.md),
-            FilledButton(onPressed: onCreate, child: const Text('Crear rutina')),
+            FilledButton(
+                onPressed: onCreate, child: const Text('Crear rutina')),
           ],
         ),
       ),

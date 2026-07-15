@@ -13,6 +13,7 @@
 - Configuracion simulada de recordatorios.
 - Preparacion de wearables watchOS y Wear OS.
 - Persistencia local inicial con store JSON durable para entidades centrales.
+- Conexion de persistencia local durable al arranque de la app en plataformas moviles/escritorio.
 - Supabase schema inicial con Row Level Security.
 - App Flutter con Android, iOS y web preview.
 - Tests unitarios centrales.
@@ -30,7 +31,6 @@
 ## Pendiente antes de beta
 
 - Conectar Supabase Auth.
-- Conectar store local durable a la app movil.
 - Implementar Drift como persistencia final antes de beta.
 - Conectar sincronizacion local-remota.
 - Integrar `flutter_local_notifications`.

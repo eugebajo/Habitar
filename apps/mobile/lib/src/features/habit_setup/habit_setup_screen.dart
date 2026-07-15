@@ -15,7 +15,8 @@ class HabitSetupScreen extends ConsumerStatefulWidget {
 
 class _HabitSetupScreenState extends ConsumerState<HabitSetupScreen> {
   final _titleController = TextEditingController(text: 'Higiene dental');
-  final _minimumController = TextEditingController(text: 'Entrar al bano y preparar el cepillo');
+  final _minimumController =
+      TextEditingController(text: 'Entrar al bano y preparar el cepillo');
   var _confirmOverride = false;
   String? _message;
   List<Habit> _habits = [];
@@ -41,27 +42,40 @@ class _HabitSetupScreenState extends ConsumerState<HabitSetupScreen> {
         child: ListView(
           padding: const EdgeInsets.all(HabitarSpacing.lg),
           children: [
-            Text('Activacion gradual', style: Theme.of(context).textTheme.headlineSmall),
+            Text('Activacion gradual',
+                style: Theme.of(context).textTheme.headlineSmall),
             const SizedBox(height: HabitarSpacing.md),
-            TextField(controller: _titleController, decoration: const InputDecoration(labelText: 'Habito nuevo')),
+            TextField(
+                controller: _titleController,
+                decoration: const InputDecoration(labelText: 'Habito nuevo')),
             const SizedBox(height: HabitarSpacing.md),
-            TextField(controller: _minimumController, decoration: const InputDecoration(labelText: 'Version minima')),
+            TextField(
+                controller: _minimumController,
+                decoration: const InputDecoration(labelText: 'Version minima')),
             const SizedBox(height: HabitarSpacing.sm),
             CheckboxListTile(
               value: _confirmOverride,
-              onChanged: (value) => setState(() => _confirmOverride = value ?? false),
-              title: const Text('Confirmar excepcion si supera el limite recomendado'),
+              onChanged: (value) =>
+                  setState(() => _confirmOverride = value ?? false),
+              title: const Text(
+                  'Confirmar excepcion si supera el limite recomendado'),
               controlAffinity: ListTileControlAffinity.leading,
             ),
-            FilledButton(onPressed: _createHabit, child: const Text('Agregar habito')),
+            FilledButton(
+                onPressed: _createHabit, child: const Text('Agregar habito')),
             if (_message != null) ...[
               const SizedBox(height: HabitarSpacing.md),
-              Card(child: Padding(padding: const EdgeInsets.all(HabitarSpacing.md), child: Text(_message!))),
+              Card(
+                  child: Padding(
+                      padding: const EdgeInsets.all(HabitarSpacing.md),
+                      child: Text(_message!))),
             ],
             const SizedBox(height: HabitarSpacing.lg),
-            Text('Panel semanal', style: Theme.of(context).textTheme.titleMedium),
+            Text('Panel semanal',
+                style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: HabitarSpacing.md),
-            for (final habit in _habits) _HabitCard(habit: habit, onRecord: () => _recordProgress(habit)),
+            for (final habit in _habits)
+              _HabitCard(habit: habit, onRecord: () => _recordProgress(habit)),
           ],
         ),
       ),
@@ -73,7 +87,8 @@ class _HabitSetupScreenState extends ConsumerState<HabitSetupScreen> {
     if (profileId == null) {
       return;
     }
-    final habits = await ref.read(habitServiceProvider).habitsForProfile(profileId);
+    final habits =
+        await ref.read(habitServiceProvider).habitsForProfile(profileId);
     if (mounted) {
       setState(() => _habits = habits);
     }
@@ -113,8 +128,10 @@ class _HabitSetupScreenState extends ConsumerState<HabitSetupScreen> {
           helpLevel: 2,
           ease: 3,
         );
-    final summaries = await ref.read(habitServiceProvider).weeklySummaries(habit.profileId);
-    final summary = summaries.where((item) => item.habitId == habit.metadata.id).first;
+    final summaries =
+        await ref.read(habitServiceProvider).weeklySummaries(habit.profileId);
+    final summary =
+        summaries.where((item) => item.habitId == habit.metadata.id).first;
     if (mounted) {
       setState(() => _message = summary.supportiveInsight);
     }
@@ -139,9 +156,12 @@ class _HabitCard extends StatelessWidget {
             Text(habit.title, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: HabitarSpacing.sm),
             Text('Estado: ${habit.status.name}'),
-            if (habit.minimumVersion != null) Text('Version minima: ${habit.minimumVersion}'),
+            if (habit.minimumVersion != null)
+              Text('Version minima: ${habit.minimumVersion}'),
             const SizedBox(height: HabitarSpacing.md),
-            OutlinedButton(onPressed: onRecord, child: const Text('Registrar version minima')),
+            OutlinedButton(
+                onPressed: onRecord,
+                child: const Text('Registrar version minima')),
           ],
         ),
       ),

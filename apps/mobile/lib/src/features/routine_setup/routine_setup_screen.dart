@@ -46,25 +46,31 @@ class _RoutineSetupScreenState extends ConsumerState<RoutineSetupScreen> {
                 key: _formKey,
                 child: ListView(
                   children: [
-                    Text('Rutina de 3 pasos', style: Theme.of(context).textTheme.headlineSmall),
+                    Text('Rutina de 3 pasos',
+                        style: Theme.of(context).textTheme.headlineSmall),
                     const SizedBox(height: HabitarSpacing.md),
                     TextFormField(
                       controller: _titleController,
-                      decoration: const InputDecoration(labelText: 'Nombre de la rutina'),
+                      decoration: const InputDecoration(
+                          labelText: 'Nombre de la rutina'),
                       validator: _required,
                     ),
                     const SizedBox(height: HabitarSpacing.md),
-                    for (var index = 0; index < _stepControllers.length; index += 1) ...[
+                    for (var index = 0;
+                        index < _stepControllers.length;
+                        index += 1) ...[
                       TextFormField(
                         controller: _stepControllers[index],
-                        decoration: InputDecoration(labelText: 'Paso ${index + 1}'),
+                        decoration:
+                            InputDecoration(labelText: 'Paso ${index + 1}'),
                         validator: _required,
                       ),
                       const SizedBox(height: HabitarSpacing.md),
                     ],
                     FilledButton(
                       onPressed: _isSubmitting ? null : _submit,
-                      child: Text(_isSubmitting ? 'Preparando...' : 'Crear e iniciar'),
+                      child: Text(
+                          _isSubmitting ? 'Preparando...' : 'Crear e iniciar'),
                     ),
                   ],
                 ),
@@ -97,7 +103,9 @@ class _RoutineSetupScreenState extends ConsumerState<RoutineSetupScreen> {
           CreateRoutineInput(
             profileId: profileId,
             title: _titleController.text.trim(),
-            stepTitles: _stepControllers.map((controller) => controller.text.trim()).toList(growable: false),
+            stepTitles: _stepControllers
+                .map((controller) => controller.text.trim())
+                .toList(growable: false),
           ),
         );
     ref.read(currentRoutineSessionIdProvider.notifier).state = session.id;

@@ -10,10 +10,12 @@ class AdultRegistrationScreen extends ConsumerStatefulWidget {
   const AdultRegistrationScreen({super.key});
 
   @override
-  ConsumerState<AdultRegistrationScreen> createState() => _AdultRegistrationScreenState();
+  ConsumerState<AdultRegistrationScreen> createState() =>
+      _AdultRegistrationScreenState();
 }
 
-class _AdultRegistrationScreenState extends ConsumerState<AdultRegistrationScreen> {
+class _AdultRegistrationScreenState
+    extends ConsumerState<AdultRegistrationScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController(text: 'Adulto cuidador');
   final _emailController = TextEditingController(text: 'adulto@example.com');
@@ -44,11 +46,13 @@ class _AdultRegistrationScreenState extends ConsumerState<AdultRegistrationScree
                 key: _formKey,
                 child: ListView(
                   children: [
-                    Text('Crear acompanamiento familiar', style: Theme.of(context).textTheme.headlineSmall),
+                    Text('Crear acompanamiento familiar',
+                        style: Theme.of(context).textTheme.headlineSmall),
                     const SizedBox(height: HabitarSpacing.md),
                     TextFormField(
                       controller: _nameController,
-                      decoration: const InputDecoration(labelText: 'Nombre del adulto'),
+                      decoration:
+                          const InputDecoration(labelText: 'Nombre del adulto'),
                       validator: _required,
                     ),
                     const SizedBox(height: HabitarSpacing.md),
@@ -61,14 +65,16 @@ class _AdultRegistrationScreenState extends ConsumerState<AdultRegistrationScree
                     const SizedBox(height: HabitarSpacing.md),
                     TextFormField(
                       controller: _passwordController,
-                      decoration: const InputDecoration(labelText: 'Contrasena'),
+                      decoration:
+                          const InputDecoration(labelText: 'Contrasena'),
                       obscureText: true,
                       validator: _required,
                     ),
                     const SizedBox(height: HabitarSpacing.md),
                     TextFormField(
                       controller: _familyController,
-                      decoration: const InputDecoration(labelText: 'Nombre de familia'),
+                      decoration:
+                          const InputDecoration(labelText: 'Nombre de familia'),
                       validator: _required,
                     ),
                     const SizedBox(height: HabitarSpacing.lg),
@@ -106,7 +112,8 @@ class _AdultRegistrationScreenState extends ConsumerState<AdultRegistrationScree
             familyName: _familyController.text.trim(),
           ),
         );
-    ref.read(currentFamilyIdProvider.notifier).state = result.family.metadata.id;
+    ref.read(currentFamilyIdProvider.notifier).state =
+        result.family.metadata.id;
     if (mounted) {
       context.go('/profile');
     }

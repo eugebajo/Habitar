@@ -26,22 +26,31 @@ class _StoryLibraryScreenState extends ConsumerState<StoryLibraryScreen> {
         child: ListView(
           padding: const EdgeInsets.all(HabitarSpacing.lg),
           children: [
-            Text('Biblioteca demo', style: Theme.of(context).textTheme.headlineSmall),
+            Text('Biblioteca demo',
+                style: Theme.of(context).textTheme.headlineSmall),
             const SizedBox(height: HabitarSpacing.md),
             for (final content in stories)
               Card(
                 child: ListTile(
                   title: Text(content.story.title),
-                  subtitle: Text('${content.story.ageRange} | ${content.story.value} | ${content.durationMinutes} min'),
-                  selected: selected.story.metadata.id == content.story.metadata.id,
+                  subtitle: Text(
+                      '${content.story.ageRange} | ${content.story.value} | ${content.durationMinutes} min'),
+                  selected:
+                      selected.story.metadata.id == content.story.metadata.id,
                   onTap: () => setState(() => _selected = content),
                 ),
               ),
             const SizedBox(height: HabitarSpacing.lg),
-            _StoryReader(content: selected, onRead: () => _markRead(selected, favorite: false), onFavorite: () => _markRead(selected, favorite: true)),
+            _StoryReader(
+                content: selected,
+                onRead: () => _markRead(selected, favorite: false),
+                onFavorite: () => _markRead(selected, favorite: true)),
             if (_message != null) ...[
               const SizedBox(height: HabitarSpacing.md),
-              Card(child: Padding(padding: const EdgeInsets.all(HabitarSpacing.md), child: Text(_message!))),
+              Card(
+                  child: Padding(
+                      padding: const EdgeInsets.all(HabitarSpacing.md),
+                      child: Text(_message!))),
             ],
           ],
         ),
@@ -49,7 +58,8 @@ class _StoryLibraryScreenState extends ConsumerState<StoryLibraryScreen> {
     );
   }
 
-  Future<void> _markRead(DemoStoryContent content, {required bool favorite}) async {
+  Future<void> _markRead(DemoStoryContent content,
+      {required bool favorite}) async {
     final profileId = ref.read(currentProfileIdProvider);
     if (profileId == null) {
       setState(() => _message = 'Primero crea un perfil.');
@@ -60,12 +70,15 @@ class _StoryLibraryScreenState extends ConsumerState<StoryLibraryScreen> {
           storyId: content.story.metadata.id,
           favorite: favorite,
         );
-    setState(() => _message = favorite ? 'Cuento guardado como favorito.' : 'Progreso del cuento guardado.');
+    setState(() => _message = favorite
+        ? 'Cuento guardado como favorito.'
+        : 'Progreso del cuento guardado.');
   }
 }
 
 class _StoryReader extends StatelessWidget {
-  const _StoryReader({required this.content, required this.onRead, required this.onFavorite});
+  const _StoryReader(
+      {required this.content, required this.onRead, required this.onFavorite});
 
   final DemoStoryContent content;
   final VoidCallback onRead;
@@ -79,11 +92,14 @@ class _StoryReader extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(content.story.title, style: Theme.of(context).textTheme.headlineSmall),
+            Text(content.story.title,
+                style: Theme.of(context).textTheme.headlineSmall),
             const SizedBox(height: HabitarSpacing.sm),
             Text('Valor: ${content.story.value}'),
             Text('Emocion principal: ${content.mainEmotion}'),
-            Text(content.audioAvailable ? 'Audio disponible' : 'Audio pendiente'),
+            Text(content.audioAvailable
+                ? 'Audio disponible'
+                : 'Audio pendiente'),
             const SizedBox(height: HabitarSpacing.md),
             Text(content.story.body),
             const SizedBox(height: HabitarSpacing.md),
@@ -94,9 +110,11 @@ class _StoryReader extends StatelessWidget {
             const SizedBox(height: HabitarSpacing.md),
             Row(
               children: [
-                FilledButton(onPressed: onRead, child: const Text('Marcar leido')),
+                FilledButton(
+                    onPressed: onRead, child: const Text('Marcar leido')),
                 const SizedBox(width: HabitarSpacing.sm),
-                OutlinedButton(onPressed: onFavorite, child: const Text('Favorito')),
+                OutlinedButton(
+                    onPressed: onFavorite, child: const Text('Favorito')),
               ],
             ),
           ],
