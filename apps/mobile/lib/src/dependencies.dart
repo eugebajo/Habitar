@@ -31,9 +31,8 @@ final supportRequestRepositoryProvider = Provider<SupportRequestRepository>(
     (ref) => InMemorySupportRequestRepository());
 final storyProgressRepositoryProvider = Provider<StoryProgressRepository>(
     (ref) => InMemoryStoryProgressRepository());
-final wearableGatewayRepositoryProvider =
-    Provider<InMemoryWearableGatewayRepository>(
-        (ref) => InMemoryWearableGatewayRepository());
+final wearableGatewayRepositoryProvider = Provider<WearableGatewayRepository>(
+    (ref) => InMemoryWearableGatewayRepository());
 
 final adultRegistrationServiceProvider =
     Provider<AdultRegistrationService>((ref) {

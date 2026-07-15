@@ -14,6 +14,7 @@
 - Preparacion de wearables watchOS y Wear OS.
 - Persistencia local inicial con store JSON durable para entidades centrales.
 - Conexion de persistencia local durable al arranque de la app en plataformas moviles/escritorio.
+- Persistencia local de notificaciones, bienestar, cuentos y snapshots wearable.
 - Supabase schema inicial con Row Level Security.
 - App Flutter con Android, iOS y web preview.
 - Tests unitarios centrales.
@@ -25,7 +26,7 @@
 - Sincronizacion real con Supabase.
 - Notificaciones nativas.
 - Audio de cuentos.
-- WatchConnectivity y Wear Data Layer.
+- WatchConnectivity y Wear Data Layer nativos.
 - Auditoria real de excepciones.
 
 ## Pendiente antes de beta

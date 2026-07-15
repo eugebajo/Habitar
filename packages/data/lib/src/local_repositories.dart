@@ -1,7 +1,9 @@
 import 'package:habitar_application/application.dart';
 import 'package:habitar_domain/domain.dart';
 import 'package:habitar_habit_engine/habit_engine.dart';
+import 'package:habitar_notifications/notifications.dart';
 import 'package:habitar_routine_engine/routine_engine.dart';
+import 'package:habitar_wearable_bridge/wearable_bridge.dart';
 import 'package:uuid/uuid.dart';
 
 import 'local_store.dart';
@@ -296,6 +298,132 @@ class LocalHabitProgressRepository implements HabitProgressRepository {
   }
 }
 
+class LocalNotificationPreferenceRepository
+    implements NotificationPreferenceRepository {
+  LocalNotificationPreferenceRepository(this.store);
+
+  final LocalStore store;
+
+  @override
+  Future<NotificationConsent?> consentForProfile(String profileId) async {
+    final record = await store.get(
+        LocalStoreCollections.notificationPreferences, profileId);
+    return record == null ? null : _notificationConsentFromJson(record);
+  }
+
+  @override
+  Future<NotificationConsent> saveConsent(NotificationConsent consent) async {
+    await store.put(LocalStoreCollections.notificationPreferences,
+        consent.profileId, _notificationConsentToJson(consent));
+    return consent;
+  }
+}
+
+class LocalEmotionCheckInRepository implements EmotionCheckInRepository {
+  LocalEmotionCheckInRepository(this.store);
+
+  final LocalStore store;
+
+  @override
+  Future<List<EmotionCheckIn>> entriesForProfile(String profileId) async {
+    final records = await store.list(LocalStoreCollections.emotionCheckIns);
+    return records
+        .map(_emotionCheckInFromJson)
+        .where((entry) => entry.profileId == profileId)
+        .toList(growable: false);
+  }
+
+  @override
+  Future<EmotionCheckIn> save(EmotionCheckIn checkIn) async {
+    await store.put(LocalStoreCollections.emotionCheckIns, checkIn.metadata.id,
+        _emotionCheckInToJson(checkIn));
+    return checkIn;
+  }
+}
+
+class LocalSupportRequestRepository implements SupportRequestRepository {
+  LocalSupportRequestRepository(this.store);
+
+  final LocalStore store;
+
+  @override
+  Future<List<SupportRequest>> requestsForProfile(String profileId) async {
+    final records = await store.list(LocalStoreCollections.supportRequests);
+    return records
+        .map(_supportRequestFromJson)
+        .where((request) => request.profileId == profileId)
+        .toList(growable: false);
+  }
+
+  @override
+  Future<SupportRequest> save(SupportRequest request) async {
+    await store.put(LocalStoreCollections.supportRequests, request.metadata.id,
+        _supportRequestToJson(request));
+    return request;
+  }
+}
+
+class LocalStoryProgressRepository implements StoryProgressRepository {
+  LocalStoryProgressRepository(this.store);
+
+  final LocalStore store;
+
+  @override
+  Future<List<StoryProgress>> progressForProfile(String profileId) async {
+    final records = await store.list(LocalStoreCollections.storyProgress);
+    return records
+        .map(_storyProgressFromJson)
+        .where((progress) => progress.profileId == profileId)
+        .toList(growable: false);
+  }
+
+  @override
+  Future<StoryProgress> save(StoryProgress progress) async {
+    await store.put(
+        LocalStoreCollections.storyProgress,
+        '${progress.profileId}:${progress.storyId}',
+        _storyProgressToJson(progress));
+    return progress;
+  }
+}
+
+class LocalWearableGatewayRepository implements WearableGatewayRepository {
+  LocalWearableGatewayRepository(this.store);
+
+  final LocalStore store;
+
+  @override
+  Future<List<WearableCommand>> pendingCommands(
+      WearablePlatform platform, String sessionId) async {
+    final records = await store.list(LocalStoreCollections.wearableCommands);
+    return records
+        .where((record) => record['platform'] == platform.name)
+        .map(_wearableCommandFromJson)
+        .where((command) => command.sessionId == sessionId)
+        .toList(growable: false);
+  }
+
+  @override
+  Future<void> publishSnapshot(
+      WearablePlatform platform, WearableRoutineSnapshot snapshot) async {
+    await store.put(LocalStoreCollections.wearableSnapshots, platform.name, {
+      'platform': platform.name,
+      'status': WearableConnectionStatus.syncing.name,
+      'snapshot': _wearableSnapshotToJson(snapshot),
+    });
+  }
+
+  @override
+  Future<WearableConnectionStatus> status(WearablePlatform platform) async {
+    final record =
+        await store.get(LocalStoreCollections.wearableSnapshots, platform.name);
+    final statusName = record?['status'] as String?;
+    return statusName == null
+        ? WearableConnectionStatus.disconnected
+        : _byName(WearableConnectionStatus.values, statusName);
+  }
+}
+
 Map<String, Object?> _metadataToJson(EntityMetadata metadata) {
   return {
     'id': metadata.id,
@@ -496,6 +624,93 @@ HabitProgressEntry _habitProgressFromJson(Map<String, Object?> json) =>
       helpLevel: json['help_level'] as int,
       ease: json['ease'] as int,
       note: json['note'] as String?,
+    );
+
+Map<String, Object?> _notificationConsentToJson(NotificationConsent consent) =>
+    {
+      'profile_id': consent.profileId,
+      'permission_status': consent.permissionStatus.name,
+      'intensity': consent.intensity.name,
+      'allowed_features':
+          consent.allowedFeatures.map((feature) => feature.name).toList(),
+    };
+
+NotificationConsent _notificationConsentFromJson(Map<String, Object?> json) =>
+    NotificationConsent(
+      profileId: json['profile_id'] as String,
+      permissionStatus: _byName(NotificationPermissionStatus.values,
+          json['permission_status'] as String),
+      intensity: _byName(ReminderIntensity.values, json['intensity'] as String),
+      allowedFeatures: _stringList(json['allowed_features'])
+          .map((name) => _byName(NotificationPlatformFeature.values, name))
+          .toList(growable: false),
+    );
+
+Map<String, Object?> _emotionCheckInToJson(EmotionCheckIn checkIn) => {
+      'metadata': _metadataToJson(checkIn.metadata),
+      'profile_id': checkIn.profileId,
+      'emotion': checkIn.emotion,
+      'energy_level': checkIn.energyLevel,
+    };
+
+EmotionCheckIn _emotionCheckInFromJson(Map<String, Object?> json) =>
+    EmotionCheckIn(
+      metadata: _metadataFromJson(_object(json['metadata'])),
+      profileId: json['profile_id'] as String,
+      emotion: json['emotion'] as String?,
+      energyLevel: json['energy_level'] as int?,
+    );
+
+Map<String, Object?> _supportRequestToJson(SupportRequest request) => {
+      'metadata': _metadataToJson(request.metadata),
+      'profile_id': request.profileId,
+      'kind': request.kind,
+      'note': request.note,
+    };
+
+SupportRequest _supportRequestFromJson(Map<String, Object?> json) =>
+    SupportRequest(
+      metadata: _metadataFromJson(_object(json['metadata'])),
+      profileId: json['profile_id'] as String,
+      kind: json['kind'] as String,
+      note: json['note'] as String?,
+    );
+
+Map<String, Object?> _storyProgressToJson(StoryProgress progress) => {
+      'metadata': _metadataToJson(progress.metadata),
+      'story_id': progress.storyId,
+      'profile_id': progress.profileId,
+      'is_favorite': progress.isFavorite,
+    };
+
+StoryProgress _storyProgressFromJson(Map<String, Object?> json) =>
+    StoryProgress(
+      metadata: _metadataFromJson(_object(json['metadata'])),
+      storyId: json['story_id'] as String,
+      profileId: json['profile_id'] as String,
+      isFavorite: json['is_favorite'] as bool? ?? false,
+    );
+
+Map<String, Object?> _wearableSnapshotToJson(
+        WearableRoutineSnapshot snapshot) =>
+    {
+      'session_id': snapshot.sessionId,
+      'routine_title': snapshot.routineTitle,
+      'current_step_title': snapshot.currentStepTitle,
+      'next_step_title': snapshot.nextStepTitle,
+      'progress_fraction': snapshot.progressFraction,
+      'remaining_minutes': snapshot.remainingMinutes,
+      'status': snapshot.status.name,
+      'updated_at': snapshot.updatedAt.toIso8601String(),
+    };
+
+WearableCommand _wearableCommandFromJson(Map<String, Object?> json) =>
+    WearableCommand(
+      sessionId: json['session_id'] as String,
+      action: _byName(WearableQuickAction.values, json['action'] as String),
+      createdAt: DateTime.parse(json['created_at'] as String),
+      minutes: json['minutes'] as int?,
+      reason: json['reason'] as String?,
     );
 
 Map<String, Object?> _object(Object? value) =>

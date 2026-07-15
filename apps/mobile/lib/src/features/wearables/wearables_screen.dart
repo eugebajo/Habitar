@@ -20,8 +20,6 @@ class _WearablesScreenState extends ConsumerState<WearablesScreen> {
     final selectedPlatform = ref.watch(selectedWearablePlatformProvider);
     final service = ref.watch(wearableServiceProvider);
     final capabilities = service.capabilitiesFor(selectedPlatform);
-    final gateway = ref.watch(wearableGatewayRepositoryProvider);
-    final snapshot = gateway.snapshotFor(selectedPlatform);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Wearables')),
@@ -45,6 +43,8 @@ class _WearablesScreenState extends ConsumerState<WearablesScreen> {
                   .state = selection.first,
             ),
             const SizedBox(height: HabitarSpacing.md),
+            _WearableStatus(platform: selectedPlatform),
+            const SizedBox(height: HabitarSpacing.md),
             _CapabilityCard(capabilities: capabilities),
             const SizedBox(height: HabitarSpacing.md),
             FilledButton(
@@ -61,24 +61,8 @@ class _WearablesScreenState extends ConsumerState<WearablesScreen> {
             Text('Ultimo snapshot',
                 style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: HabitarSpacing.md),
-            if (snapshot == null)
-              const Text('Todavia no hay una rutina publicada para el reloj.')
-            else
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(HabitarSpacing.md),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(snapshot.routineTitle,
-                          style: Theme.of(context).textTheme.titleMedium),
-                      Text('Ahora: ${snapshot.currentStepTitle}'),
-                      Text('Despues: ${snapshot.nextStepTitle}'),
-                      Text('Minutos restantes: ${snapshot.remainingMinutes}'),
-                    ],
-                  ),
-                ),
-              ),
+            Text(_message ??
+                'Todavia no hay una rutina publicada para el reloj.'),
           ],
         ),
       ),
@@ -105,6 +89,28 @@ class _WearablesScreenState extends ConsumerState<WearablesScreen> {
         .publishRoutineSession(platform, session);
     setState(() => _message =
         'Snapshot preparado para ${platform.name}: ${snapshot.currentStepTitle}.');
+  }
+}
+
+class _WearableStatus extends ConsumerWidget {
+  const _WearableStatus({required this.platform});
+
+  final WearablePlatform platform;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return FutureBuilder<WearableConnectionStatus>(
+      future: ref.watch(wearableGatewayRepositoryProvider).status(platform),
+      builder: (context, snapshot) {
+        final status = snapshot.data;
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(HabitarSpacing.md),
+            child: Text('Estado local: ${status?.name ?? 'consultando'}'),
+          ),
+        );
+      },
+    );
   }
 }
 

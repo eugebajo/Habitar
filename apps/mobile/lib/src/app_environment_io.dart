@@ -22,5 +22,15 @@ Future<List<Override>> buildProductionOverrides() async {
     habitRepositoryProvider.overrideWithValue(LocalHabitRepository(store)),
     habitProgressRepositoryProvider
         .overrideWithValue(LocalHabitProgressRepository(store)),
+    notificationPreferenceRepositoryProvider
+        .overrideWithValue(LocalNotificationPreferenceRepository(store)),
+    emotionCheckInRepositoryProvider
+        .overrideWithValue(LocalEmotionCheckInRepository(store)),
+    supportRequestRepositoryProvider
+        .overrideWithValue(LocalSupportRequestRepository(store)),
+    storyProgressRepositoryProvider
+        .overrideWithValue(LocalStoryProgressRepository(store)),
+    wearableGatewayRepositoryProvider
+        .overrideWithValue(LocalWearableGatewayRepository(store)),
   ];
 }

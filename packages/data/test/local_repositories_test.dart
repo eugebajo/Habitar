@@ -3,7 +3,9 @@ import 'dart:io';
 import 'package:habitar_data/data.dart';
 import 'package:habitar_domain/domain.dart';
 import 'package:habitar_habit_engine/habit_engine.dart';
+import 'package:habitar_notifications/notifications.dart';
 import 'package:habitar_routine_engine/routine_engine.dart';
+import 'package:habitar_wearable_bridge/wearable_bridge.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -95,5 +97,85 @@ void main() {
     expect(restoredSession?.activeStep?.title, 'Vestirse');
     expect(restoredHabits.single.minimumVersion, 'Un vaso');
     expect(restoredEntries.single.completedMinimumVersion, isTrue);
+  });
+
+  test('persists notifications, wellbeing, story progress and wearables',
+      () async {
+    final directory =
+        await Directory.systemTemp.createTemp('habitar_local_store_test_');
+    addTearDown(() => directory.delete(recursive: true));
+    final file = File('${directory.path}/habitar.json');
+    final store = FileLocalStore(file);
+    final now = DateTime.utc(2026, 7, 15, 14);
+    final metadata = EntityMetadata(
+      id: 'entry-1',
+      createdAt: now,
+      updatedAt: now,
+      ownerId: 'profile-1',
+    );
+
+    await LocalNotificationPreferenceRepository(store).saveConsent(
+      const NotificationConsent(
+        profileId: 'profile-1',
+        permissionStatus: NotificationPermissionStatus.granted,
+        intensity: ReminderIntensity.visible,
+        allowedFeatures: [NotificationPlatformFeature.timeSensitive],
+      ),
+    );
+    await LocalEmotionCheckInRepository(store).save(
+      EmotionCheckIn(
+        metadata: metadata,
+        profileId: 'profile-1',
+        emotion: 'tranquilo',
+        energyLevel: 3,
+      ),
+    );
+    await LocalSupportRequestRepository(store).save(
+      SupportRequest(
+        metadata: metadata,
+        profileId: 'profile-1',
+        kind: 'pausa',
+        note: 'Necesita bajar estimulo',
+      ),
+    );
+    await LocalStoryProgressRepository(store).save(
+      StoryProgress(
+        metadata: metadata,
+        storyId: 'cuento-1',
+        profileId: 'profile-1',
+        isFavorite: true,
+      ),
+    );
+    await LocalWearableGatewayRepository(store).publishSnapshot(
+      WearablePlatform.wearOS,
+      WearableRoutineSnapshot(
+        sessionId: 'session-1',
+        routineTitle: 'Manana',
+        currentStepTitle: 'Vestirse',
+        nextStepTitle: 'Desayunar',
+        progressFraction: 0.25,
+        remainingMinutes: 12,
+        status: RoutineSessionStatus.running,
+        updatedAt: now,
+      ),
+    );
+
+    final restoredStore = FileLocalStore(file);
+    final consent = await LocalNotificationPreferenceRepository(restoredStore)
+        .consentForProfile('profile-1');
+    final checkIns = await LocalEmotionCheckInRepository(restoredStore)
+        .entriesForProfile('profile-1');
+    final supportRequests = await LocalSupportRequestRepository(restoredStore)
+        .requestsForProfile('profile-1');
+    final storyProgress = await LocalStoryProgressRepository(restoredStore)
+        .progressForProfile('profile-1');
+    final wearableStatus = await LocalWearableGatewayRepository(restoredStore)
+        .status(WearablePlatform.wearOS);
+
+    expect(consent?.intensity, ReminderIntensity.visible);
+    expect(checkIns.single.emotion, 'tranquilo');
+    expect(supportRequests.single.kind, 'pausa');
+    expect(storyProgress.single.isFavorite, isTrue);
+    expect(wearableStatus, WearableConnectionStatus.syncing);
   });
 }
