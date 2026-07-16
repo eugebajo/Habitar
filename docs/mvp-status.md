@@ -19,6 +19,7 @@
 - Cola de sincronizacion local-remota persistente.
 - Adaptador de Auth Supabase preparado por gateway.
 - Plan verificable de migracion JSON a Drift/SQLite.
+- Drift/SQLite real activo como backend local en plataformas nativas/escritorio.
 - Supabase schema inicial con Row Level Security.
 - App Flutter con Android, iOS y web preview.
 - Tests unitarios centrales.
@@ -26,7 +27,7 @@
 ## Simulado
 
 - Gateway concreto de Auth real con `supabase_flutter`.
-- Persistencia offline final con Drift.
+- Tablas Drift tipadas por entidad.
 - Sincronizacion real con Supabase.
 - Notificaciones nativas.
 - Audio de cuentos.

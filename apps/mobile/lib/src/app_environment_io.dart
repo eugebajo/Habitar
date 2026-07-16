@@ -10,8 +10,8 @@ import 'platform/supabase_flutter_auth_gateway.dart';
 
 Future<List<Override>> buildProductionOverrides() async {
   final directory = await getApplicationSupportDirectory();
-  final store = FileLocalStore(
-      File('${directory.path}${Platform.pathSeparator}habitar_store.json'));
+  final store = await DriftLocalStore.open(
+      File('${directory.path}${Platform.pathSeparator}habitar.sqlite'));
   final supabaseConfig = SupabaseConfig.maybeFromEnvironment();
 
   final authRepository = supabaseConfig == null

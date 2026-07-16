@@ -37,10 +37,11 @@ Implementado:
 - Adaptador de Auth Supabase preparado por gateway.
 - Plan verificable de migracion JSON a Drift/SQLite.
 - Supabase Auth real integrado en Flutter con `supabase_flutter` y fallback local.
+- Drift/SQLite real activo como backend local en plataformas con sistema de archivos.
 
 Simulado/preparado:
 
-- Persistencia local: store JSON durable conectado en plataformas `dart:io` para datos centrales y modulos de acompanamiento; Drift/SQLite queda como destino final.
+- Persistencia local: SQLite con Drift activo en plataformas `dart:io`; web conserva modo memoria/preview.
 - Persistencia de rutina: funciona en memoria y esta preparada para Drift/Supabase.
 - Supabase: configuracion, migracion y Auth inicial preparados; requiere variables de entorno reales.
 - Supabase Auth: `supabase_flutter` integrado; falta login/logout y lectura/escritura remota de familias/perfiles.

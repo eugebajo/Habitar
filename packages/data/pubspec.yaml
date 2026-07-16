@@ -6,6 +6,7 @@ environment:
   sdk: ^3.6.0
 
 dependencies:
+  drift: ^2.34.2
   habitar_application:
     path: ../application
   habitar_domain:
@@ -20,6 +21,7 @@ dependencies:
     path: ../story_library
   habitar_wearable_bridge:
     path: ../wearable_bridge
+  sqlite3: ^3.4.0
   uuid: ^4.5.1
 
 dev_dependencies:
