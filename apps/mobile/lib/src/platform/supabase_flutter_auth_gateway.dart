@@ -30,6 +30,27 @@ class FlutterSupabaseAuthGateway implements SupabaseAuthGateway {
     return _mapUser(user);
   }
 
+  @override
+  Future<SupabaseAuthUser> signInWithPassword({
+    required String email,
+    required String password,
+  }) async {
+    final response = await client.auth.signInWithPassword(
+      email: email,
+      password: password,
+    );
+    final user = response.user;
+    if (user == null) {
+      throw StateError('Supabase did not return a user after sign in.');
+    }
+    return _mapUser(user);
+  }
+
+  @override
+  Future<void> signOut() {
+    return client.auth.signOut();
+  }
+
   SupabaseAuthUser _mapUser(supabase.User user) {
     final metadata = user.userMetadata ?? const <String, dynamic>{};
     final displayName =

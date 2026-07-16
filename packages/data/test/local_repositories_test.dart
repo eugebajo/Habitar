@@ -43,6 +43,32 @@ void main() {
     expect(restoredProfiles.single.displayName, 'Luz');
   });
 
+  test('signs local users out and back in by email', () async {
+    final directory =
+        await Directory.systemTemp.createTemp('habitar_local_store_test_');
+    addTearDown(() => directory.delete(recursive: true));
+    final repository = LocalAuthRepository(
+      FileLocalStore(File('${directory.path}/habitar.json')),
+    );
+
+    await repository.registerAdult(
+      displayName: 'Euge',
+      email: 'euge@example.com',
+      password: 'not-stored-locally',
+    );
+
+    await repository.signOut();
+    expect(await repository.currentUser(), isNull);
+
+    final user = await repository.signIn(
+      email: 'euge@example.com',
+      password: 'not-stored-locally',
+    );
+
+    expect(user.displayName, 'Euge');
+    expect((await repository.currentUser())?.email, 'euge@example.com');
+  });
+
   test('persists routines, active sessions, habits and progress', () async {
     final directory =
         await Directory.systemTemp.createTemp('habitar_local_store_test_');

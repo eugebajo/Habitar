@@ -13,6 +13,7 @@ class StartupScreen extends ConsumerWidget {
     ref.listen(appRestoreProvider, (previous, next) {
       next.whenData((result) {
         final location = switch (result.destination) {
+          AppRestoreDestination.onboarding => '/onboarding',
           AppRestoreDestination.register => '/register',
           AppRestoreDestination.profileSetup => '/profile',
           AppRestoreDestination.dashboard => '/dashboard',
@@ -46,8 +47,8 @@ class StartupScreen extends ConsumerWidget {
                     const CircularProgressIndicator()
                   else
                     FilledButton(
-                      onPressed: () => context.go('/register'),
-                      child: const Text('Ir al registro'),
+                      onPressed: () => context.go('/onboarding'),
+                      child: const Text('Continuar'),
                     ),
                 ],
               ),

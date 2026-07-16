@@ -4,7 +4,7 @@ import 'package:habitar_domain/domain.dart';
 
 import 'dependencies.dart';
 
-enum AppRestoreDestination { register, profileSetup, dashboard }
+enum AppRestoreDestination { onboarding, register, profileSetup, dashboard }
 
 class AppRestoreResult {
   const AppRestoreResult({
@@ -39,7 +39,7 @@ class AppRestoreService {
     final user = await authRepository.currentUser();
     if (user == null) {
       return const AppRestoreResult(
-          destination: AppRestoreDestination.register);
+          destination: AppRestoreDestination.onboarding);
     }
 
     final family = await familyRepository.currentFamily(user.metadata.id);

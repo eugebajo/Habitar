@@ -22,6 +22,7 @@ class _AdultRegistrationScreenState
   final _passwordController = TextEditingController(text: 'Cambiar123');
   final _familyController = TextEditingController(text: 'Mi familia');
   var _isSubmitting = false;
+  String? _error;
 
   @override
   void dispose() {
@@ -46,8 +47,24 @@ class _AdultRegistrationScreenState
                 key: _formKey,
                 child: ListView(
                   children: [
-                    Text('Crear acompanamiento familiar',
-                        style: Theme.of(context).textTheme.headlineSmall),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: HabitarColors.surfaceWarm,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      padding: const EdgeInsets.all(HabitarSpacing.lg),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Crear acompanamiento familiar',
+                              style: Theme.of(context).textTheme.headlineSmall),
+                          const SizedBox(height: HabitarSpacing.sm),
+                          const Text(
+                            'Primero registramos al adulto responsable y el espacio familiar.',
+                          ),
+                        ],
+                      ),
+                    ),
                     const SizedBox(height: HabitarSpacing.md),
                     TextFormField(
                       controller: _nameController,
@@ -77,10 +94,24 @@ class _AdultRegistrationScreenState
                           const InputDecoration(labelText: 'Nombre de familia'),
                       validator: _required,
                     ),
+                    if (_error != null) ...[
+                      const SizedBox(height: HabitarSpacing.md),
+                      Text(
+                        _error!,
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.error),
+                      ),
+                    ],
                     const SizedBox(height: HabitarSpacing.lg),
                     FilledButton(
                       onPressed: _isSubmitting ? null : _submit,
                       child: Text(_isSubmitting ? 'Creando...' : 'Continuar'),
+                    ),
+                    const SizedBox(height: HabitarSpacing.sm),
+                    TextButton(
+                      onPressed:
+                          _isSubmitting ? null : () => context.go('/login'),
+                      child: const Text('Ya tengo cuenta'),
                     ),
                   ],
                 ),
@@ -103,19 +134,35 @@ class _AdultRegistrationScreenState
     if (!_formKey.currentState!.validate()) {
       return;
     }
-    setState(() => _isSubmitting = true);
-    final result = await ref.read(adultRegistrationServiceProvider).register(
-          AdultRegistrationInput(
-            displayName: _nameController.text.trim(),
-            email: _emailController.text.trim(),
-            password: _passwordController.text,
-            familyName: _familyController.text.trim(),
-          ),
-        );
-    ref.read(currentFamilyIdProvider.notifier).state =
-        result.family.metadata.id;
-    if (mounted) {
-      context.go('/profile');
+    setState(() {
+      _isSubmitting = true;
+      _error = null;
+    });
+    try {
+      final result = await ref.read(adultRegistrationServiceProvider).register(
+            AdultRegistrationInput(
+              displayName: _nameController.text.trim(),
+              email: _emailController.text.trim(),
+              password: _passwordController.text,
+              familyName: _familyController.text.trim(),
+            ),
+          );
+      ref.read(currentFamilyIdProvider.notifier).state =
+          result.family.metadata.id;
+      if (mounted) {
+        context.go('/profile');
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _error =
+              'No pudimos crear la cuenta. Revisa los datos o intenta entrar si ya existe.';
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
     }
   }
 }

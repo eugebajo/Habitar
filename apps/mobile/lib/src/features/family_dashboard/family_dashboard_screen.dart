@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:habitar_design_system/design_system.dart';
 
 import '../../dependencies.dart';
+import '../../local_restore.dart';
 
 class FamilyDashboardScreen extends ConsumerWidget {
   const FamilyDashboardScreen({super.key});
@@ -15,13 +16,38 @@ class FamilyDashboardScreen extends ConsumerWidget {
     final activeSessionId = ref.watch(currentRoutineSessionIdProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Panel semanal')),
+      appBar: AppBar(
+        title: const Text('Panel semanal'),
+        actions: [
+          IconButton(
+            tooltip: 'Cerrar sesion',
+            onPressed: () => _signOut(context, ref),
+            icon: const Icon(Icons.logout),
+          ),
+        ],
+      ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(HabitarSpacing.lg),
           children: [
-            Text('Acompanamiento de la semana',
-                style: Theme.of(context).textTheme.headlineSmall),
+            Container(
+              decoration: BoxDecoration(
+                color: HabitarColors.sunlit,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              padding: const EdgeInsets.all(HabitarSpacing.lg),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Acompanamiento de la semana',
+                      style: Theme.of(context).textTheme.headlineSmall),
+                  const SizedBox(height: HabitarSpacing.sm),
+                  const Text(
+                    'Un resumen simple para decidir que rutina, habito o apoyo conviene atender hoy.',
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: HabitarSpacing.md),
             _LocalStorageCard(
               hasLocalStore: hasLocalStore,
@@ -96,6 +122,18 @@ class FamilyDashboardScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _signOut(BuildContext context, WidgetRef ref) async {
+    await ref.read(sessionServiceProvider).signOut();
+    ref.read(currentFamilyIdProvider.notifier).state = null;
+    ref.read(currentProfileIdProvider.notifier).state = null;
+    ref.read(currentProfileKindProvider.notifier).state = null;
+    ref.read(currentRoutineSessionIdProvider.notifier).state = null;
+    ref.invalidate(appRestoreProvider);
+    if (context.mounted) {
+      context.go('/onboarding');
+    }
   }
 }
 

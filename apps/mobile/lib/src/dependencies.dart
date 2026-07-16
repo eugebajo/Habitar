@@ -44,6 +44,10 @@ final adultRegistrationServiceProvider =
   );
 });
 
+final sessionServiceProvider = Provider<SessionService>((ref) {
+  return SessionService(ref.watch(authRepositoryProvider));
+});
+
 final profileServiceProvider = Provider<ProfileService>((ref) {
   return ProfileService(ref.watch(profileRepositoryProvider));
 });

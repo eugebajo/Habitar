@@ -8,6 +8,13 @@ abstract interface class SupabaseAuthGateway {
     required String displayName,
   });
 
+  Future<SupabaseAuthUser> signInWithPassword({
+    required String email,
+    required String password,
+  });
+
+  Future<void> signOut();
+
   Future<SupabaseAuthUser?> currentUser();
 }
 
@@ -48,6 +55,20 @@ class SupabaseAuthRepository implements AuthRepository {
       displayName: displayName,
     );
     return _mapUser(user);
+  }
+
+  @override
+  Future<User> signIn({required String email, required String password}) async {
+    final user = await gateway.signInWithPassword(
+      email: email,
+      password: password,
+    );
+    return _mapUser(user);
+  }
+
+  @override
+  Future<void> signOut() {
+    return gateway.signOut();
   }
 
   User _mapUser(SupabaseAuthUser user) {

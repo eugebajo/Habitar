@@ -36,7 +36,11 @@ abstract interface class AuthRepository {
       required String email,
       required String password});
 
+  Future<User> signIn({required String email, required String password});
+
   Future<User?> currentUser();
+
+  Future<void> signOut();
 }
 
 abstract interface class ProfileRepository {

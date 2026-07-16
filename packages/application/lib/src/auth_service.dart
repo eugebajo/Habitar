@@ -40,3 +40,15 @@ class AdultRegistrationService {
     return AdultRegistrationResult(user: user, family: family);
   }
 }
+
+class SessionService {
+  const SessionService(this.authRepository);
+
+  final AuthRepository authRepository;
+
+  Future<User> signIn({required String email, required String password}) {
+    return authRepository.signIn(email: email, password: password);
+  }
+
+  Future<void> signOut() => authRepository.signOut();
+}

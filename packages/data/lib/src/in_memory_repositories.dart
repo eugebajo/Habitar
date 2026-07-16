@@ -9,6 +9,7 @@ import 'package:uuid/uuid.dart';
 const _uuid = Uuid();
 
 class InMemoryAuthRepository implements AuthRepository {
+  final Map<String, User> _usersByEmail = {};
   User? _current;
 
   @override
@@ -26,7 +27,23 @@ class InMemoryAuthRepository implements AuthRepository {
       displayName: displayName,
       email: email,
     );
+    _usersByEmail[email] = _current!;
     return _current!;
+  }
+
+  @override
+  Future<User> signIn({required String email, required String password}) async {
+    final user = _usersByEmail[email];
+    if (user == null) {
+      throw StateError('No local user found for $email.');
+    }
+    _current = user;
+    return user;
+  }
+
+  @override
+  Future<void> signOut() async {
+    _current = null;
   }
 }
 

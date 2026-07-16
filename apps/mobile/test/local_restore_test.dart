@@ -4,7 +4,7 @@ import 'package:habitar_domain/domain.dart';
 import 'package:habitar_mobile/src/local_restore.dart';
 
 void main() {
-  test('restore sends empty local state to registration', () async {
+  test('restore sends empty local state to onboarding', () async {
     final service = AppRestoreService(
       authRepository: InMemoryAuthRepository(),
       familyRepository: InMemoryFamilyRepository(),
@@ -14,7 +14,7 @@ void main() {
 
     final result = await service.restore();
 
-    expect(result.destination, AppRestoreDestination.register);
+    expect(result.destination, AppRestoreDestination.onboarding);
   });
 
   test('restore recovers family and first child profile', () async {

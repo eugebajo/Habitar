@@ -32,6 +32,24 @@ void main() {
 
     expect((await repository.currentUser())?.displayName, 'Adulto');
   });
+
+  test('signs in and signs out through Supabase gateway', () async {
+    final gateway = _FakeSupabaseAuthGateway();
+    final repository = SupabaseAuthRepository(gateway);
+
+    final user = await repository.signIn(
+      email: 'adulto@example.com',
+      password: 'secret',
+    );
+
+    expect(user.email, 'adulto@example.com');
+    expect(gateway.lastPassword, 'secret');
+    expect((await repository.currentUser())?.metadata.id, 'supabase-user-1');
+
+    await repository.signOut();
+
+    expect(await repository.currentUser(), isNull);
+  });
 }
 
 class _FakeSupabaseAuthGateway implements SupabaseAuthGateway {
@@ -55,5 +73,25 @@ class _FakeSupabaseAuthGateway implements SupabaseAuthGateway {
       createdAt: DateTime.utc(2026, 7, 15),
     );
     return _current!;
+  }
+
+  @override
+  Future<SupabaseAuthUser> signInWithPassword({
+    required String email,
+    required String password,
+  }) async {
+    lastPassword = password;
+    _current = SupabaseAuthUser(
+      id: 'supabase-user-1',
+      email: email,
+      displayName: 'Adulto',
+      createdAt: DateTime.utc(2026, 7, 15),
+    );
+    return _current!;
+  }
+
+  @override
+  Future<void> signOut() async {
+    _current = null;
   }
 }

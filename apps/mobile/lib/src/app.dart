@@ -5,7 +5,9 @@ import 'package:habitar_design_system/design_system.dart';
 import 'features/adult_registration/adult_registration_screen.dart';
 import 'features/family_dashboard/family_dashboard_screen.dart';
 import 'features/habit_setup/habit_setup_screen.dart';
+import 'features/login/login_screen.dart';
 import 'features/notification_settings/notification_settings_screen.dart';
+import 'features/onboarding/onboarding_screen.dart';
 import 'features/profile_setup/profile_setup_screen.dart';
 import 'features/routine_player/routine_player_screen.dart';
 import 'features/routine_setup/routine_setup_screen.dart';
@@ -18,6 +20,10 @@ final appRouter = GoRouter(
   initialLocation: '/',
   routes: [
     GoRoute(path: '/', builder: (context, state) => const StartupScreen()),
+    GoRoute(
+        path: '/onboarding',
+        builder: (context, state) => const OnboardingScreen()),
+    GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
     GoRoute(
         path: '/register',
         builder: (context, state) => const AdultRegistrationScreen()),

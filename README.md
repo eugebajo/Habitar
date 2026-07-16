@@ -38,13 +38,14 @@ Implementado:
 - Plan verificable de migracion JSON a Drift/SQLite.
 - Supabase Auth real integrado en Flutter con `supabase_flutter` y fallback local.
 - Drift/SQLite real activo como backend local en plataformas con sistema de archivos.
+- Bienvenida visual, login y logout integrados con restauracion de sesion local.
 
 Simulado/preparado:
 
 - Persistencia local: SQLite con Drift activo en plataformas `dart:io`; web conserva modo memoria/preview.
 - Persistencia de rutina: funciona en memoria y esta preparada para Drift/Supabase.
 - Supabase: configuracion, migracion y Auth inicial preparados; requiere variables de entorno reales.
-- Supabase Auth: `supabase_flutter` integrado; falta login/logout y lectura/escritura remota de familias/perfiles.
+- Supabase Auth: `supabase_flutter` integrado con registro, login y logout; falta lectura/escritura remota de familias/perfiles.
 - Auditoria de excepciones de habitos: regla de producto implementada, escritura real en `audit_logs` pendiente.
 - Notificaciones nativas: planificador implementado, integracion `flutter_local_notifications` pendiente.
 - Audio de cuentos: marcado como pendiente.
@@ -53,8 +54,7 @@ Simulado/preparado:
 
 Pendiente:
 
-- Generacion Drift real y base local SQLite.
-- Integracion Supabase ejecutada contra proyecto real.
+- Lectura/escritura remota Supabase para familias, perfiles, rutinas, habitos y progreso.
 - Pruebas de widgets e integracion completas.
 - watchOS, Wear OS, Live Activities, widgets y notificaciones avanzadas.
 

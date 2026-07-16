@@ -46,6 +46,25 @@ class LocalAuthRepository implements AuthRepository {
         {'user_id': user.metadata.id});
     return user;
   }
+
+  @override
+  Future<User> signIn({required String email, required String password}) async {
+    final records = await store.list(LocalStoreCollections.users);
+    for (final record in records) {
+      final user = _userFromJson(record);
+      if (user.email == email) {
+        await store.put(LocalStoreCollections.authState, _currentUserKey,
+            {'user_id': user.metadata.id});
+        return user;
+      }
+    }
+    throw StateError('No local user found for $email.');
+  }
+
+  @override
+  Future<void> signOut() async {
+    await store.put(LocalStoreCollections.authState, _currentUserKey, {});
+  }
 }
 
 class LocalFamilyRepository implements FamilyRepository {
