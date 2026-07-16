@@ -92,9 +92,7 @@ class _ProfilesScreenState extends ConsumerState<ProfilesScreen> {
                     onSelect: () => _selectProfile(summary),
                     onRoutine: () {
                       _selectProfile(summary);
-                      context.go(summary.activeRoutineTitle == null
-                          ? '/routine/create'
-                          : '/routine/player');
+                      context.go('/routine/player');
                     },
                     onHabits: () {
                       _selectProfile(summary);
@@ -207,7 +205,8 @@ class _ProfileProgressCard extends StatelessWidget {
             if (summary.activeRoutineTitle != null)
               Text('Rutina activa: ${summary.activeRoutineTitle}')
             else
-              const Text('No hay rutina activa ahora.'),
+              const Text(
+                  'No hay rutina activa ahora. Un adulto puede preparar una.'),
             if (summary.nextTaskTitle != null) ...[
               const SizedBox(height: HabitarSpacing.xs),
               Text('Proximo paso: ${summary.nextTaskTitle}'),
@@ -219,18 +218,21 @@ class _ProfileProgressCard extends StatelessWidget {
               spacing: HabitarSpacing.sm,
               runSpacing: HabitarSpacing.sm,
               children: [
-                FilledButton(
-                  onPressed: onRoutine,
-                  child: Text(summary.activeRoutineTitle == null
-                      ? 'Crear rutina'
-                      : 'Ver tarea'),
-                ),
-                OutlinedButton(
-                  onPressed: onHabits,
-                  child: Text(summary.habitsCount == 0
-                      ? 'Crear habito'
-                      : 'Ver habitos'),
-                ),
+                if (summary.activeRoutineTitle != null)
+                  FilledButton(
+                    onPressed: onRoutine,
+                    child: const Text('Ver tarea'),
+                  ),
+                if (summary.habitsCount > 0)
+                  OutlinedButton(
+                    onPressed: onHabits,
+                    child: const Text('Ver habitos'),
+                  )
+                else
+                  const _AdultManagedNote(
+                    text:
+                        'Los habitos los prepara un adulto, tutor, profesional o docente.',
+                  ),
               ],
             ),
           ],
@@ -267,6 +269,28 @@ class _MetricTile extends StatelessWidget {
           Text(label),
         ],
       ),
+    );
+  }
+}
+
+class _AdultManagedNote extends StatelessWidget {
+  const _AdultManagedNote({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(minHeight: 48),
+      padding: const EdgeInsets.symmetric(
+        horizontal: HabitarSpacing.md,
+        vertical: HabitarSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: HabitarColors.softBlue.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(text),
     );
   }
 }

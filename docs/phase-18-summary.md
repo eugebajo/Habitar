@@ -13,12 +13,14 @@ Implementado:
 - Selector de perfil activo desde la lista.
 - Acceso a perfiles desde el panel semanal.
 - `ProfileService` ahora construye un resumen de progreso usando repositorios existentes.
+- El panel infantil/adolescente no ofrece crear habitos ni rutinas.
 
 Reglas de calculo:
 
 - Metas cumplidas combina pasos de rutina completados y versiones minimas registradas.
 - Tareas pendientes combina pasos restantes de la rutina activa y habitos activos/propuestos sin registro.
 - El progreso es una orientacion visual, no una racha ni una puntuacion competitiva.
+- Ninos y adolescentes ven tareas, progreso y habitos asignados; la creacion y edicion corresponde a padres, tutores, profesionales medicos o profesores.
 
 Pendiente:
 
