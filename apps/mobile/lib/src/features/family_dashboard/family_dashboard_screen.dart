@@ -55,6 +55,16 @@ class FamilyDashboardScreen extends ConsumerWidget {
               activeSessionId: activeSessionId,
             ),
             const _StatusCard(
+              title: 'Perfiles',
+              body:
+                  'Cada nino o adolescente puede ver progreso, metas cumplidas y tareas pendientes.',
+            ),
+            FilledButton(
+              onPressed: () => context.go('/profiles'),
+              child: const Text('Ver perfiles'),
+            ),
+            const SizedBox(height: HabitarSpacing.md),
+            const _StatusCard(
               title: 'Habitos nuevos',
               body:
                   'Limite recomendado activo y conectado a la creacion de habitos.',

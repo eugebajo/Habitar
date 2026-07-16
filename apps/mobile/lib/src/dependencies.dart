@@ -49,7 +49,13 @@ final sessionServiceProvider = Provider<SessionService>((ref) {
 });
 
 final profileServiceProvider = Provider<ProfileService>((ref) {
-  return ProfileService(ref.watch(profileRepositoryProvider));
+  return ProfileService(
+    repository: ref.watch(profileRepositoryProvider),
+    routineRepository: ref.watch(routineRepositoryProvider),
+    sessionRepository: ref.watch(routineSessionRepositoryProvider),
+    habitRepository: ref.watch(habitRepositoryProvider),
+    progressRepository: ref.watch(habitProgressRepositoryProvider),
+  );
 });
 
 final currentFamilyIdProvider = StateProvider<String?>((ref) => null);

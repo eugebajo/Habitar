@@ -8,6 +8,7 @@ import 'features/habit_setup/habit_setup_screen.dart';
 import 'features/login/login_screen.dart';
 import 'features/notification_settings/notification_settings_screen.dart';
 import 'features/onboarding/onboarding_screen.dart';
+import 'features/profiles/profiles_screen.dart';
 import 'features/profile_setup/profile_setup_screen.dart';
 import 'features/routine_player/routine_player_screen.dart';
 import 'features/routine_setup/routine_setup_screen.dart';
@@ -30,6 +31,8 @@ final appRouter = GoRouter(
     GoRoute(
         path: '/profile',
         builder: (context, state) => const ProfileSetupScreen()),
+    GoRoute(
+        path: '/profiles', builder: (context, state) => const ProfilesScreen()),
     GoRoute(
         path: '/dashboard',
         builder: (context, state) => const FamilyDashboardScreen()),
