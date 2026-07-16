@@ -32,6 +32,7 @@ Implementado:
 - Persistencia local inicial con `FileLocalStore` y repositorios locales para entidades centrales.
 - Conexion del store local al arranque de la app en plataformas con sistema de archivos.
 - Persistencia local ampliada para notificaciones, bienestar, cuentos y wearables.
+- Recuperacion local de familia, perfil y sesion activa al abrir la app.
 
 Simulado/preparado:
 

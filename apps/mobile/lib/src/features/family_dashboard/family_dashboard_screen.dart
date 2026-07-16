@@ -1,12 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:habitar_design_system/design_system.dart';
 
-class FamilyDashboardScreen extends StatelessWidget {
+import '../../dependencies.dart';
+
+class FamilyDashboardScreen extends ConsumerWidget {
   const FamilyDashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final hasLocalStore = ref.watch(localStoreProvider) != null;
+    final profileId = ref.watch(currentProfileIdProvider);
+    final activeSessionId = ref.watch(currentRoutineSessionIdProvider);
+
     return Scaffold(
       appBar: AppBar(title: const Text('Panel semanal')),
       body: SafeArea(
@@ -16,6 +23,11 @@ class FamilyDashboardScreen extends StatelessWidget {
             Text('Acompanamiento de la semana',
                 style: Theme.of(context).textTheme.headlineSmall),
             const SizedBox(height: HabitarSpacing.md),
+            _LocalStorageCard(
+              hasLocalStore: hasLocalStore,
+              profileId: profileId,
+              activeSessionId: activeSessionId,
+            ),
             const _StatusCard(
               title: 'Habitos nuevos',
               body:
@@ -80,6 +92,46 @@ class FamilyDashboardScreen extends StatelessWidget {
               onPressed: () => context.go('/wearables'),
               child: const Text('Preparar wearables'),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LocalStorageCard extends StatelessWidget {
+  const _LocalStorageCard({
+    required this.hasLocalStore,
+    required this.profileId,
+    required this.activeSessionId,
+  });
+
+  final bool hasLocalStore;
+  final String? profileId;
+  final String? activeSessionId;
+
+  @override
+  Widget build(BuildContext context) {
+    final title =
+        hasLocalStore ? 'Guardado en este dispositivo' : 'Modo temporal';
+    final body = hasLocalStore
+        ? 'Perfil recuperado localmente${activeSessionId == null ? '.' : ' con una rutina activa.'}'
+        : 'Este entorno usa datos en memoria para preview o pruebas.';
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: HabitarSpacing.md),
+      child: Padding(
+        padding: const EdgeInsets.all(HabitarSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: HabitarSpacing.sm),
+            Text(body),
+            if (profileId != null) ...[
+              const SizedBox(height: HabitarSpacing.sm),
+              Text('Perfil activo: $profileId'),
+            ],
           ],
         ),
       ),

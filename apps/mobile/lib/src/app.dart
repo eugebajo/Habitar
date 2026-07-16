@@ -9,13 +9,15 @@ import 'features/notification_settings/notification_settings_screen.dart';
 import 'features/profile_setup/profile_setup_screen.dart';
 import 'features/routine_player/routine_player_screen.dart';
 import 'features/routine_setup/routine_setup_screen.dart';
+import 'features/startup/startup_screen.dart';
 import 'features/story_library/story_library_screen.dart';
 import 'features/wearables/wearables_screen.dart';
 import 'features/wellbeing_checkin/wellbeing_checkin_screen.dart';
 
 final appRouter = GoRouter(
-  initialLocation: '/register',
+  initialLocation: '/',
   routes: [
+    GoRoute(path: '/', builder: (context, state) => const StartupScreen()),
     GoRoute(
         path: '/register',
         builder: (context, state) => const AdultRegistrationScreen()),

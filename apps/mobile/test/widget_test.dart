@@ -1,10 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:habitar_mobile/src/app.dart';
 
 void main() {
   testWidgets('shows adult registration as the first screen', (tester) async {
-    await tester.pumpWidget(const HabitarMobileApp());
+    await tester.pumpWidget(const ProviderScope(child: HabitarMobileApp()));
     await tester.pumpAndSettle();
 
     expect(find.text('Registro del adulto'), findsOneWidget);

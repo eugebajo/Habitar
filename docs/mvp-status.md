@@ -15,6 +15,7 @@
 - Persistencia local inicial con store JSON durable para entidades centrales.
 - Conexion de persistencia local durable al arranque de la app en plataformas moviles/escritorio.
 - Persistencia local de notificaciones, bienestar, cuentos y snapshots wearable.
+- Recuperacion local de familia, perfil y sesion activa al abrir la app.
 - Supabase schema inicial con Row Level Security.
 - App Flutter con Android, iOS y web preview.
 - Tests unitarios centrales.
