@@ -36,13 +36,14 @@ Implementado:
 - Cola de sincronizacion local-remota persistente.
 - Adaptador de Auth Supabase preparado por gateway.
 - Plan verificable de migracion JSON a Drift/SQLite.
+- Supabase Auth real integrado en Flutter con `supabase_flutter` y fallback local.
 
 Simulado/preparado:
 
 - Persistencia local: store JSON durable conectado en plataformas `dart:io` para datos centrales y modulos de acompanamiento; Drift/SQLite queda como destino final.
 - Persistencia de rutina: funciona en memoria y esta preparada para Drift/Supabase.
-- Supabase: configuracion, migracion y adaptador inicial preparados; requiere variables de entorno reales.
-- Supabase Auth: repositorio preparado por gateway; falta integrar `supabase_flutter`.
+- Supabase: configuracion, migracion y Auth inicial preparados; requiere variables de entorno reales.
+- Supabase Auth: `supabase_flutter` integrado; falta login/logout y lectura/escritura remota de familias/perfiles.
 - Auditoria de excepciones de habitos: regla de producto implementada, escritura real en `audit_logs` pendiente.
 - Notificaciones nativas: planificador implementado, integracion `flutter_local_notifications` pendiente.
 - Audio de cuentos: marcado como pendiente.
@@ -94,6 +95,6 @@ dart test
 Copiar `.env.example` a `.env` y completar:
 
 - `SUPABASE_URL`
-- `SUPABASE_ANON_KEY`
+- `SUPABASE_ANON_KEY` con la publishable key publica de Supabase
 
 No se deben versionar secretos reales.

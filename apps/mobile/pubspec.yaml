@@ -32,6 +32,7 @@ dependencies:
   habitar_wearable_bridge:
     path: ../../packages/wearable_bridge
   path_provider: ^2.1.5
+  supabase_flutter: ^2.16.0
 
 dev_dependencies:
   flutter_test:

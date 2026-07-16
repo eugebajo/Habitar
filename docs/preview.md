@@ -1,11 +1,9 @@
 # Como ver la app
 
-Este entorno no tiene `flutter` ni `dart` disponibles en PATH, por eso Codex no puede abrir la app aqui.
-
 En una maquina con Flutter instalado:
 
 ```powershell
-cd C:\Users\eugen\OneDrive\Documentos\Habitar\apps\mobile
+cd C:\Users\eugen\Documents\Habitar\apps\mobile
 flutter pub get
 flutter run
 ```
@@ -13,8 +11,16 @@ flutter run
 Mientras no tengas Android Studio/Android SDK instalado, podes verlo en Chrome:
 
 ```powershell
-cd C:\Users\eugen\OneDrive\Documentos\Habitar\apps\mobile
+cd C:\Users\eugen\Documents\Habitar\apps\mobile
 flutter run -d chrome
+```
+
+Con Supabase Auth real:
+
+```powershell
+flutter run `
+  --dart-define=SUPABASE_URL=https://frmgwpbstezqjwbcshbw.supabase.co `
+  --dart-define=SUPABASE_ANON_KEY=sb_publishable_REEMPLAZAR
 ```
 
 Para verlo como app Android, primero instala Android Studio y acepta los componentes del Android SDK. Despues:

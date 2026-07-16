@@ -32,8 +32,10 @@ dart test
 Ejemplo:
 
 ```powershell
-flutter run --dart-define=SUPABASE_URL=https://your-project.supabase.co --dart-define=SUPABASE_ANON_KEY=your-anon-key
+flutter run --dart-define=SUPABASE_URL=https://your-project.supabase.co --dart-define=SUPABASE_ANON_KEY=your-publishable-key
 ```
+
+En Supabase nuevo, `SUPABASE_ANON_KEY` puede ser la key publica que empieza con `sb_publishable_`.
 
 ## iOS y Android
 

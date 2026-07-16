@@ -3,17 +3,24 @@ import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:habitar_data/data.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'dependencies.dart';
+import 'platform/supabase_flutter_auth_gateway.dart';
 
 Future<List<Override>> buildProductionOverrides() async {
   final directory = await getApplicationSupportDirectory();
   final store = FileLocalStore(
       File('${directory.path}${Platform.pathSeparator}habitar_store.json'));
+  final supabaseConfig = SupabaseConfig.maybeFromEnvironment();
+
+  final authRepository = supabaseConfig == null
+      ? LocalAuthRepository(store)
+      : await _buildSupabaseAuthRepository(supabaseConfig);
 
   return [
     localStoreProvider.overrideWithValue(store),
-    authRepositoryProvider.overrideWithValue(LocalAuthRepository(store)),
+    authRepositoryProvider.overrideWithValue(authRepository),
     familyRepositoryProvider.overrideWithValue(LocalFamilyRepository(store)),
     profileRepositoryProvider.overrideWithValue(LocalProfileRepository(store)),
     routineRepositoryProvider.overrideWithValue(LocalRoutineRepository(store)),
@@ -35,4 +42,11 @@ Future<List<Override>> buildProductionOverrides() async {
     syncQueueRepositoryProvider
         .overrideWithValue(LocalSyncQueueRepository(store)),
   ];
+}
+
+Future<SupabaseAuthRepository> _buildSupabaseAuthRepository(
+    SupabaseConfig config) async {
+  await Supabase.initialize(url: config.url, publishableKey: config.anonKey);
+  return SupabaseAuthRepository(
+      FlutterSupabaseAuthGateway(Supabase.instance.client));
 }
