@@ -3,7 +3,11 @@ import 'package:habitar_domain/domain.dart';
 import 'repositories.dart';
 
 class AdultRegistrationInput {
-  const AdultRegistrationInput({required this.displayName, required this.email, required this.password, required this.familyName});
+  const AdultRegistrationInput(
+      {required this.displayName,
+      required this.email,
+      required this.password,
+      required this.familyName});
 
   final String displayName;
   final String email;
@@ -19,7 +23,8 @@ class AdultRegistrationResult {
 }
 
 class AdultRegistrationService {
-  const AdultRegistrationService({required this.authRepository, required this.familyRepository});
+  const AdultRegistrationService(
+      {required this.authRepository, required this.familyRepository});
 
   final AuthRepository authRepository;
   final FamilyRepository familyRepository;
@@ -30,7 +35,8 @@ class AdultRegistrationService {
       email: input.email,
       password: input.password,
     );
-    final family = await familyRepository.createFamily(ownerUserId: user.metadata.id, name: input.familyName);
+    final family = await familyRepository.createFamily(
+        ownerUserId: user.metadata.id, name: input.familyName);
     return AdultRegistrationResult(user: user, family: family);
   }
 }

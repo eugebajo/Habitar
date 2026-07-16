@@ -20,7 +20,8 @@ class CreateHabitInput {
 }
 
 class CreateHabitResult {
-  const CreateHabitResult({required this.habit, required this.plan, required this.wasActivated});
+  const CreateHabitResult(
+      {required this.habit, required this.plan, required this.wasActivated});
 
   final Habit habit;
   final HabitActivationPlan plan;
@@ -46,7 +47,8 @@ class HabitService {
       minimumVersion: input.minimumVersion,
       status: HabitStatus.newHabit,
     );
-    final plan = engine.evaluateActivation(habit: draft, profileKind: input.profileKind, activeHabits: existing);
+    final plan = engine.evaluateActivation(
+        habit: draft, profileKind: input.profileKind, activeHabits: existing);
     if (!plan.decision.isAllowed && !input.confirmedOverride) {
       final paused = Habit(
         metadata: draft.metadata,
@@ -65,7 +67,11 @@ class HabitService {
     return habitRepository.habitsForProfile(profileId);
   }
 
-  Future<void> recordMinimumVersion({required String habitId, required bool completed, required int helpLevel, required int ease}) {
+  Future<void> recordMinimumVersion(
+      {required String habitId,
+      required bool completed,
+      required int helpLevel,
+      required int ease}) {
     return progressRepository.record(
       HabitProgressEntry(
         habitId: habitId,
@@ -81,8 +87,10 @@ class HabitService {
     final habits = await habitRepository.habitsForProfile(profileId);
     final summaries = <WeeklyHabitSummary>[];
     for (final habit in habits) {
-      final entries = await progressRepository.entriesForHabit(habit.metadata.id);
-      summaries.add(engine.summarizeWeek(habitId: habit.metadata.id, entries: entries));
+      final entries =
+          await progressRepository.entriesForHabit(habit.metadata.id);
+      summaries.add(
+          engine.summarizeWeek(habitId: habit.metadata.id, entries: entries));
     }
     return summaries;
   }

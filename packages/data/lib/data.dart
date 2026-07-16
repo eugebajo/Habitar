@@ -3,4 +3,6 @@ export 'src/file_local_store_stub.dart'
 export 'src/in_memory_repositories.dart';
 export 'src/local_repositories.dart';
 export 'src/local_store.dart';
+export 'src/persistence_migration.dart';
 export 'src/supabase_config.dart';
+export 'src/supabase_auth_repository.dart';

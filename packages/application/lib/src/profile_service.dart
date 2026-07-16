@@ -23,8 +23,14 @@ class ProfileService {
 
   Future<AppEntity> createProfile(CreateProfileInput input) {
     if (input.kind == ProfileKind.child) {
-      return repository.createChildProfile(familyId: input.familyId, displayName: input.displayName, age: input.age);
+      return repository.createChildProfile(
+          familyId: input.familyId,
+          displayName: input.displayName,
+          age: input.age);
     }
-    return repository.createTeenProfile(familyId: input.familyId, displayName: input.displayName, age: input.age);
+    return repository.createTeenProfile(
+        familyId: input.familyId,
+        displayName: input.displayName,
+        age: input.age);
   }
 }

@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:habitar_application/application.dart';
 import 'package:habitar_data/data.dart';
 import 'package:habitar_domain/domain.dart';
 import 'package:habitar_habit_engine/habit_engine.dart';
@@ -177,5 +178,30 @@ void main() {
     expect(supportRequests.single.kind, 'pausa');
     expect(storyProgress.single.isFavorite, isTrue);
     expect(wearableStatus, WearableConnectionStatus.syncing);
+  });
+
+  test('persists sync queue state transitions', () async {
+    final directory =
+        await Directory.systemTemp.createTemp('habitar_local_store_test_');
+    addTearDown(() => directory.delete(recursive: true));
+    final repository = LocalSyncQueueRepository(
+        FileLocalStore(File('${directory.path}/habitar.json')));
+
+    final item = await repository.enqueue(
+      collection: LocalStoreCollections.routines,
+      entityId: 'routine-1',
+      operation: SyncOperation.create,
+      payload: {'title': 'Manana'},
+    );
+
+    expect((await repository.pending()).single.id, item.id);
+
+    await repository.markFailed(item.id, 'network');
+    final failed = (await repository.pending()).single;
+    expect(failed.status, SyncQueueStatus.failed);
+    expect(failed.lastError, 'network');
+
+    await repository.markPushed(item.id);
+    expect(await repository.pending(), isEmpty);
   });
 }

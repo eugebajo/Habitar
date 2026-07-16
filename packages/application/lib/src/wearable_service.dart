@@ -22,13 +22,15 @@ class WearableService {
     return gateway.status(platform);
   }
 
-  Future<WearableRoutineSnapshot> publishRoutineSession(WearablePlatform platform, RoutineSession session) async {
+  Future<WearableRoutineSnapshot> publishRoutineSession(
+      WearablePlatform platform, RoutineSession session) async {
     final snapshot = mapper.fromRoutineSession(session);
     await gateway.publishSnapshot(platform, snapshot);
     return snapshot;
   }
 
-  Future<List<WearableCommand>> pendingCommands(WearablePlatform platform, String sessionId) {
+  Future<List<WearableCommand>> pendingCommands(
+      WearablePlatform platform, String sessionId) {
     return gateway.pendingCommands(platform, sessionId);
   }
 }

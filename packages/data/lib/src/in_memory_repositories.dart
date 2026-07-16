@@ -340,3 +340,74 @@ class InMemoryWearableGatewayRepository implements WearableGatewayRepository {
     return _statuses[platform] ?? WearableConnectionStatus.unavailable;
   }
 }
+
+class InMemorySyncQueueRepository implements SyncQueueRepository {
+  final Map<String, SyncQueueItem> _items = {};
+
+  @override
+  Future<SyncQueueItem> enqueue({
+    required String collection,
+    required String entityId,
+    required SyncOperation operation,
+    required Map<String, Object?> payload,
+  }) async {
+    final item = SyncQueueItem(
+      id: _uuid.v4(),
+      collection: collection,
+      entityId: entityId,
+      operation: operation,
+      payload: payload,
+      createdAt: DateTime.now(),
+      status: SyncQueueStatus.pending,
+    );
+    _items[item.id] = item;
+    return item;
+  }
+
+  @override
+  Future<void> markFailed(String itemId, String error) async {
+    final item = _items[itemId];
+    if (item == null) {
+      return;
+    }
+    _items[itemId] = SyncQueueItem(
+      id: item.id,
+      collection: item.collection,
+      entityId: item.entityId,
+      operation: item.operation,
+      payload: item.payload,
+      createdAt: item.createdAt,
+      status: SyncQueueStatus.failed,
+      lastError: error,
+    );
+  }
+
+  @override
+  Future<void> markPushed(String itemId) async {
+    final item = _items[itemId];
+    if (item == null) {
+      return;
+    }
+    _items[itemId] = SyncQueueItem(
+      id: item.id,
+      collection: item.collection,
+      entityId: item.entityId,
+      operation: item.operation,
+      payload: item.payload,
+      createdAt: item.createdAt,
+      status: SyncQueueStatus.pushed,
+      lastError: item.lastError,
+    );
+  }
+
+  @override
+  Future<List<SyncQueueItem>> pending() async {
+    final items = _items.values
+        .where((item) =>
+            item.status == SyncQueueStatus.pending ||
+            item.status == SyncQueueStatus.failed)
+        .toList();
+    items.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    return items;
+  }
+}

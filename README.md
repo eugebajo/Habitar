@@ -33,12 +33,16 @@ Implementado:
 - Conexion del store local al arranque de la app en plataformas con sistema de archivos.
 - Persistencia local ampliada para notificaciones, bienestar, cuentos y wearables.
 - Recuperacion local de familia, perfil y sesion activa al abrir la app.
+- Cola de sincronizacion local-remota persistente.
+- Adaptador de Auth Supabase preparado por gateway.
+- Plan verificable de migracion JSON a Drift/SQLite.
 
 Simulado/preparado:
 
 - Persistencia local: store JSON durable conectado en plataformas `dart:io` para datos centrales y modulos de acompanamiento; Drift/SQLite queda como destino final.
 - Persistencia de rutina: funciona en memoria y esta preparada para Drift/Supabase.
 - Supabase: configuracion, migracion y adaptador inicial preparados; requiere variables de entorno reales.
+- Supabase Auth: repositorio preparado por gateway; falta integrar `supabase_flutter`.
 - Auditoria de excepciones de habitos: regla de producto implementada, escritura real en `audit_logs` pendiente.
 - Notificaciones nativas: planificador implementado, integracion `flutter_local_notifications` pendiente.
 - Audio de cuentos: marcado como pendiente.

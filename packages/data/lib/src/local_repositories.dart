@@ -424,6 +424,96 @@ class LocalWearableGatewayRepository implements WearableGatewayRepository {
   }
 }
 
+class LocalSyncQueueRepository implements SyncQueueRepository {
+  LocalSyncQueueRepository(this.store);
+
+  final LocalStore store;
+
+  @override
+  Future<SyncQueueItem> enqueue({
+    required String collection,
+    required String entityId,
+    required SyncOperation operation,
+    required Map<String, Object?> payload,
+  }) async {
+    final item = SyncQueueItem(
+      id: _uuid.v4(),
+      collection: collection,
+      entityId: entityId,
+      operation: operation,
+      payload: payload,
+      createdAt: DateTime.now(),
+      status: SyncQueueStatus.pending,
+    );
+    await store.put(
+        LocalStoreCollections.syncQueue, item.id, _syncQueueItemToJson(item));
+    return item;
+  }
+
+  @override
+  Future<void> markFailed(String itemId, String error) async {
+    final record = await store.get(LocalStoreCollections.syncQueue, itemId);
+    if (record == null) {
+      return;
+    }
+    final item = _syncQueueItemFromJson(record);
+    await store.put(
+      LocalStoreCollections.syncQueue,
+      itemId,
+      _syncQueueItemToJson(
+        SyncQueueItem(
+          id: item.id,
+          collection: item.collection,
+          entityId: item.entityId,
+          operation: item.operation,
+          payload: item.payload,
+          createdAt: item.createdAt,
+          status: SyncQueueStatus.failed,
+          lastError: error,
+        ),
+      ),
+    );
+  }
+
+  @override
+  Future<void> markPushed(String itemId) async {
+    final record = await store.get(LocalStoreCollections.syncQueue, itemId);
+    if (record == null) {
+      return;
+    }
+    final item = _syncQueueItemFromJson(record);
+    await store.put(
+      LocalStoreCollections.syncQueue,
+      itemId,
+      _syncQueueItemToJson(
+        SyncQueueItem(
+          id: item.id,
+          collection: item.collection,
+          entityId: item.entityId,
+          operation: item.operation,
+          payload: item.payload,
+          createdAt: item.createdAt,
+          status: SyncQueueStatus.pushed,
+          lastError: item.lastError,
+        ),
+      ),
+    );
+  }
+
+  @override
+  Future<List<SyncQueueItem>> pending() async {
+    final records = await store.list(LocalStoreCollections.syncQueue);
+    final items = records
+        .map(_syncQueueItemFromJson)
+        .where((item) =>
+            item.status == SyncQueueStatus.pending ||
+            item.status == SyncQueueStatus.failed)
+        .toList();
+    items.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    return items;
+  }
+}
+
 Map<String, Object?> _metadataToJson(EntityMetadata metadata) {
   return {
     'id': metadata.id,
@@ -711,6 +801,29 @@ WearableCommand _wearableCommandFromJson(Map<String, Object?> json) =>
       createdAt: DateTime.parse(json['created_at'] as String),
       minutes: json['minutes'] as int?,
       reason: json['reason'] as String?,
+    );
+
+Map<String, Object?> _syncQueueItemToJson(SyncQueueItem item) => {
+      'id': item.id,
+      'collection': item.collection,
+      'entity_id': item.entityId,
+      'operation': item.operation.name,
+      'payload': item.payload,
+      'created_at': item.createdAt.toIso8601String(),
+      'status': item.status.name,
+      'last_error': item.lastError,
+    };
+
+SyncQueueItem _syncQueueItemFromJson(Map<String, Object?> json) =>
+    SyncQueueItem(
+      id: json['id'] as String,
+      collection: json['collection'] as String,
+      entityId: json['entity_id'] as String,
+      operation: _byName(SyncOperation.values, json['operation'] as String),
+      payload: _object(json['payload']),
+      createdAt: DateTime.parse(json['created_at'] as String),
+      status: _byName(SyncQueueStatus.values, json['status'] as String),
+      lastError: json['last_error'] as String?,
     );
 
 Map<String, Object?> _object(Object? value) =>

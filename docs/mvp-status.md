@@ -16,13 +16,16 @@
 - Conexion de persistencia local durable al arranque de la app en plataformas moviles/escritorio.
 - Persistencia local de notificaciones, bienestar, cuentos y snapshots wearable.
 - Recuperacion local de familia, perfil y sesion activa al abrir la app.
+- Cola de sincronizacion local-remota persistente.
+- Adaptador de Auth Supabase preparado por gateway.
+- Plan verificable de migracion JSON a Drift/SQLite.
 - Supabase schema inicial con Row Level Security.
 - App Flutter con Android, iOS y web preview.
 - Tests unitarios centrales.
 
 ## Simulado
 
-- Auth real.
+- Gateway concreto de Auth real con `supabase_flutter`.
 - Persistencia offline final con Drift.
 - Sincronizacion real con Supabase.
 - Notificaciones nativas.
@@ -33,6 +36,7 @@
 ## Pendiente antes de beta
 
 - Conectar Supabase Auth.
+- Implementar worker de sincronizacion Supabase.
 - Implementar Drift como persistencia final antes de beta.
 - Conectar sincronizacion local-remota.
 - Integrar `flutter_local_notifications`.

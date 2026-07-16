@@ -32,5 +32,7 @@ Future<List<Override>> buildProductionOverrides() async {
         .overrideWithValue(LocalStoryProgressRepository(store)),
     wearableGatewayRepositoryProvider
         .overrideWithValue(LocalWearableGatewayRepository(store)),
+    syncQueueRepositoryProvider
+        .overrideWithValue(LocalSyncQueueRepository(store)),
   ];
 }

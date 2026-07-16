@@ -33,6 +33,8 @@ final storyProgressRepositoryProvider = Provider<StoryProgressRepository>(
     (ref) => InMemoryStoryProgressRepository());
 final wearableGatewayRepositoryProvider = Provider<WearableGatewayRepository>(
     (ref) => InMemoryWearableGatewayRepository());
+final syncQueueRepositoryProvider =
+    Provider<SyncQueueRepository>((ref) => InMemorySyncQueueRepository());
 
 final adultRegistrationServiceProvider =
     Provider<AdultRegistrationService>((ref) {
@@ -82,6 +84,10 @@ final wellbeingServiceProvider = Provider<WellbeingService>((ref) {
 
 final wearableServiceProvider = Provider<WearableService>((ref) {
   return WearableService(gateway: ref.watch(wearableGatewayRepositoryProvider));
+});
+
+final syncServiceProvider = Provider<SyncService>((ref) {
+  return SyncService(ref.watch(syncQueueRepositoryProvider));
 });
 
 final selectedWearablePlatformProvider =

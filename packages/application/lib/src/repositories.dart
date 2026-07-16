@@ -4,8 +4,37 @@ import 'package:habitar_notifications/notifications.dart';
 import 'package:habitar_routine_engine/routine_engine.dart';
 import 'package:habitar_wearable_bridge/wearable_bridge.dart';
 
+enum SyncOperation { create, update, delete }
+
+enum SyncQueueStatus { pending, pushed, failed }
+
+class SyncQueueItem {
+  const SyncQueueItem({
+    required this.id,
+    required this.collection,
+    required this.entityId,
+    required this.operation,
+    required this.payload,
+    required this.createdAt,
+    required this.status,
+    this.lastError,
+  });
+
+  final String id;
+  final String collection;
+  final String entityId;
+  final SyncOperation operation;
+  final Map<String, Object?> payload;
+  final DateTime createdAt;
+  final SyncQueueStatus status;
+  final String? lastError;
+}
+
 abstract interface class AuthRepository {
-  Future<User> registerAdult({required String displayName, required String email, required String password});
+  Future<User> registerAdult(
+      {required String displayName,
+      required String email,
+      required String password});
 
   Future<User?> currentUser();
 }
@@ -15,19 +44,29 @@ abstract interface class ProfileRepository {
 
   Future<List<TeenProfile>> teenProfiles(String familyId);
 
-  Future<ChildProfile> createChildProfile({required String familyId, required String displayName, required int age});
+  Future<ChildProfile> createChildProfile(
+      {required String familyId,
+      required String displayName,
+      required int age});
 
-  Future<TeenProfile> createTeenProfile({required String familyId, required String displayName, required int age});
+  Future<TeenProfile> createTeenProfile(
+      {required String familyId,
+      required String displayName,
+      required int age});
 }
 
 abstract interface class FamilyRepository {
-  Future<Family> createFamily({required String ownerUserId, required String name});
+  Future<Family> createFamily(
+      {required String ownerUserId, required String name});
 
   Future<Family?> currentFamily(String ownerUserId);
 }
 
 abstract interface class RoutineRepository {
-  Future<Routine> createRoutine({required String profileId, required String title, required List<String> stepTitles});
+  Future<Routine> createRoutine(
+      {required String profileId,
+      required String title,
+      required List<String> stepTitles});
 
   Future<List<RoutineStep>> stepsForRoutine(String routineId);
 
@@ -88,7 +127,24 @@ abstract interface class StoryProgressRepository {
 abstract interface class WearableGatewayRepository {
   Future<WearableConnectionStatus> status(WearablePlatform platform);
 
-  Future<void> publishSnapshot(WearablePlatform platform, WearableRoutineSnapshot snapshot);
+  Future<void> publishSnapshot(
+      WearablePlatform platform, WearableRoutineSnapshot snapshot);
 
-  Future<List<WearableCommand>> pendingCommands(WearablePlatform platform, String sessionId);
+  Future<List<WearableCommand>> pendingCommands(
+      WearablePlatform platform, String sessionId);
+}
+
+abstract interface class SyncQueueRepository {
+  Future<SyncQueueItem> enqueue({
+    required String collection,
+    required String entityId,
+    required SyncOperation operation,
+    required Map<String, Object?> payload,
+  });
+
+  Future<List<SyncQueueItem>> pending();
+
+  Future<void> markPushed(String itemId);
+
+  Future<void> markFailed(String itemId, String error);
 }

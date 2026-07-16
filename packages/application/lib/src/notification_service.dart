@@ -36,7 +36,9 @@ class NotificationService {
   }) async {
     final consent = await preferenceRepository.consentForProfile(profileId);
     if (consent == null) {
-      return const ReminderPlan(requests: [], blockedReason: 'Primero configura permisos de recordatorios.');
+      return const ReminderPlan(
+          requests: [],
+          blockedReason: 'Primero configura permisos de recordatorios.');
     }
 
     final plan = planner.planRoutineStart(

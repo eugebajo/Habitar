@@ -3,7 +3,8 @@ import 'package:habitar_routine_engine/routine_engine.dart';
 import 'repositories.dart';
 
 class CreateRoutineInput {
-  const CreateRoutineInput({required this.profileId, required this.title, required this.stepTitles});
+  const CreateRoutineInput(
+      {required this.profileId, required this.title, required this.stepTitles});
 
   final String profileId;
   final String title;
@@ -48,13 +49,16 @@ class RoutineService {
     return updated;
   }
 
-  Future<RoutineSession> requestMoreTime(RoutineSession session, {int minutes = 5}) async {
-    final updated = engine.requestMoreTime(session, minutes: minutes, now: DateTime.now());
+  Future<RoutineSession> requestMoreTime(RoutineSession session,
+      {int minutes = 5}) async {
+    final updated =
+        engine.requestMoreTime(session, minutes: minutes, now: DateTime.now());
     await sessionRepository.save(updated);
     return updated;
   }
 
-  Future<RoutineSession> pause(RoutineSession session, RoutinePauseReason reason) async {
+  Future<RoutineSession> pause(
+      RoutineSession session, RoutinePauseReason reason) async {
     final updated = engine.pause(session, reason: reason, now: DateTime.now());
     await sessionRepository.save(updated);
     return updated;
@@ -66,8 +70,10 @@ class RoutineService {
     return updated;
   }
 
-  Future<RoutineSession> postpone(RoutineSession session, Duration duration) async {
-    final updated = engine.postpone(session, duration: duration, now: DateTime.now());
+  Future<RoutineSession> postpone(
+      RoutineSession session, Duration duration) async {
+    final updated =
+        engine.postpone(session, duration: duration, now: DateTime.now());
     await sessionRepository.save(updated);
     return updated;
   }
