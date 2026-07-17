@@ -2,131 +2,107 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:habitar_design_system/design_system.dart';
 
-class OnboardingScreen extends StatelessWidget {
+class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
-    return Scaffold(
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(HabitarSpacing.lg),
-          children: [
-            const SizedBox(height: HabitarSpacing.lg),
-            Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 720),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Habitar', style: textTheme.displaySmall),
-                    const SizedBox(height: HabitarSpacing.sm),
-                    Text(
-                      'Rutinas, habitos y acompanamiento familiar en un lugar calmo.',
-                      style: textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: HabitarSpacing.lg),
-                    const _WarmPanel(),
-                    const SizedBox(height: HabitarSpacing.lg),
-                    FilledButton(
-                      onPressed: () => context.go('/register'),
-                      child: const Text('Crear acompanamiento'),
-                    ),
-                    const SizedBox(height: HabitarSpacing.sm),
-                    OutlinedButton(
-                      onPressed: () => context.go('/login'),
-                      child: const Text('Ya tengo cuenta'),
-                    ),
-                    const SizedBox(height: HabitarSpacing.lg),
-                    Text(
-                      'Puedes empezar en este dispositivo y luego conectar sincronizacion familiar cuando este lista.',
-                      style: textTheme.bodyMedium,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  State<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _WarmPanel extends StatelessWidget {
-  const _WarmPanel();
+class _OnboardingScreenState extends State<OnboardingScreen> {
+  var _step = 0;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: HabitarColors.sunlit,
-        borderRadius: BorderRadius.circular(16),
+    final moments = [
+      _OnboardingMoment(
+        title: 'Bienvenida a Habitar.',
+        body:
+            'Un lugar para acompanar a tu familia con calma, claridad y pequenos pasos posibles.',
+        action: 'Comenzar',
       ),
-      padding: const EdgeInsets.all(HabitarSpacing.lg),
-      child: const Column(
+      _OnboardingMoment(
+        title: 'No estas llegando tarde.',
+        body:
+            'Hay dias intensos. Habitar ayuda a preparar lo importante sin juzgar lo que no salio.',
+        action: 'Respirar y seguir',
+      ),
+      _OnboardingMoment(
+        title: 'Primero cuidamos el vinculo.',
+        body:
+            'Rutinas, habitos, emociones y escuela se organizan alrededor de una pregunta simple: que necesita hoy?',
+        action: 'Crear mi espacio',
+      ),
+    ];
+    final moment = moments[_step];
+
+    return Scaffold(
+      body: HabitarPage(
+        maxWidth: 1060,
         children: [
-          _OnboardingRow(
-            title: 'Mananas mas previsibles',
-            body: 'Arma rutinas breves con pasos claros para cada perfil.',
-            color: HabitarColors.calmGreen,
-          ),
-          SizedBox(height: HabitarSpacing.md),
-          _OnboardingRow(
-            title: 'Menos carga mental',
-            body:
-                'Guarda preferencias, recordatorios y acompanamiento semanal.',
-            color: HabitarColors.softBlue,
-          ),
-          SizedBox(height: HabitarSpacing.md),
-          _OnboardingRow(
-            title: 'Apoyos a tiempo',
-            body: 'Registra emociones, pausas y pequenas acciones de cuidado.',
-            color: HabitarColors.supportRose,
+          AnimatedSwitcher(
+            duration: HabitarMotion.gentle,
+            child: HabitarStage(
+              key: ValueKey(_step),
+              eyebrow: 'Habitar',
+              title: moment.title,
+              body: moment.body,
+              primaryLabel: moment.action,
+              onPrimary: _next,
+              secondaryLabel: 'Ya tengo mi espacio',
+              onSecondary: () => context.go('/login'),
+              footer: _StepDots(current: _step, total: moments.length),
+            ),
           ),
         ],
       ),
     );
   }
+
+  void _next() {
+    if (_step < 2) {
+      setState(() => _step += 1);
+      return;
+    }
+    context.go('/register');
+  }
 }
 
-class _OnboardingRow extends StatelessWidget {
-  const _OnboardingRow({
+class _OnboardingMoment {
+  const _OnboardingMoment({
     required this.title,
     required this.body,
-    required this.color,
+    required this.action,
   });
 
   final String title;
   final String body;
-  final Color color;
+  final String action;
+}
+
+class _StepDots extends StatelessWidget {
+  const _StepDots({required this.current, required this.total});
+
+  final int current;
+  final int total;
 
   @override
   Widget build(BuildContext context) {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: 14,
-          height: 48,
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(7),
+        for (var index = 0; index < total; index += 1)
+          AnimatedContainer(
+            duration: HabitarMotion.gentle,
+            width: index == current ? 30 : 8,
+            height: 8,
+            margin: const EdgeInsets.only(right: HabitarSpacing.xs),
+            decoration: BoxDecoration(
+              color: index == current
+                  ? HabitarColors.deepGreen
+                  : HabitarColors.deepGreen.withValues(alpha: 0.16),
+              borderRadius: BorderRadius.circular(HabitarRadius.pill),
+            ),
           ),
-        ),
-        const SizedBox(width: HabitarSpacing.md),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: HabitarSpacing.xs),
-              Text(body),
-            ],
-          ),
-        ),
       ],
     );
   }

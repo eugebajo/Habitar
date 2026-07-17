@@ -32,65 +32,67 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Entrar')),
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 520),
-            child: Padding(
-              padding: const EdgeInsets.all(HabitarSpacing.lg),
-              child: Form(
-                key: _formKey,
-                child: ListView(
-                  shrinkWrap: true,
-                  children: [
-                    Text('Volver a Habitar', style: textTheme.headlineSmall),
-                    const SizedBox(height: HabitarSpacing.sm),
-                    Text(
-                      'Usa la cuenta del adulto para recuperar la sesion en este dispositivo.',
-                      style: textTheme.bodyLarge,
-                    ),
-                    const SizedBox(height: HabitarSpacing.lg),
-                    TextFormField(
-                      controller: _emailController,
-                      decoration: const InputDecoration(labelText: 'Email'),
-                      keyboardType: TextInputType.emailAddress,
-                      validator: _required,
-                    ),
-                    const SizedBox(height: HabitarSpacing.md),
-                    TextFormField(
-                      controller: _passwordController,
-                      decoration:
-                          const InputDecoration(labelText: 'Contrasena'),
-                      obscureText: true,
-                      validator: _required,
-                    ),
-                    if (_error != null) ...[
-                      const SizedBox(height: HabitarSpacing.md),
-                      Text(
-                        _error!,
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.error,
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: HabitarSpacing.lg),
-                    FilledButton(
-                      onPressed: _isSubmitting ? null : _submit,
-                      child: Text(_isSubmitting ? 'Entrando...' : 'Entrar'),
-                    ),
-                    const SizedBox(height: HabitarSpacing.sm),
-                    TextButton(
-                      onPressed:
-                          _isSubmitting ? null : () => context.go('/register'),
-                      child: const Text('Crear una cuenta nueva'),
-                    ),
-                  ],
+      body: HabitarPage(
+        maxWidth: 560,
+        children: [
+          const SizedBox(height: HabitarSpacing.xl),
+          HabitarMoment(
+            title: 'Volvamos a tu espacio.',
+            body:
+                'Usa el acceso del adulto. Habitar buscara lo preparado para tu familia.',
+            color: HabitarColors.surfaceMist,
+          ),
+          const SizedBox(height: HabitarSpacing.lg),
+          Form(
+            key: _formKey,
+            child: Column(
+              children: [
+                TextFormField(
+                  controller: _emailController,
+                  decoration:
+                      const InputDecoration(labelText: 'Correo del adulto'),
+                  keyboardType: TextInputType.emailAddress,
+                  validator: _required,
                 ),
-              ),
+                const SizedBox(height: HabitarSpacing.md),
+                TextFormField(
+                  controller: _passwordController,
+                  decoration: const InputDecoration(labelText: 'Contrasena'),
+                  obscureText: true,
+                  validator: _required,
+                ),
+                if (_error != null) ...[
+                  const SizedBox(height: HabitarSpacing.md),
+                  HabitarConversationCard(
+                    title: 'No pudimos abrir el espacio todavia',
+                    body:
+                        'Revisa el correo y la contrasena. Si es la primera vez, podemos crear tu espacio en un minuto.',
+                    color: HabitarColors.surfaceWarm,
+                  ),
+                ],
+                const SizedBox(height: HabitarSpacing.lg),
+                FilledButton(
+                  onPressed: _isSubmitting ? null : _submit,
+                  child:
+                      Text(_isSubmitting ? 'Buscando tu espacio...' : 'Entrar'),
+                ),
+                const SizedBox(height: HabitarSpacing.sm),
+                TextButton(
+                  onPressed:
+                      _isSubmitting ? null : () => context.go('/register'),
+                  child: const Text('Crear mi espacio familiar'),
+                ),
+              ],
             ),
           ),
-        ),
+          const SizedBox(height: HabitarSpacing.lg),
+          Text(
+            'Tu informacion familiar no se muestra al nino desde esta entrada.',
+            style:
+                textTheme.bodyMedium?.copyWith(color: HabitarColors.mutedInk),
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
   }
@@ -125,7 +127,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
       setState(() {
         _error =
-            'No pudimos entrar con esos datos. Revisa el email y la contrasena.';
+            'No pudimos entrar con esos datos. Revisa el correo y la contrasena.';
       });
     } finally {
       if (mounted) {

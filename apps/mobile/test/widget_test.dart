@@ -9,7 +9,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Habitar'), findsOneWidget);
-    expect(find.text('Crear acompanamiento'), findsOneWidget);
-    expect(find.text('Ya tengo cuenta'), findsOneWidget);
+    expect(find.text('Bienvenida a Habitar.'), findsOneWidget);
+    expect(find.text('Comenzar'), findsOneWidget);
+    expect(find.text('Ya tengo mi espacio'), findsOneWidget);
   });
 }

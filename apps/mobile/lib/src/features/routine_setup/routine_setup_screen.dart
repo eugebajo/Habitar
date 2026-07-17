@@ -35,7 +35,7 @@ class _RoutineSetupScreenState extends ConsumerState<RoutineSetupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Crear rutina')),
+      appBar: AppBar(title: const Text('Preparar un camino')),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -46,13 +46,17 @@ class _RoutineSetupScreenState extends ConsumerState<RoutineSetupScreen> {
                 key: _formKey,
                 child: ListView(
                   children: [
-                    Text('Rutina de 3 pasos',
-                        style: Theme.of(context).textTheme.headlineSmall),
+                    const HabitarMoment(
+                      title: 'Que necesita pasar primero?',
+                      body:
+                          'Tres pasos alcanzan. La idea no es completar perfecto, sino bajar la friccion del momento.',
+                      color: HabitarColors.surfaceMist,
+                    ),
                     const SizedBox(height: HabitarSpacing.md),
                     TextFormField(
                       controller: _titleController,
                       decoration: const InputDecoration(
-                          labelText: 'Nombre de la rutina'),
+                          labelText: 'Nombre del momento'),
                       validator: _required,
                     ),
                     const SizedBox(height: HabitarSpacing.md),
@@ -61,16 +65,17 @@ class _RoutineSetupScreenState extends ConsumerState<RoutineSetupScreen> {
                         index += 1) ...[
                       TextFormField(
                         controller: _stepControllers[index],
-                        decoration:
-                            InputDecoration(labelText: 'Paso ${index + 1}'),
+                        decoration: InputDecoration(
+                            labelText: 'Pequeno paso ${index + 1}'),
                         validator: _required,
                       ),
                       const SizedBox(height: HabitarSpacing.md),
                     ],
                     FilledButton(
                       onPressed: _isSubmitting ? null : _submit,
-                      child: Text(
-                          _isSubmitting ? 'Preparando...' : 'Crear e iniciar'),
+                      child: Text(_isSubmitting
+                          ? 'Preparando...'
+                          : 'Preparar e iniciar'),
                     ),
                   ],
                 ),

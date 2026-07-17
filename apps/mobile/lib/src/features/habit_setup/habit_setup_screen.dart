@@ -37,32 +37,38 @@ class _HabitSetupScreenState extends ConsumerState<HabitSetupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Habitos')),
+      appBar: AppBar(title: const Text('Habitos cuidados')),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(HabitarSpacing.lg),
           children: [
-            Text('Activacion gradual',
-                style: Theme.of(context).textTheme.headlineSmall),
+            const HabitarMoment(
+              title: 'Elijamos algo pequeno.',
+              body:
+                  'Un habito nuevo debe sentirse posible. Si pesa demasiado, lo hacemos mas pequeno.',
+              color: HabitarColors.surfaceWarm,
+            ),
             const SizedBox(height: HabitarSpacing.md),
             TextField(
                 controller: _titleController,
-                decoration: const InputDecoration(labelText: 'Habito nuevo')),
+                decoration:
+                    const InputDecoration(labelText: 'Que queremos cuidar?')),
             const SizedBox(height: HabitarSpacing.md),
             TextField(
                 controller: _minimumController,
-                decoration: const InputDecoration(labelText: 'Version minima')),
+                decoration:
+                    const InputDecoration(labelText: 'Paso minimo posible')),
             const SizedBox(height: HabitarSpacing.sm),
             CheckboxListTile(
               value: _confirmOverride,
               onChanged: (value) =>
                   setState(() => _confirmOverride = value ?? false),
               title: const Text(
-                  'Confirmar excepcion si supera el limite recomendado'),
+                  'Hoy podemos sostener un poco mas si un adulto lo decide'),
               controlAffinity: ListTileControlAffinity.leading,
             ),
             FilledButton(
-                onPressed: _createHabit, child: const Text('Agregar habito')),
+                onPressed: _createHabit, child: const Text('Preparar habito')),
             if (_message != null) ...[
               const SizedBox(height: HabitarSpacing.md),
               Card(
@@ -71,7 +77,7 @@ class _HabitSetupScreenState extends ConsumerState<HabitSetupScreen> {
                       child: Text(_message!))),
             ],
             const SizedBox(height: HabitarSpacing.lg),
-            Text('Panel semanal',
+            Text('Lo que estamos cuidando',
                 style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: HabitarSpacing.md),
             for (final habit in _habits)
@@ -115,8 +121,8 @@ class _HabitSetupScreenState extends ConsumerState<HabitSetupScreen> {
     final warning = result.plan.decision.warning;
     setState(() {
       _message = result.wasActivated
-          ? 'Habito activado con version minima. Hoy retomamos desde aqui.'
-          : warning ?? 'El habito quedo propuesto para evitar sobrecarga.';
+          ? 'Listo. Lo vamos a acompanar desde el paso mas pequeno.'
+          : warning ?? 'Lo dejamos preparado sin sumar carga hoy.';
     });
     await _loadHabits();
   }
@@ -155,16 +161,26 @@ class _HabitCard extends StatelessWidget {
           children: [
             Text(habit.title, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: HabitarSpacing.sm),
-            Text('Estado: ${habit.status.name}'),
+            Text(_statusText(habit.status)),
             if (habit.minimumVersion != null)
-              Text('Version minima: ${habit.minimumVersion}'),
+              Text('Paso minimo: ${habit.minimumVersion}'),
             const SizedBox(height: HabitarSpacing.md),
             OutlinedButton(
-                onPressed: onRecord,
-                child: const Text('Registrar version minima')),
+                onPressed: onRecord, child: const Text('Hoy lo logramos')),
           ],
         ),
       ),
     );
+  }
+
+  String _statusText(HabitStatus status) {
+    return switch (status) {
+      HabitStatus.proposed => 'Preparado para mas adelante',
+      HabitStatus.newHabit => 'Nuevo y acompanado',
+      HabitStatus.practicing => 'En practica',
+      HabitStatus.stable => 'Ya se siente mas estable',
+      HabitStatus.paused => 'Pausado con cuidado',
+      HabitStatus.archived => 'Guardado en historial',
+    };
   }
 }

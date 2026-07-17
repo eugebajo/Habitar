@@ -27,13 +27,17 @@ class _WellbeingCheckInScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Como estoy')),
+      appBar: AppBar(title: const Text('Como esta ahora')),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(HabitarSpacing.lg),
           children: [
-            Text('Check-in opcional',
-                style: Theme.of(context).textTheme.headlineSmall),
+            const HabitarMoment(
+              title: 'No hace falta explicar todo.',
+              body:
+                  'Solo una senal alcanza para saber si necesita silencio, movimiento o ayuda.',
+              color: HabitarColors.surfaceMist,
+            ),
             const SizedBox(height: HabitarSpacing.md),
             SegmentedButton<String>(
               segments: const [
@@ -80,7 +84,7 @@ class _WellbeingCheckInScreenState
               controlAffinity: ListTileControlAffinity.leading,
             ),
             const SizedBox(height: HabitarSpacing.md),
-            FilledButton(onPressed: _save, child: const Text('Guardar')),
+            FilledButton(onPressed: _save, child: const Text('Acompanarlo')),
             if (_message != null) ...[
               const SizedBox(height: HabitarSpacing.md),
               Card(
@@ -89,7 +93,7 @@ class _WellbeingCheckInScreenState
                       child: Text(_message!))),
             ],
             const SizedBox(height: HabitarSpacing.lg),
-            Text('Apoyos sugeridos',
+            Text('Apoyos posibles',
                 style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: HabitarSpacing.md),
             for (final action in _actions)
@@ -126,8 +130,8 @@ class _WellbeingCheckInScreenState
     setState(() {
       _actions = ref.read(wellbeingServiceProvider).supportActionsFor(input);
       _message = _skipped
-          ? 'Podemos responder despues.'
-          : 'Registro guardado sin interpretacion clinica.';
+          ? 'Esta bien. Podemos volver despues.'
+          : 'Gracias. Guardamos esta senal sin juzgarla.';
     });
   }
 
@@ -139,7 +143,7 @@ class _WellbeingCheckInScreenState
     await ref
         .read(wellbeingServiceProvider)
         .requestSupport(profileId: profileId, action: action);
-    setState(() => _message = 'Apoyo registrado: ${action.label}.');
+    setState(() => _message = 'Listo. ${action.label} queda como apoyo.');
   }
 }
 

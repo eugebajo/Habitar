@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:habitar_application/application.dart';
 import 'package:habitar_design_system/design_system.dart';
 import 'package:habitar_routine_engine/routine_engine.dart';
@@ -29,12 +28,11 @@ class _RoutinePlayerScreenState extends ConsumerState<RoutinePlayerScreen> {
   Widget build(BuildContext context) {
     final session = _session;
     return Scaffold(
-      appBar: AppBar(title: const Text('Rutina guiada')),
       body: SafeArea(
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : session == null
-                ? _EmptyRoutine(onCreate: () => context.go('/routine/create'))
+                ? const _EmptyRoutine()
                 : _RoutineBody(
                     session: session,
                     onDone: () =>
@@ -115,21 +113,24 @@ class _RoutineBody extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(HabitarSpacing.lg),
       children: [
+        Text('Estoy contigo',
+            style: Theme.of(context).textTheme.displaySmall),
+        const SizedBox(height: HabitarSpacing.sm),
         Text(session.routine.title,
-            style: Theme.of(context).textTheme.headlineSmall),
-        const SizedBox(height: HabitarSpacing.lg),
-        LinearProgressIndicator(
-            value: session.progressFraction.clamp(0, 1).toDouble()),
-        const SizedBox(height: HabitarSpacing.lg),
+            style: Theme.of(context)
+                .textTheme
+                .titleLarge
+                ?.copyWith(color: HabitarColors.mutedInk)),
+        const SizedBox(height: HabitarSpacing.xl),
         if (isComplete)
           const _MainStepCard(
-              title: 'Rutina completa',
-              subtitle: 'Hoy retomamos desde aqui cuando lo necesites.')
+              title: 'Terminamos por ahora.',
+              subtitle: 'Lo hiciste paso a paso.')
         else
           _MainStepCard(
             title: activeStep?.title ?? 'Sin paso activo',
             subtitle:
-                isPaused ? 'Pausa activa. El progreso esta guardado.' : 'Ahora',
+                isPaused ? 'Podemos pausar. No se perdio nada.' : 'Ahora',
           ),
         const SizedBox(height: HabitarSpacing.md),
         _TimerPanel(
@@ -142,7 +143,7 @@ class _RoutineBody extends StatelessWidget {
         if (!isComplete) ...[
           FilledButton(
               onPressed: isPaused ? onResume : onDone,
-              child: Text(isPaused ? 'Reanudar' : 'Hecho')),
+              child: Text(isPaused ? 'Volver cuando quieras' : 'Ya lo hice')),
           const SizedBox(height: HabitarSpacing.sm),
           OutlinedButton(
               onPressed: onMoreTime, child: const Text('Necesito mas tiempo')),
@@ -155,7 +156,7 @@ class _RoutineBody extends StatelessWidget {
           const SizedBox(height: HabitarSpacing.sm),
           OutlinedButton(
               onPressed: isPaused ? onResume : onPause,
-              child: Text(isPaused ? 'Volver a la rutina' : 'Pausa sensorial')),
+              child: Text(isPaused ? 'Estoy listo' : 'Necesito una pausa')),
           const SizedBox(height: HabitarSpacing.sm),
           OutlinedButton(
               onPressed: onPostpone, child: const Text('5 minutos despues')),
@@ -176,6 +177,7 @@ class _MainStepCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
+      color: HabitarColors.sunlit,
       child: Padding(
         padding: const EdgeInsets.all(HabitarSpacing.lg),
         child: Column(
@@ -183,7 +185,7 @@ class _MainStepCard extends StatelessWidget {
           children: [
             Text(subtitle, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: HabitarSpacing.md),
-            Text(title, style: Theme.of(context).textTheme.headlineSmall),
+            Text(title, style: Theme.of(context).textTheme.displaySmall),
           ],
         ),
       ),
@@ -266,9 +268,7 @@ class _SmallPanel extends StatelessWidget {
 }
 
 class _EmptyRoutine extends StatelessWidget {
-  const _EmptyRoutine({required this.onCreate});
-
-  final VoidCallback onCreate;
+  const _EmptyRoutine();
 
   @override
   Widget build(BuildContext context) {
@@ -278,10 +278,13 @@ class _EmptyRoutine extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Todavia no hay una rutina activa.'),
+            Text('Hoy no hay una tarea preparada.',
+                style: Theme.of(context).textTheme.headlineSmall),
             const SizedBox(height: HabitarSpacing.md),
-            FilledButton(
-                onPressed: onCreate, child: const Text('Crear rutina')),
+            const Text(
+              'Un adulto puede preparar el proximo paso. Por ahora puedes respirar.',
+              textAlign: TextAlign.center,
+            ),
           ],
         ),
       ),

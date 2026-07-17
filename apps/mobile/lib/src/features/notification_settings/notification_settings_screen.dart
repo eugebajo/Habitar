@@ -23,23 +23,27 @@ class _NotificationSettingsScreenState
   Widget build(BuildContext context) {
     final scheduled = ref.watch(reminderSchedulerProvider).scheduled;
     return Scaffold(
-      appBar: AppBar(title: const Text('Recordatorios')),
+      appBar: AppBar(title: const Text('Recordatorios suaves')),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(HabitarSpacing.lg),
           children: [
-            Text('Permisos e intensidad',
-                style: Theme.of(context).textTheme.headlineSmall),
+            const HabitarMoment(
+              title: 'Como avisamos sin invadir?',
+              body:
+                  'Los recordatorios deben ayudar, no perseguir. Elige el tono que cuide mejor el momento.',
+              color: HabitarColors.surfaceWarm,
+            ),
             const SizedBox(height: HabitarSpacing.md),
             SwitchListTile(
               value: _permissionGranted,
               onChanged: (value) => setState(() => _permissionGranted = value),
-              title: const Text('Consentimiento para recordatorios'),
+              title: const Text('Quiero recibir avisos'),
             ),
             const SizedBox(height: HabitarSpacing.md),
             DropdownButtonFormField<ReminderIntensity>(
               initialValue: _intensity,
-              decoration: const InputDecoration(labelText: 'Intensidad'),
+              decoration: const InputDecoration(labelText: 'Tono del aviso'),
               items: const [
                 DropdownMenuItem(
                     value: ReminderIntensity.quiet, child: Text('Discreta')),
@@ -60,11 +64,11 @@ class _NotificationSettingsScreenState
             const SizedBox(height: HabitarSpacing.lg),
             FilledButton(
                 onPressed: _saveConsent,
-                child: const Text('Guardar preferencias')),
+                child: const Text('Guardar este cuidado')),
             const SizedBox(height: HabitarSpacing.sm),
             OutlinedButton(
                 onPressed: _scheduleDemo,
-                child: const Text('Programar recordatorio demo')),
+                child: const Text('Probar un aviso suave')),
             if (_message != null) ...[
               const SizedBox(height: HabitarSpacing.md),
               Card(
@@ -73,7 +77,7 @@ class _NotificationSettingsScreenState
                       child: Text(_message!))),
             ],
             const SizedBox(height: HabitarSpacing.lg),
-            Text('Solicitudes programadas',
+            Text('Avisos preparados',
                 style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: HabitarSpacing.md),
             for (final request in scheduled)
@@ -86,9 +90,7 @@ class _NotificationSettingsScreenState
                       Text(request.title,
                           style: Theme.of(context).textTheme.titleMedium),
                       Text(request.body),
-                      Text('Acciones: ${request.actions.length}'),
-                      Text(
-                          'Alarma exacta: ${request.requiresExactAlarm ? 'si' : 'no'}'),
+                      Text('Incluye ${request.actions.length} apoyo(s).'),
                     ],
                   ),
                 ),
@@ -112,7 +114,7 @@ class _NotificationSettingsScreenState
               : NotificationPermissionStatus.denied,
           intensity: _intensity,
         );
-    setState(() => _message = 'Preferencias guardadas.');
+    setState(() => _message = 'Listo. Los avisos respetaran este tono.');
   }
 
   Future<void> _scheduleDemo() async {
@@ -130,9 +132,8 @@ class _NotificationSettingsScreenState
               scheduledAt: DateTime.now().add(const Duration(minutes: 10)),
             );
     setState(() {
-      _message = plan.isBlocked
-          ? plan.blockedReason
-          : 'Recordatorio preparado con ${plan.requests.length} solicitud(es).';
+      _message =
+          plan.isBlocked ? plan.blockedReason : 'Aviso preparado con cuidado.';
     });
   }
 }

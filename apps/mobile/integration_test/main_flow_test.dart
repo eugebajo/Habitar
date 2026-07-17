@@ -11,12 +11,16 @@ void main() {
     await tester.pumpWidget(const ProviderScope(child: HabitarMobileApp()));
     await tester.pumpAndSettle();
 
-    expect(find.text('Crear acompanamiento'), findsOneWidget);
+    expect(find.text('Comenzar'), findsOneWidget);
 
-    await tester.tap(find.text('Crear acompanamiento'));
+    await tester.tap(find.text('Comenzar'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Respirar y seguir'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Crear mi espacio'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Registro del adulto'), findsOneWidget);
-    expect(find.text('Crear acompanamiento familiar'), findsOneWidget);
+    expect(find.text('Contame quien sostiene este espacio.'), findsOneWidget);
+    expect(find.text('Seguir con mi familia'), findsOneWidget);
   });
 }

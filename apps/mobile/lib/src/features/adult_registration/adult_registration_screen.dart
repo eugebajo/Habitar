@@ -36,89 +36,77 @@ class _AdultRegistrationScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Registro del adulto')),
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 560),
-            child: Padding(
-              padding: const EdgeInsets.all(HabitarSpacing.lg),
-              child: Form(
-                key: _formKey,
-                child: ListView(
-                  children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        color: HabitarColors.surfaceWarm,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      padding: const EdgeInsets.all(HabitarSpacing.lg),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Crear acompanamiento familiar',
-                              style: Theme.of(context).textTheme.headlineSmall),
-                          const SizedBox(height: HabitarSpacing.sm),
-                          const Text(
-                            'Primero registramos al adulto responsable y el espacio familiar.',
-                          ),
-                        ],
-                      ),
+      body: HabitarPage(
+        maxWidth: 1080,
+        children: [
+          const SizedBox(height: HabitarSpacing.xl),
+          HabitarCompanionLayout(
+            eyebrow: 'Primer paso',
+            title: 'Contame quien sostiene este espacio.',
+            body:
+                'No necesitamos todo ahora. Solo lo suficiente para cuidar a tu familia con calma.',
+            child: Form(
+              key: _formKey,
+              child: Column(
+                children: [
+                  TextFormField(
+                    controller: _nameController,
+                    decoration: const InputDecoration(
+                      labelText: 'Como te llamas?',
                     ),
+                    validator: _required,
+                  ),
+                  const SizedBox(height: HabitarSpacing.md),
+                  TextFormField(
+                    controller: _familyController,
+                    decoration: const InputDecoration(
+                      labelText: 'Como llamamos a tu familia?',
+                    ),
+                    validator: _required,
+                  ),
+                  const SizedBox(height: HabitarSpacing.md),
+                  TextFormField(
+                    controller: _emailController,
+                    decoration:
+                        const InputDecoration(labelText: 'Correo para volver'),
+                    keyboardType: TextInputType.emailAddress,
+                    validator: _required,
+                  ),
+                  const SizedBox(height: HabitarSpacing.md),
+                  TextFormField(
+                    controller: _passwordController,
+                    decoration: const InputDecoration(
+                        labelText: 'Contrasena tranquila'),
+                    obscureText: true,
+                    validator: _required,
+                  ),
+                  if (_error != null) ...[
                     const SizedBox(height: HabitarSpacing.md),
-                    TextFormField(
-                      controller: _nameController,
-                      decoration:
-                          const InputDecoration(labelText: 'Nombre del adulto'),
-                      validator: _required,
-                    ),
-                    const SizedBox(height: HabitarSpacing.md),
-                    TextFormField(
-                      controller: _emailController,
-                      decoration: const InputDecoration(labelText: 'Email'),
-                      keyboardType: TextInputType.emailAddress,
-                      validator: _required,
-                    ),
-                    const SizedBox(height: HabitarSpacing.md),
-                    TextFormField(
-                      controller: _passwordController,
-                      decoration:
-                          const InputDecoration(labelText: 'Contrasena'),
-                      obscureText: true,
-                      validator: _required,
-                    ),
-                    const SizedBox(height: HabitarSpacing.md),
-                    TextFormField(
-                      controller: _familyController,
-                      decoration:
-                          const InputDecoration(labelText: 'Nombre de familia'),
-                      validator: _required,
-                    ),
-                    if (_error != null) ...[
-                      const SizedBox(height: HabitarSpacing.md),
-                      Text(
-                        _error!,
-                        style: TextStyle(
-                            color: Theme.of(context).colorScheme.error),
-                      ),
-                    ],
-                    const SizedBox(height: HabitarSpacing.lg),
-                    FilledButton(
-                      onPressed: _isSubmitting ? null : _submit,
-                      child: Text(_isSubmitting ? 'Creando...' : 'Continuar'),
-                    ),
-                    const SizedBox(height: HabitarSpacing.sm),
-                    TextButton(
-                      onPressed:
-                          _isSubmitting ? null : () => context.go('/login'),
-                      child: const Text('Ya tengo cuenta'),
+                    const HabitarConversationCard(
+                      title: 'No pudimos crear el espacio todavia',
+                      body:
+                          'Puede que ese correo ya exista. Intenta entrar o revisa los datos con calma.',
+                      color: HabitarColors.surfaceWarm,
                     ),
                   ],
-                ),
+                  const SizedBox(height: HabitarSpacing.lg),
+                  FilledButton(
+                    onPressed: _isSubmitting ? null : _submit,
+                    child: Text(_isSubmitting
+                        ? 'Preparando tu espacio...'
+                        : 'Seguir con mi familia'),
+                  ),
+                  const SizedBox(height: HabitarSpacing.sm),
+                  TextButton(
+                    onPressed:
+                        _isSubmitting ? null : () => context.go('/login'),
+                    child: const Text('Ya tengo mi espacio'),
+                  ),
+                ],
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -156,7 +144,7 @@ class _AdultRegistrationScreenState
       if (mounted) {
         setState(() {
           _error =
-              'No pudimos crear la cuenta. Revisa los datos o intenta entrar si ya existe.';
+              'No pudimos crear el espacio. Revisa los datos o intenta entrar si ya existe.';
         });
       }
     } finally {

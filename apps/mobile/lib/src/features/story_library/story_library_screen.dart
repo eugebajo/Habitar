@@ -26,8 +26,12 @@ class _StoryLibraryScreenState extends ConsumerState<StoryLibraryScreen> {
         child: ListView(
           padding: const EdgeInsets.all(HabitarSpacing.lg),
           children: [
-            Text('Biblioteca demo',
-                style: Theme.of(context).textTheme.headlineSmall),
+            const HabitarMoment(
+              title: 'Un cuento para bajar el ruido.',
+              body:
+                  'Elige una historia breve. No buscamos rendimiento, buscamos conversacion.',
+              color: HabitarColors.lavender,
+            ),
             const SizedBox(height: HabitarSpacing.md),
             for (final content in stories)
               Card(
@@ -71,8 +75,8 @@ class _StoryLibraryScreenState extends ConsumerState<StoryLibraryScreen> {
           favorite: favorite,
         );
     setState(() => _message = favorite
-        ? 'Cuento guardado como favorito.'
-        : 'Progreso del cuento guardado.');
+        ? 'Lo guardamos para volver a este cuento.'
+        : 'Listo. Este momento de lectura queda cuidado.');
   }
 }
 
@@ -95,23 +99,21 @@ class _StoryReader extends StatelessWidget {
             Text(content.story.title,
                 style: Theme.of(context).textTheme.headlineSmall),
             const SizedBox(height: HabitarSpacing.sm),
-            Text('Valor: ${content.story.value}'),
-            Text('Emocion principal: ${content.mainEmotion}'),
-            Text(content.audioAvailable
-                ? 'Audio disponible'
-                : 'Audio pendiente'),
+            Text('${content.story.ageRange} · ${content.durationMinutes} min'),
+            Text('Tema: ${content.story.value}'),
             const SizedBox(height: HabitarSpacing.md),
             Text(content.story.body),
             const SizedBox(height: HabitarSpacing.md),
-            Text('Preguntas', style: Theme.of(context).textTheme.titleMedium),
+            Text('Para conversar',
+                style: Theme.of(context).textTheme.titleMedium),
             for (final question in content.questions) Text('- $question'),
             const SizedBox(height: HabitarSpacing.md),
-            Text('Actividad: ${content.activity}'),
+            Text('Despues podemos probar: ${content.activity}'),
             const SizedBox(height: HabitarSpacing.md),
             Row(
               children: [
                 FilledButton(
-                    onPressed: onRead, child: const Text('Marcar leido')),
+                    onPressed: onRead, child: const Text('Ya lo leimos')),
                 const SizedBox(width: HabitarSpacing.sm),
                 OutlinedButton(
                     onPressed: onFavorite, child: const Text('Favorito')),

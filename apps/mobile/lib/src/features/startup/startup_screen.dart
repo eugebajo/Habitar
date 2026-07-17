@@ -34,14 +34,14 @@ class StartupScreen extends ConsumerWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text('Habitar',
-                      style: Theme.of(context).textTheme.headlineSmall),
+                      style: Theme.of(context).textTheme.displaySmall),
                   const SizedBox(height: HabitarSpacing.md),
                   if (restoreState.hasError)
                     const Text(
-                        'No pudimos recuperar datos locales. Podemos empezar de nuevo.')
+                        'No pudimos abrir tu espacio todavia. Podemos empezar de nuevo con calma.')
                   else
                     const Text(
-                        'Buscando datos guardados en este dispositivo...'),
+                        'Preparando el lugar tranquilo de tu familia...'),
                   const SizedBox(height: HabitarSpacing.lg),
                   if (restoreState.isLoading)
                     const CircularProgressIndicator()

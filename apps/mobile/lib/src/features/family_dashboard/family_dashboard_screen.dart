@@ -11,125 +11,78 @@ class FamilyDashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final hasLocalStore = ref.watch(localStoreProvider) != null;
-    final profileId = ref.watch(currentProfileIdProvider);
-    final activeSessionId = ref.watch(currentRoutineSessionIdProvider);
+    final hasActiveProfile = ref.watch(currentProfileIdProvider) != null;
+    final hasRoutineWaiting =
+        ref.watch(currentRoutineSessionIdProvider) != null;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Panel semanal'),
-        actions: [
-          IconButton(
-            tooltip: 'Cerrar sesion',
-            onPressed: () => _signOut(context, ref),
-            icon: const Icon(Icons.logout),
+      body: HabitarPage(
+        maxWidth: 760,
+        children: [
+          Align(
+            alignment: Alignment.centerRight,
+            child: IconButton(
+              tooltip: 'Cerrar sesion',
+              onPressed: () => _signOut(context, ref),
+              icon: const Icon(Icons.logout),
+            ),
+          ),
+          Text('Hoy', style: Theme.of(context).textTheme.displaySmall),
+          const SizedBox(height: HabitarSpacing.lg),
+          HabitarMoment(
+            eyebrow: 'Respiremos',
+            title: hasRoutineWaiting
+                ? 'Hay un pequeno camino preparado.'
+                : 'No tienes que resolver todo ahora.',
+            body: hasRoutineWaiting
+                ? 'Habitar puede acompanar el proximo paso sin apurar, sin rachas y sin castigos.'
+                : 'Elige una sola cosa importante para hoy. Lo demas puede esperar.',
+            color: HabitarColors.sunlit,
+            trailing: FilledButton(
+              onPressed: () => context.go('/profiles'),
+              child: const Text('Elegir quien empieza'),
+            ),
+          ),
+          const SizedBox(height: HabitarSpacing.lg),
+          _TodayAction(
+            title: 'Preparar una rutina',
+            body: 'Tres pasos claros para que el dia tenga menos friccion.',
+            action: hasActiveProfile ? 'Preparar' : 'Elegir perfil',
+            color: HabitarColors.surfaceMist,
+            onTap: () =>
+                context.go(hasActiveProfile ? '/routine/create' : '/profiles'),
+          ),
+          _TodayAction(
+            title: 'Cuidar un habito',
+            body:
+                'Una version minima, pequena y posible. Nada de exigir de mas.',
+            action: hasActiveProfile ? 'Acompanarlo' : 'Elegir perfil',
+            color: HabitarColors.surfaceWarm,
+            onTap: () => context.go(hasActiveProfile ? '/habits' : '/profiles'),
+          ),
+          _TodayAction(
+            title: 'Mirar como esta',
+            body: 'Un check-in suave para pedir silencio, movimiento o ayuda.',
+            action: hasActiveProfile ? 'Abrir' : 'Elegir perfil',
+            color: HabitarColors.softBlue.withValues(alpha: 0.2),
+            onTap: () =>
+                context.go(hasActiveProfile ? '/wellbeing' : '/profiles'),
+          ),
+          _TodayAction(
+            title: 'Leer juntos',
+            body:
+                'Cuentos breves para cerrar el dia con conversacion, no con tarea.',
+            action: hasActiveProfile ? 'Elegir cuento' : 'Elegir perfil',
+            color: HabitarColors.lavender.withValues(alpha: 0.25),
+            onTap: () =>
+                context.go(hasActiveProfile ? '/stories' : '/profiles'),
+          ),
+          const SizedBox(height: HabitarSpacing.md),
+          TextButton(
+            onPressed: () => context.go('/notifications'),
+            child: const Text('Ajustar recordatorios con calma'),
           ),
         ],
-      ),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(HabitarSpacing.lg),
-          children: [
-            Container(
-              decoration: BoxDecoration(
-                color: HabitarColors.sunlit,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              padding: const EdgeInsets.all(HabitarSpacing.lg),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Acompanamiento de la semana',
-                      style: Theme.of(context).textTheme.headlineSmall),
-                  const SizedBox(height: HabitarSpacing.sm),
-                  const Text(
-                    'Un resumen simple para decidir que rutina, habito o apoyo conviene atender hoy.',
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: HabitarSpacing.md),
-            _LocalStorageCard(
-              hasLocalStore: hasLocalStore,
-              profileId: profileId,
-              activeSessionId: activeSessionId,
-            ),
-            const _StatusCard(
-              title: 'Perfiles',
-              body:
-                  'Cada nino o adolescente puede ver progreso, metas cumplidas y tareas pendientes.',
-            ),
-            FilledButton(
-              onPressed: () => context.go('/profiles'),
-              child: const Text('Ver perfiles'),
-            ),
-            const SizedBox(height: HabitarSpacing.md),
-            const _StatusCard(
-              title: 'Habitos nuevos',
-              body:
-                  'Limite recomendado activo y conectado a la creacion de habitos.',
-            ),
-            FilledButton(
-              onPressed: () => context.go('/habits'),
-              child: const Text('Gestionar habitos'),
-            ),
-            const SizedBox(height: HabitarSpacing.md),
-            const _StatusCard(
-              title: 'Rutinas',
-              body:
-                  'Crea una rutina breve y ejecutala paso a paso desde la vista infantil.',
-            ),
-            FilledButton(
-              onPressed: () => context.go('/routine/create'),
-              child: const Text('Crear rutina guiada'),
-            ),
-            const SizedBox(height: HabitarSpacing.md),
-            const _StatusCard(
-              title: 'Modo baja estimulacion',
-              body:
-                  'Tema visual calmado preparado. Los controles finos llegan con preferencias persistentes.',
-            ),
-            const _StatusCard(
-              title: 'Recordatorios',
-              body:
-                  'Configura consentimiento e intensidad. Las integraciones nativas quedan marcadas por plataforma.',
-            ),
-            FilledButton(
-              onPressed: () => context.go('/notifications'),
-              child: const Text('Configurar recordatorios'),
-            ),
-            const SizedBox(height: HabitarSpacing.md),
-            const _StatusCard(
-              title: 'Emociones y apoyos',
-              body:
-                  'Check-in opcional con energia, sobrecarga y acciones breves.',
-            ),
-            FilledButton(
-              onPressed: () => context.go('/wellbeing'),
-              child: const Text('Registrar check-in'),
-            ),
-            const SizedBox(height: HabitarSpacing.md),
-            const _StatusCard(
-              title: 'Cuentos',
-              body:
-                  'Biblioteca demo con preguntas, actividad y progreso simple.',
-            ),
-            FilledButton(
-              onPressed: () => context.go('/stories'),
-              child: const Text('Abrir cuentos'),
-            ),
-            const SizedBox(height: HabitarSpacing.md),
-            const _StatusCard(
-              title: 'Wearables',
-              body:
-                  'Preparacion separada para watchOS y Wear OS con acciones rapidas.',
-            ),
-            FilledButton(
-              onPressed: () => context.go('/wearables'),
-              child: const Text('Preparar wearables'),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -147,65 +100,32 @@ class FamilyDashboardScreen extends ConsumerWidget {
   }
 }
 
-class _LocalStorageCard extends StatelessWidget {
-  const _LocalStorageCard({
-    required this.hasLocalStore,
-    required this.profileId,
-    required this.activeSessionId,
+class _TodayAction extends StatelessWidget {
+  const _TodayAction({
+    required this.title,
+    required this.body,
+    required this.action,
+    required this.color,
+    required this.onTap,
   });
-
-  final bool hasLocalStore;
-  final String? profileId;
-  final String? activeSessionId;
-
-  @override
-  Widget build(BuildContext context) {
-    final title =
-        hasLocalStore ? 'Guardado en este dispositivo' : 'Modo temporal';
-    final body = hasLocalStore
-        ? 'Perfil recuperado localmente${activeSessionId == null ? '.' : ' con una rutina activa.'}'
-        : 'Este entorno usa datos en memoria para preview o pruebas.';
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: HabitarSpacing.md),
-      child: Padding(
-        padding: const EdgeInsets.all(HabitarSpacing.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title, style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: HabitarSpacing.sm),
-            Text(body),
-            if (profileId != null) ...[
-              const SizedBox(height: HabitarSpacing.sm),
-              Text('Perfil activo: $profileId'),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _StatusCard extends StatelessWidget {
-  const _StatusCard({required this.title, required this.body});
 
   final String title;
   final String body;
+  final String action;
+  final Color color;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: HabitarSpacing.md),
-      child: Padding(
-        padding: const EdgeInsets.all(HabitarSpacing.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title, style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: HabitarSpacing.sm),
-            Text(body),
-          ],
+    return HabitarConversationCard(
+      title: title,
+      body: body,
+      color: color,
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: OutlinedButton(
+          onPressed: onTap,
+          child: Text(action),
         ),
       ),
     );
