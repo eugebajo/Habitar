@@ -10,6 +10,7 @@ import 'features/notification_settings/notification_settings_screen.dart';
 import 'features/onboarding/onboarding_screen.dart';
 import 'features/profiles/profiles_screen.dart';
 import 'features/profile_setup/profile_setup_screen.dart';
+import 'features/portal/portal_screens.dart';
 import 'features/routine_player/routine_player_screen.dart';
 import 'features/routine_setup/routine_setup_screen.dart';
 import 'features/startup/startup_screen.dart';
@@ -26,6 +27,12 @@ final appRouter = GoRouter(
         builder: (context, state) => const OnboardingScreen()),
     GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
     GoRoute(
+        path: '/recover',
+        builder: (context, state) => const SimpleModeScreen(
+            title: 'Recuperar contrasena',
+            message:
+                'Escribe a soporte@habitar.app desde el correo de tu cuenta.')),
+    GoRoute(
         path: '/register',
         builder: (context, state) => const AdultRegistrationScreen()),
     GoRoute(
@@ -34,8 +41,29 @@ final appRouter = GoRouter(
     GoRoute(
         path: '/profiles', builder: (context, state) => const ProfilesScreen()),
     GoRoute(
+        path: '/adult-pin',
+        builder: (context, state) => const AdultPinScreen()),
+    GoRoute(
         path: '/dashboard',
         builder: (context, state) => const FamilyDashboardScreen()),
+    GoRoute(
+        path: '/routines',
+        builder: (context, state) =>
+            const AdultSectionScreen(kind: 'routines')),
+    GoRoute(
+        path: '/progress',
+        builder: (context, state) =>
+            const AdultSectionScreen(kind: 'progress')),
+    GoRoute(
+        path: '/habits/list',
+        builder: (context, state) => const AdultSectionScreen(kind: 'habits')),
+    GoRoute(
+        path: '/rewards',
+        builder: (context, state) => const AdultSectionScreen(kind: 'rewards')),
+    GoRoute(
+        path: '/settings',
+        builder: (context, state) =>
+            const AdultSectionScreen(kind: 'settings')),
     GoRoute(
         path: '/habits', builder: (context, state) => const HabitSetupScreen()),
     GoRoute(
@@ -56,6 +84,44 @@ final appRouter = GoRouter(
     GoRoute(
         path: '/wearables',
         builder: (context, state) => const WearablesScreen()),
+    GoRoute(
+        path: '/child', builder: (context, state) => const ChildHomeScreen()),
+    GoRoute(
+        path: '/child/achievements',
+        builder: (context, state) => const SimpleModeScreen(
+            title: 'Mis logros',
+            message: 'Cada paso cuenta. Aqui aparecen tus avances recientes.')),
+    GoRoute(
+        path: '/child/stories',
+        builder: (context, state) => const StoryLibraryScreen()),
+    GoRoute(
+        path: '/child/emotions',
+        builder: (context, state) => const WellbeingCheckInScreen()),
+    GoRoute(path: '/teen', builder: (context, state) => const TeenHomeScreen()),
+    GoRoute(
+        path: '/teen/habits',
+        builder: (context, state) => const SimpleModeScreen(
+            title: 'Mis habitos',
+            message: 'Elige una version pequena y posible para hoy.',
+            teen: true)),
+    GoRoute(
+        path: '/teen/progress',
+        builder: (context, state) => const SimpleModeScreen(
+            title: 'Mi progreso',
+            message: 'Observa lo que funciono sin compararte.',
+            teen: true)),
+    GoRoute(
+        path: '/teen/reflection',
+        builder: (context, state) => const SimpleModeScreen(
+            title: 'Reflexion diaria',
+            message: 'Este espacio es privado. Escribe solo si te ayuda.',
+            teen: true)),
+    GoRoute(
+        path: '/teen/privacy',
+        builder: (context, state) => const SimpleModeScreen(
+            title: 'Privacidad',
+            message: 'Tu decides que reflexiones compartir.',
+            teen: true)),
   ],
 );
 

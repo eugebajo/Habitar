@@ -11,12 +11,8 @@ void main() {
     await tester.pumpWidget(const ProviderScope(child: HabitarMobileApp()));
     await tester.pumpAndSettle();
 
-    expect(find.text('Comenzar'), findsOneWidget);
+    expect(find.text('Crear mi espacio'), findsOneWidget);
 
-    await tester.tap(find.text('Comenzar'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Respirar y seguir'));
-    await tester.pumpAndSettle();
     await tester.tap(find.text('Crear mi espacio'));
     await tester.pumpAndSettle();
 

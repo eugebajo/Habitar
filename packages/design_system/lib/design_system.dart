@@ -2,17 +2,18 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 class HabitarColors {
-  static const ink = Color(0xFF1F2A2E);
-  static const mutedInk = Color(0xFF657378);
-  static const surface = Color(0xFFFBFAF4);
-  static const surfaceWarm = Color(0xFFFFF4DF);
-  static const surfaceMist = Color(0xFFEFF6F3);
-  static const sunlit = Color(0xFFFFE7B8);
-  static const deepGreen = Color(0xFF237657);
+  static const ink = Color(0xFF233036);
+  static const mutedInk = Color(0xFF66757A);
+  static const surface = Color(0xFFFAFAF7);
+  static const surfaceWarm = Color(0xFFFFF8EA);
+  static const surfaceMist = Color(0xFFDDEFEA);
+  static const sunlit = Color(0xFFF9D98C);
+  static const deepGreen = Color(0xFF205B49);
+  static const primaryGreen = Color(0xFF2F7D62);
   static const calmGreen = Color(0xFF7DAA92);
   static const warmGold = Color(0xFFE2B66D);
   static const softBlue = Color(0xFF7EA7C7);
-  static const supportRose = Color(0xFFD9928F);
+  static const supportRose = Color(0xFFF3A58A);
   static const lavender = Color(0xFFC7BDD9);
 }
 
@@ -20,7 +21,7 @@ class HabitarSpacing {
   static const xs = 4.0;
   static const sm = 8.0;
   static const md = 16.0;
-  static const lg = 24.0;
+  static const lg = 20.0;
   static const xl = 32.0;
   static const xxl = 48.0;
 }
@@ -39,7 +40,7 @@ class HabitarMotion {
 
 ThemeData buildHabitarTheme({bool lowStimulation = false}) {
   final colorScheme = ColorScheme.fromSeed(
-    seedColor: HabitarColors.calmGreen,
+    seedColor: HabitarColors.primaryGreen,
     brightness: Brightness.light,
     surface: HabitarColors.surface,
   );
@@ -74,8 +75,7 @@ ThemeData buildHabitarTheme({bool lowStimulation = false}) {
       color: Colors.white,
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: const BorderRadius.all(Radius.circular(HabitarRadius.md)),
-        side: BorderSide(color: HabitarColors.deepGreen.withValues(alpha: 0.1)),
+        borderRadius: const BorderRadius.all(Radius.circular(HabitarRadius.lg)),
       ),
     ),
     inputDecorationTheme: InputDecorationTheme(
@@ -103,7 +103,7 @@ ThemeData buildHabitarTheme({bool lowStimulation = false}) {
         minimumSize: const Size.fromHeight(52),
         textStyle: const TextStyle(fontWeight: FontWeight.w700),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(HabitarRadius.pill),
+          borderRadius: BorderRadius.circular(HabitarRadius.md),
         ),
       ),
     ),
@@ -114,7 +114,7 @@ ThemeData buildHabitarTheme({bool lowStimulation = false}) {
         textStyle: const TextStyle(fontWeight: FontWeight.w700),
         side: const BorderSide(color: HabitarColors.deepGreen),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(HabitarRadius.pill),
+          borderRadius: BorderRadius.circular(HabitarRadius.md),
         ),
       ),
     ),
@@ -552,4 +552,73 @@ class HabitarAvatar extends StatelessWidget {
       ),
     );
   }
+}
+
+class ProgressRing extends StatelessWidget {
+  const ProgressRing({super.key, required this.value, this.size = 64});
+
+  final double value;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+        label: 'Progreso ${(value * 100).round()} por ciento',
+        child: SizedBox.square(
+          dimension: size,
+          child: Stack(alignment: Alignment.center, children: [
+            CircularProgressIndicator(
+              value: value.clamp(0, 1),
+              strokeWidth: 7,
+              backgroundColor: HabitarColors.surfaceMist,
+              color: HabitarColors.primaryGreen,
+            ),
+            Text('${(value * 100).round()}%',
+                style: Theme.of(context)
+                    .textTheme
+                    .labelLarge
+                    ?.copyWith(fontWeight: FontWeight.w800)),
+          ]),
+        ),
+      );
+}
+
+class EmptyState extends StatelessWidget {
+  const EmptyState({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.message,
+    this.action,
+  });
+
+  final IconData icon;
+  final String title;
+  final String message;
+  final Widget? action;
+
+  @override
+  Widget build(BuildContext context) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(HabitarSpacing.lg),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            CircleAvatar(
+              radius: 30,
+              backgroundColor: HabitarColors.surfaceMist,
+              child: Icon(icon, size: 30, color: HabitarColors.deepGreen),
+            ),
+            const SizedBox(height: HabitarSpacing.md),
+            Text(title,
+                style: Theme.of(context).textTheme.titleLarge,
+                textAlign: TextAlign.center),
+            const SizedBox(height: HabitarSpacing.sm),
+            Text(message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: HabitarColors.mutedInk)),
+            if (action != null) ...[
+              const SizedBox(height: HabitarSpacing.md),
+              action!,
+            ],
+          ]),
+        ),
+      );
 }

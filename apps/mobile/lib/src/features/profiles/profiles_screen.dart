@@ -104,7 +104,7 @@ class _ProfilesScreenState extends ConsumerState<ProfilesScreen> {
                 ),
                 const SizedBox(height: HabitarSpacing.xl),
                 OutlinedButton(
-                  onPressed: () => context.go('/dashboard'),
+                  onPressed: () => context.go('/adult-pin'),
                   child: const Text('Entrar como adulto'),
                 ),
               ],
@@ -126,11 +126,7 @@ class _ProfilesScreenState extends ConsumerState<ProfilesScreen> {
   void _openProfile(ProfileProgressSummary summary) {
     ref.read(currentProfileIdProvider.notifier).state = summary.profileId;
     ref.read(currentProfileKindProvider.notifier).state = summary.kind;
-    if (summary.activeRoutineTitle == null) {
-      context.go('/dashboard');
-      return;
-    }
-    context.go('/routine/player');
+    context.go(summary.kind == ProfileKind.teen ? '/teen' : '/child');
   }
 
   Color _profileColor(int index) {
@@ -197,7 +193,7 @@ class _ProfileTile extends StatelessWidget {
               ),
               const SizedBox(height: HabitarSpacing.sm),
               Text(
-                '${summary.completedGoals} metas cuidadas · ${summary.pendingTasks} pendientes',
+                '${summary.completedGoals} metas cuidadas - ${summary.pendingTasks} pendientes',
                 style: Theme.of(context)
                     .textTheme
                     .bodyMedium
