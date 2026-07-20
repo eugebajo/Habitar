@@ -12,3 +12,5 @@ pubspec.lock
 ios/Flutter/Generated.xcconfig
 ios/Flutter/flutter_export_environment.sh
 android/local.properties
+**/android/key.properties
+**/android/app/upload-keystore.jks
