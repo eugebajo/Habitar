@@ -1,4 +1,4 @@
-package com.habitar.app
+package com.habitarpy.app
 
 import io.flutter.embedding.android.FlutterActivity
 

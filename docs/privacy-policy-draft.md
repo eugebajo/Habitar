@@ -10,7 +10,7 @@ autonomia de ninos y adolescentes.
 
 Contacto previsto:
 
-- Email: `soporte@habitar.app`
+- Email: `soporte@habitarpy.com`
 - Sitio: pendiente de dominio propio de Habitar
 
 ## Datos que podemos tratar
@@ -72,4 +72,4 @@ funciones. La version publicada debe indicar fecha de ultima actualizacion.
 
 Para privacidad o soporte:
 
-`soporte@habitar.app`
+`soporte@habitarpy.com`

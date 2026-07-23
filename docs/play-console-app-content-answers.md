@@ -76,5 +76,5 @@ Pending final domain.
 
 Recommended independent Habitar domain:
 
-- `https://habitar.app/privacy`
-- `https://habitar.app/terms`
+- `https://habitarpy.com/privacy`
+- `https://habitarpy.com/terms`

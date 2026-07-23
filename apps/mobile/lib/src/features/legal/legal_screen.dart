@@ -81,7 +81,7 @@ const _privacySections = [
   ),
   _LegalSection(
     'Contacto',
-    'Para consultas de privacidad o soporte, escribe a soporte@habitar.app.',
+    'Para consultas de privacidad o soporte, escribe a soporte@habitarpy.com.',
   ),
 ];
 
@@ -104,6 +104,6 @@ const _termsSections = [
   ),
   _LegalSection(
     'Contacto',
-    'Para soporte o consultas sobre estos terminos, escribe a soporte@habitar.app.',
+    'Para soporte o consultas sobre estos terminos, escribe a soporte@habitarpy.com.',
   ),
 ];

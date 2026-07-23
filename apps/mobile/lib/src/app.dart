@@ -44,7 +44,7 @@ final appRouter = GoRouter(
         builder: (context, state) => const SimpleModeScreen(
             title: 'Recuperar contrasena',
             message:
-                'Escribe a soporte@habitar.app desde el correo de tu cuenta.')),
+                'Escribe a soporte@habitarpy.com desde el correo de tu cuenta.')),
     GoRoute(
         path: '/register',
         builder: (context, state) => const AdultRegistrationScreen()),

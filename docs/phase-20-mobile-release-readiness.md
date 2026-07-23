@@ -5,8 +5,8 @@ Habitar is mobile-first. Web remains a preview/build target, not the primary lau
 ## Android identity
 
 - App label: Habitar
-- Application ID: com.habitar.app
-- Android namespace: com.habitar.app
+- Application ID: com.habitarpy.app
+- Android namespace: com.habitarpy.app
 - Internet permission: enabled for Supabase/Auth/API access
 
 ## Android signing

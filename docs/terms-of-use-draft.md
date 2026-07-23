@@ -46,4 +46,4 @@ No se permite usar Habitar para:
 
 Para soporte o consultas:
 
-`soporte@habitar.app`
+`soporte@habitarpy.com`
