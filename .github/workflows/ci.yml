@@ -49,12 +49,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Dart
-        uses: dart-lang/setup-dart@v1
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
 
       - name: Dependencies
-        working-directory: ${{ matrix.package }}
-        run: dart pub get
+        run: flutter pub get
 
       - name: Analyze
         working-directory: ${{ matrix.package }}
