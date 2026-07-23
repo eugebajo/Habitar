@@ -31,6 +31,21 @@ class OnboardingScreen extends StatelessWidget {
                 ]),
               ),
             ),
+            const SizedBox(height: HabitarSpacing.md),
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: HabitarSpacing.sm,
+              children: [
+                TextButton(
+                  onPressed: () => context.go('/privacy'),
+                  child: const Text('Privacidad'),
+                ),
+                TextButton(
+                  onPressed: () => context.go('/terms'),
+                  child: const Text('Terminos'),
+                ),
+              ],
+            ),
           ],
         ),
       );

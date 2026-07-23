@@ -119,6 +119,16 @@ Supabase/Auth/API access.
 - Internal testing group.
 - iOS bundle/signing setup.
 
+## Work completed while developer account verification is pending
+
+- In-app privacy route: `/privacy`.
+- In-app terms route: `/terms`.
+- Draft privacy policy: `docs/privacy-policy-draft.md`.
+- Draft terms of use: `docs/terms-of-use-draft.md`.
+- Draft Play Console app-content answers:
+  `docs/play-console-app-content-answers.md`.
+- Store assets checklist: `docs/store-assets-checklist.md`.
+
 ## Official references checked
 
 - Google Play target API requirement:

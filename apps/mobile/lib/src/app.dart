@@ -5,6 +5,7 @@ import 'package:habitar_design_system/design_system.dart';
 import 'features/adult_registration/adult_registration_screen.dart';
 import 'features/family_dashboard/family_dashboard_screen.dart';
 import 'features/habit_setup/habit_setup_screen.dart';
+import 'features/legal/legal_screen.dart';
 import 'features/login/login_screen.dart';
 import 'features/notification_settings/notification_settings_screen.dart';
 import 'features/onboarding/onboarding_screen.dart';
@@ -26,6 +27,18 @@ final appRouter = GoRouter(
         path: '/onboarding',
         builder: (context, state) => const OnboardingScreen()),
     GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
+    GoRoute(
+        path: '/privacy',
+        builder: (context, state) => const LegalScreen(
+              title: 'Politica de privacidad',
+              kind: LegalDocumentKind.privacy,
+            )),
+    GoRoute(
+        path: '/terms',
+        builder: (context, state) => const LegalScreen(
+              title: 'Terminos de uso',
+              kind: LegalDocumentKind.terms,
+            )),
     GoRoute(
         path: '/recover',
         builder: (context, state) => const SimpleModeScreen(

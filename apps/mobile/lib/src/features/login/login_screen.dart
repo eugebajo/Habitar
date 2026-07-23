@@ -78,13 +78,28 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
                 const SizedBox(height: HabitarSpacing.sm),
                 TextButton(
-                  onPressed: _isSubmitting ? null : () => context.go('/recover'),
+                  onPressed:
+                      _isSubmitting ? null : () => context.go('/recover'),
                   child: const Text('Olvidé mi contraseña'),
                 ),
                 TextButton(
                   onPressed:
                       _isSubmitting ? null : () => context.go('/register'),
                   child: const Text('Crear mi espacio familiar'),
+                ),
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: HabitarSpacing.sm,
+                  children: [
+                    TextButton(
+                      onPressed: () => context.go('/privacy'),
+                      child: const Text('Privacidad'),
+                    ),
+                    TextButton(
+                      onPressed: () => context.go('/terms'),
+                      child: const Text('Terminos'),
+                    ),
+                  ],
                 ),
               ],
             ),

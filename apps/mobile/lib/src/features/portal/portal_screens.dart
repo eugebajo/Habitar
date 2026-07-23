@@ -43,8 +43,8 @@ class AdultSectionScreen extends StatelessWidget {
           'Configuracion',
           Icons.tune_rounded,
           'Ajusta accesibilidad, privacidad y experiencia sensorial.',
-          '/notifications',
-          'Notificaciones'
+          '/privacy',
+          'Privacidad'
         ),
       _ => (
           'HABITAR',
