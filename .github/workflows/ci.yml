@@ -60,7 +60,7 @@ jobs:
 
       - name: Package workspace dependencies
         working-directory: ${{ matrix.package }}
-        run: dart pub get
+        run: flutter pub get
 
       - name: Analyze
         working-directory: ${{ matrix.package }}
