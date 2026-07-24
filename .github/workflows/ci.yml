@@ -33,6 +33,7 @@ jobs:
   dart-packages:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         package:
           - packages/domain
@@ -56,6 +57,10 @@ jobs:
 
       - name: Dependencies
         run: flutter pub get
+
+      - name: Package workspace dependencies
+        working-directory: ${{ matrix.package }}
+        run: dart pub get
 
       - name: Analyze
         working-directory: ${{ matrix.package }}
