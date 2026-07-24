@@ -22,26 +22,26 @@ class FamilyDashboardScreen extends ConsumerWidget {
                 child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                  Text('Hola. Que necesita tu familia hoy?',
+                  Text('Hola. ¿Qué necesita tu familia hoy?',
                       style: Theme.of(context).textTheme.headlineSmall),
                   const SizedBox(height: 6),
                   Text(
                       hasProfile
-                          ? 'Perfil seleccionado - listo para acompanar'
+                          ? 'Perfil seleccionado - listo para acompañar'
                           : 'Elige un perfil para comenzar',
                       style: const TextStyle(color: HabitarColors.mutedInk)),
                 ])),
             PopupMenuButton<String>(
-                tooltip: 'Mas opciones',
+                tooltip: 'Más opciones',
                 onSelected: (value) {
                   if (value == 'settings') context.go('/settings');
                   if (value == 'logout') _signOut(context, ref);
                 },
                 itemBuilder: (_) => const [
                       PopupMenuItem(
-                          value: 'settings', child: Text('Configuracion')),
+                          value: 'settings', child: Text('Configuración')),
                       PopupMenuItem(
-                          value: 'logout', child: Text('Cerrar sesion'))
+                          value: 'logout', child: Text('Cerrar sesión'))
                     ]),
           ]),
           const SizedBox(height: 18),
@@ -66,7 +66,7 @@ class FamilyDashboardScreen extends ConsumerWidget {
                     const Icon(Icons.expand_more_rounded)
                   ]))),
           const SizedBox(height: 26),
-          Text('Accesos rapidos',
+          Text('Accesos rápidos',
               style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 12),
           GridView.count(
@@ -85,7 +85,7 @@ class FamilyDashboardScreen extends ConsumerWidget {
                         .go(hasProfile ? '/routine/create' : '/profiles')),
                 _Quick(
                     icon: Icons.wb_sunny_rounded,
-                    label: 'Crear habito',
+                    label: 'Crear hábito',
                     color: HabitarColors.sunlit,
                     onTap: () =>
                         context.go(hasProfile ? '/habits' : '/profiles')),
@@ -117,12 +117,12 @@ class FamilyDashboardScreen extends ConsumerWidget {
                           Text(
                               hasProfile
                                   ? '2 de 3 prioridades listas'
-                                  : 'Sin prioridades todavia',
+                                  : 'Sin prioridades todavía',
                               style: Theme.of(context).textTheme.titleMedium),
                           const SizedBox(height: 4),
                           Text(
                               hasProfile
-                                  ? 'Proximo: preparar la mochila - 18:30'
+                                  ? 'Próximo: preparar la mochila - 18:30'
                                   : 'Crea o selecciona un perfil.',
                               style: const TextStyle(
                                   color: HabitarColors.mutedInk))
@@ -134,15 +134,15 @@ class FamilyDashboardScreen extends ConsumerWidget {
           const SizedBox(height: 12),
           const _SummaryRow(
               icon: Icons.check_circle_outline,
-              title: 'Habitos completados',
+              title: 'Hábitos completados',
               value: '8'),
           const _SummaryRow(
               icon: Icons.favorite_outline,
               title: 'Logro reciente',
-              value: 'Pidio una pausa'),
+              value: 'Pidió una pausa'),
           const _SummaryRow(
               icon: Icons.battery_2_bar_rounded,
-              title: 'Momento mas dificil',
+              title: 'Momento más difícil',
               value: 'Tardes'),
           const SizedBox(height: 16),
           OutlinedButton.icon(

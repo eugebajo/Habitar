@@ -36,7 +36,7 @@ class LegalScreen extends StatelessWidget {
           Text(title, style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: HabitarSpacing.sm),
           Text(
-            'Documento preliminar para la version inicial de Habitar.',
+            'Documento preliminar para la versión inicial de Habitar.',
             style: Theme.of(context)
                 .textTheme
                 .bodyMedium
@@ -64,20 +64,20 @@ class _LegalSection {
 
 const _privacySections = [
   _LegalSection(
-    'Que datos usamos',
-    'Habitar puede usar datos de cuenta, perfiles familiares, rutinas, habitos, progreso, preferencias de notificacion y check-ins opcionales para prestar el servicio.',
+    'Qué datos usamos',
+    'Habitar puede usar datos de cuenta, perfiles familiares, rutinas, hábitos, progreso, preferencias de notificación y check-ins opcionales para prestar el servicio.',
   ),
   _LegalSection(
-    'Para que los usamos',
-    'Usamos estos datos para crear el espacio familiar, permitir el acceso adulto, mostrar rutinas asignadas, resumir progreso y sincronizar informacion cuando la cuenta lo permita.',
+    'Para qué los usamos',
+    'Usamos estos datos para crear el espacio familiar, permitir el acceso adulto, mostrar rutinas asignadas, resumir progreso y sincronizar información cuando la cuenta lo permita.',
   ),
   _LegalSection(
-    'Datos de ninos y adolescentes',
-    'Los perfiles infantiles y adolescentes existen para acompanamiento familiar. Los adultos responsables administran rutinas, habitos y configuraciones.',
+    'Datos de niños y adolescentes',
+    'Los perfiles infantiles y adolescentes existen para acompañamiento familiar. Los adultos responsables administran rutinas, hábitos y configuraciones.',
   ),
   _LegalSection(
     'Seguridad',
-    'La informacion se transmite mediante conexiones seguras. El espacio adulto esta protegido por un paso de confirmacion y la base remota debe usar reglas de acceso por cuenta.',
+    'La información se transmite mediante conexiones seguras. El espacio adulto está protegido por un paso de confirmación y la base remota debe usar reglas de acceso por cuenta.',
   ),
   _LegalSection(
     'Contacto',
@@ -88,15 +88,15 @@ const _privacySections = [
 const _termsSections = [
   _LegalSection(
     'Uso de Habitar',
-    'Habitar es una herramienta de organizacion familiar para rutinas, habitos y acompanamiento diario. No reemplaza orientacion medica, psicologica, educativa ni profesional.',
+    'Habitar es una herramienta de organización familiar para rutinas, hábitos y acompañamiento diario. No reemplaza orientación médica, psicológica, educativa ni profesional.',
   ),
   _LegalSection(
     'Responsabilidad adulta',
-    'El espacio adulto debe ser usado por madres, padres, tutores, cuidadores o profesionales autorizados. Los ninos y adolescentes no deben crear sus propias rutinas ni habitos desde su modo personal.',
+    'El espacio adulto debe ser usado por madres, padres, tutores, cuidadores o profesionales autorizados. Los niños y adolescentes no deben crear sus propias rutinas ni hábitos desde su modo personal.',
   ),
   _LegalSection(
     'Contenido y decisiones',
-    'Las rutinas, habitos, cuentos y apoyos deben revisarse segun la situacion de cada familia. El adulto responsable decide que acompanamiento corresponde.',
+    'Las rutinas, hábitos, cuentos y apoyos deben revisarse según la situación de cada familia. El adulto responsable decide qué acompañamiento corresponde.',
   ),
   _LegalSection(
     'Cuenta y seguridad',
@@ -104,6 +104,6 @@ const _termsSections = [
   ),
   _LegalSection(
     'Contacto',
-    'Para soporte o consultas sobre estos terminos, escribe a soporte@habitarpy.com.',
+    'Para soporte o consultas sobre estos términos, escribí a soporte@habitarpy.com.',
   ),
 ];

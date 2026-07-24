@@ -42,7 +42,7 @@ class _AdultRegistrationScreenState
           const SizedBox(height: HabitarSpacing.xl),
           HabitarCompanionLayout(
             eyebrow: 'Primer paso',
-            title: 'Contame quien sostiene este espacio.',
+            title: 'Contame quién sostiene este espacio.',
             body:
                 'No necesitamos todo ahora. Solo lo suficiente para cuidar a tu familia con calma.',
             child: Form(
@@ -52,7 +52,7 @@ class _AdultRegistrationScreenState
                   TextFormField(
                     controller: _nameController,
                     decoration: const InputDecoration(
-                      labelText: 'Como te llamas?',
+                      labelText: '¿Cómo te llamás?',
                     ),
                     validator: _required,
                   ),
@@ -60,7 +60,7 @@ class _AdultRegistrationScreenState
                   TextFormField(
                     controller: _familyController,
                     decoration: const InputDecoration(
-                      labelText: 'Como llamamos a tu familia?',
+                      labelText: '¿Cómo llamamos a tu familia?',
                     ),
                     validator: _required,
                   ),
@@ -76,16 +76,16 @@ class _AdultRegistrationScreenState
                   TextFormField(
                     controller: _passwordController,
                     decoration: const InputDecoration(
-                        labelText: 'Contrasena tranquila'),
+                        labelText: 'Contraseña tranquila'),
                     obscureText: true,
                     validator: _required,
                   ),
                   if (_error != null) ...[
                     const SizedBox(height: HabitarSpacing.md),
                     const HabitarConversationCard(
-                      title: 'No pudimos crear el espacio todavia',
+                      title: 'No pudimos crear el espacio todavía',
                       body:
-                          'Puede que ese correo ya exista. Intenta entrar o revisa los datos con calma.',
+                          'Puede que ese correo ya exista. Intentá entrar o revisá los datos con calma.',
                       color: HabitarColors.surfaceWarm,
                     ),
                   ],
@@ -144,7 +144,7 @@ class _AdultRegistrationScreenState
       if (mounted) {
         setState(() {
           _error =
-              'No pudimos crear el espacio. Revisa los datos o intenta entrar si ya existe.';
+              'No pudimos crear el espacio. Revisá los datos o intentá entrar si ya existe.';
         });
       }
     } finally {

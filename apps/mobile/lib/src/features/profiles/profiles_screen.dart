@@ -39,9 +39,9 @@ class _ProfilesScreenState extends ConsumerState<ProfilesScreen> {
                 children: [
                   const SizedBox(height: HabitarSpacing.xl),
                   HabitarMoment(
-                    title: 'Quien usara Habitar?',
+                    title: '¿Quién usará Habitar?',
                     body:
-                        'Crea el primer perfil para que el acompanamiento tenga nombre, ritmo y cuidado.',
+                        'Creá el primer perfil para que el acompañamiento tenga nombre, ritmo y cuidado.',
                     color: HabitarColors.surfaceMist,
                     trailing: FilledButton(
                       onPressed: () => context.go('/profile'),
@@ -61,11 +61,11 @@ class _ProfilesScreenState extends ConsumerState<ProfilesScreen> {
                     final text = Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Quien usara Habitar?',
+                        Text('¿Quién usará Habitar?',
                             style: Theme.of(context).textTheme.displaySmall),
                         const SizedBox(height: HabitarSpacing.sm),
                         Text(
-                          'Cada perfil abre un momento distinto: nino, adolescente o adulto.',
+                          'Cada perfil abre un momento distinto: niño, adolescente o adulto.',
                           style: Theme.of(context)
                               .textTheme
                               .bodyLarge
@@ -155,7 +155,7 @@ class _ProfileTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final kindLabel =
-        summary.kind == ProfileKind.child ? 'Nino/a' : 'Adolescente';
+        summary.kind == ProfileKind.child ? 'Niño/a' : 'Adolescente';
     final hasNext = summary.nextTaskTitle != null;
 
     return SizedBox(
@@ -178,7 +178,7 @@ class _ProfileTile extends StatelessWidget {
               Text(summary.displayName,
                   style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: HabitarSpacing.xs),
-              Text('$kindLabel, ${summary.age} anos'),
+              Text('$kindLabel, ${summary.age} años'),
               const SizedBox(height: HabitarSpacing.md),
               LinearProgressIndicator(
                 value: summary.progressFraction,

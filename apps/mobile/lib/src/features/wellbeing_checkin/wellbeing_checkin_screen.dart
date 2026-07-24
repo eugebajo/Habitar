@@ -27,7 +27,7 @@ class _WellbeingCheckInScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Como esta ahora')),
+      appBar: AppBar(title: const Text('Cómo está ahora')),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(HabitarSpacing.lg),
@@ -35,7 +35,7 @@ class _WellbeingCheckInScreenState
             const HabitarMoment(
               title: 'No hace falta explicar todo.',
               body:
-                  'Solo una senal alcanza para saber si necesita silencio, movimiento o ayuda.',
+                  'Solo una señal alcanza para saber si necesita silencio, movimiento o ayuda.',
               color: HabitarColors.surfaceMist,
             ),
             const SizedBox(height: HabitarSpacing.md),
@@ -84,7 +84,7 @@ class _WellbeingCheckInScreenState
               controlAffinity: ListTileControlAffinity.leading,
             ),
             const SizedBox(height: HabitarSpacing.md),
-            FilledButton(onPressed: _save, child: const Text('Acompanarlo')),
+            FilledButton(onPressed: _save, child: const Text('Acompañarlo')),
             if (_message != null) ...[
               const SizedBox(height: HabitarSpacing.md),
               Card(
@@ -114,7 +114,7 @@ class _WellbeingCheckInScreenState
   Future<void> _save() async {
     final profileId = ref.read(currentProfileIdProvider);
     if (profileId == null) {
-      setState(() => _message = 'Primero crea un perfil.');
+      setState(() => _message = 'Primero creá un perfil.');
       return;
     }
     final input = EmotionCheckInInput(
@@ -130,8 +130,8 @@ class _WellbeingCheckInScreenState
     setState(() {
       _actions = ref.read(wellbeingServiceProvider).supportActionsFor(input);
       _message = _skipped
-          ? 'Esta bien. Podemos volver despues.'
-          : 'Gracias. Guardamos esta senal sin juzgarla.';
+          ? 'Está bien. Podemos volver después.'
+          : 'Gracias. Guardamos esta señal sin juzgarla.';
     });
   }
 

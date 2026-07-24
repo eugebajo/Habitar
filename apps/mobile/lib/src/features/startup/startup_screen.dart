@@ -38,7 +38,7 @@ class StartupScreen extends ConsumerWidget {
                   const SizedBox(height: HabitarSpacing.md),
                   if (restoreState.hasError)
                     const Text(
-                        'No pudimos abrir tu espacio todavia. Podemos empezar de nuevo con calma.')
+                        'No pudimos abrir tu espacio todavía. Podemos empezar de nuevo con calma.')
                   else
                     const Text(
                         'Preparando el lugar tranquilo de tu familia...'),

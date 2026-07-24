@@ -26,11 +26,11 @@ class AdultSectionScreen extends StatelessWidget {
           'Ver logros'
         ),
       'habits' => (
-          'Habitos',
+          'Hábitos',
           Icons.wb_sunny_rounded,
-          'Activa como maximo tres cambios pequenos a la vez.',
+          'Activá como máximo tres cambios pequeños a la vez.',
           '/habits',
-          'Crear habito'
+          'Crear hábito'
         ),
       'rewards' => (
           'Recompensas',
@@ -40,7 +40,7 @@ class AdultSectionScreen extends StatelessWidget {
           'Volver al inicio'
         ),
       'settings' => (
-          'Configuracion',
+          'Configuración',
           Icons.tune_rounded,
           'Ajusta accesibilidad, privacidad y experiencia sensorial.',
           '/privacy',
@@ -79,7 +79,7 @@ class AdultSectionScreen extends StatelessWidget {
           const _Stat(
               icon: Icons.favorite_outline,
               label: 'Logro reciente',
-              value: 'Pidio ayuda'),
+              value: 'Pidió ayuda'),
         ],
       ),
     );
@@ -135,7 +135,7 @@ class ChildHomeScreen extends StatelessWidget {
                       style: TextStyle(color: HabitarColors.mutedInk))
                 ])),
             IconButton(
-                tooltip: 'Como me siento',
+                tooltip: 'Cómo me siento',
                 onPressed: () => context.go('/child/emotions'),
                 icon: const Icon(Icons.mood_rounded))
           ]),
@@ -152,7 +152,7 @@ class ChildHomeScreen extends StatelessWidget {
               action: 'Empezar',
               onTap: () => context.go('/routine/player')),
           const SizedBox(height: 16),
-          const Text('Despues: tiempo libre',
+          const Text('Después: tiempo libre',
               style: TextStyle(fontWeight: FontWeight.w700)),
           const SizedBox(height: 20),
           Wrap(spacing: 12, runSpacing: 12, children: [
@@ -222,7 +222,7 @@ class TeenHomeScreen extends StatelessWidget {
           Text('Buenas tardes, Alex',
               style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: 6),
-          const Text('Tu dia, a tu ritmo.',
+          const Text('Tu día, a tu ritmo.',
               style: TextStyle(color: HabitarColors.mutedInk)),
           const SizedBox(height: 24),
           const _TeenTile(
@@ -231,17 +231,17 @@ class TeenHomeScreen extends StatelessWidget {
               value: 'Preparar la mochila'),
           const _TeenTile(
               icon: Icons.task_alt_rounded,
-              title: 'Habitos activos',
+              title: 'Hábitos activos',
               value: '2 de 3 completados'),
           const _TeenTile(
               icon: Icons.insights_rounded,
               title: 'Mi progreso',
-              value: '4 dias esta semana'),
+              value: '4 días esta semana'),
           const SizedBox(height: 16),
           FilledButton.icon(
               onPressed: () => context.go('/teen/reflection'),
               icon: const Icon(Icons.edit_note_rounded),
-              label: const Text('Reflexion diaria')),
+              label: const Text('Reflexión diaria')),
           TextButton(
               onPressed: () => showAdultPin(context),
               child: const Text('Entrar al espacio adulto')),
@@ -310,7 +310,7 @@ class AdultPinScreen extends StatelessWidget {
                     icon: Icons.lock_outline,
                     title: 'Confirma el PIN adulto',
                     message:
-                        'Las rutinas, habitos y cambios familiares quedan protegidos.',
+                        'Las rutinas, hábitos y cambios familiares quedan protegidos.',
                   ),
                   const SizedBox(height: 16),
                   FilledButton(

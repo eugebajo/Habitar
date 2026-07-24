@@ -14,9 +14,9 @@ class OnboardingScreen extends StatelessWidget {
               header: true,
               child: HabitarStage(
                 eyebrow: 'HABITAR',
-                title: 'Habitos posibles para familias reales.',
+                title: 'Hábitos posibles para familias reales.',
                 body:
-                    'Rutinas visuales, pequenos pasos y acompanamiento para cada etapa.',
+                    'Rutinas visuales, pequeños pasos y acompañamiento para cada etapa.',
                 primaryLabel: 'Crear mi espacio',
                 onPrimary: () => context.go('/register'),
                 secondaryLabel: 'Ya tengo una cuenta',
@@ -27,7 +27,7 @@ class OnboardingScreen extends StatelessWidget {
                   SizedBox(width: 8),
                   Expanded(
                       child: Text(
-                          'Sin castigos, comparaciones ni presion por rachas.')),
+                          'Sin castigos, comparaciones ni presión por rachas.')),
                 ]),
               ),
             ),
@@ -42,7 +42,7 @@ class OnboardingScreen extends StatelessWidget {
                 ),
                 TextButton(
                   onPressed: () => context.go('/terms'),
-                  child: const Text('Terminos'),
+                  child: const Text('Términos'),
                 ),
               ],
             ),

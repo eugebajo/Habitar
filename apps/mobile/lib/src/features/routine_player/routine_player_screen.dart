@@ -130,7 +130,7 @@ class _RoutineBody extends StatelessWidget {
           _MainStepCard(
             title: activeStep?.title ?? 'Sin paso activo',
             subtitle:
-                isPaused ? 'Podemos pausar. No se perdio nada.' : 'Ahora',
+                isPaused ? 'Podemos pausar. No se perdió nada.' : 'Ahora',
           ),
         const SizedBox(height: HabitarSpacing.md),
         _TimerPanel(
@@ -138,7 +138,7 @@ class _RoutineBody extends StatelessWidget {
         const SizedBox(height: HabitarSpacing.md),
         _NowNextPanel(
             nowTitle: activeStep?.title ?? 'Listo',
-            nextTitle: nextStep?.title ?? 'Despues terminamos'),
+            nextTitle: nextStep?.title ?? 'Después terminamos'),
         const SizedBox(height: HabitarSpacing.lg),
         if (!isComplete) ...[
           FilledButton(
@@ -146,7 +146,7 @@ class _RoutineBody extends StatelessWidget {
               child: Text(isPaused ? 'Volver cuando quieras' : 'Ya lo hice')),
           const SizedBox(height: HabitarSpacing.sm),
           OutlinedButton(
-              onPressed: onMoreTime, child: const Text('Necesito mas tiempo')),
+              onPressed: onMoreTime, child: const Text('Necesito más tiempo')),
           const SizedBox(height: HabitarSpacing.sm),
           OutlinedButton(
               onPressed: onHelp,
@@ -159,7 +159,7 @@ class _RoutineBody extends StatelessWidget {
               child: Text(isPaused ? 'Estoy listo' : 'Necesito una pausa')),
           const SizedBox(height: HabitarSpacing.sm),
           OutlinedButton(
-              onPressed: onPostpone, child: const Text('5 minutos despues')),
+              onPressed: onPostpone, child: const Text('5 minutos después')),
           const SizedBox(height: HabitarSpacing.sm),
           TextButton(onPressed: onSkip, child: const Text('Omitir este paso')),
         ],
@@ -237,7 +237,7 @@ class _NowNextPanel extends StatelessWidget {
       children: [
         Expanded(child: _SmallPanel(label: 'Ahora', title: nowTitle)),
         const SizedBox(width: HabitarSpacing.sm),
-        Expanded(child: _SmallPanel(label: 'Despues', title: nextTitle)),
+        Expanded(child: _SmallPanel(label: 'Después', title: nextTitle)),
       ],
     );
   }
@@ -282,7 +282,7 @@ class _EmptyRoutine extends StatelessWidget {
                 style: Theme.of(context).textTheme.headlineSmall),
             const SizedBox(height: HabitarSpacing.md),
             const Text(
-              'Un adulto puede preparar el proximo paso. Por ahora puedes respirar.',
+              'Un adulto puede preparar el próximo paso. Por ahora podés respirar.',
               textAlign: TextAlign.center,
             ),
           ],

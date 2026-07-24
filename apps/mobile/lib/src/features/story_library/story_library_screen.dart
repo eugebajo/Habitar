@@ -29,7 +29,7 @@ class _StoryLibraryScreenState extends ConsumerState<StoryLibraryScreen> {
             const HabitarMoment(
               title: 'Un cuento para bajar el ruido.',
               body:
-                  'Elige una historia breve. No buscamos rendimiento, buscamos conversacion.',
+                  'Elegí una historia breve. No buscamos rendimiento, buscamos conversación.',
               color: HabitarColors.lavender,
             ),
             const SizedBox(height: HabitarSpacing.md),
@@ -66,7 +66,7 @@ class _StoryLibraryScreenState extends ConsumerState<StoryLibraryScreen> {
       {required bool favorite}) async {
     final profileId = ref.read(currentProfileIdProvider);
     if (profileId == null) {
-      setState(() => _message = 'Primero crea un perfil.');
+      setState(() => _message = 'Primero creá un perfil.');
       return;
     }
     await ref.read(wellbeingServiceProvider).markStoryRead(
@@ -108,12 +108,12 @@ class _StoryReader extends StatelessWidget {
                 style: Theme.of(context).textTheme.titleMedium),
             for (final question in content.questions) Text('- $question'),
             const SizedBox(height: HabitarSpacing.md),
-            Text('Despues podemos probar: ${content.activity}'),
+            Text('Después podemos probar: ${content.activity}'),
             const SizedBox(height: HabitarSpacing.md),
             Row(
               children: [
                 FilledButton(
-                    onPressed: onRead, child: const Text('Ya lo leimos')),
+                    onPressed: onRead, child: const Text('Ya lo leímos')),
                 const SizedBox(width: HabitarSpacing.sm),
                 OutlinedButton(
                     onPressed: onFavorite, child: const Text('Favorito')),

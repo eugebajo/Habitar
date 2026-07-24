@@ -51,13 +51,13 @@ class WeeklyHabitSummary {
 
   String get supportiveInsight {
     if (totalEntries == 0) {
-      return 'Quizas conviene mantener este habito simple una semana mas.';
+      return 'Quizás conviene mantener este hábito simple una semana más.';
     }
     if (averageHelpLevel <= 1.5) {
-      return 'Este habito se realizo con menos ayuda.';
+      return 'Este hábito se realizó con menos ayuda.';
     }
     if (averageEase < 2.5) {
-      return 'Este habito puede necesitar una version minima mas pequena.';
+      return 'Este hábito puede necesitar una versión mínima más pequeña.';
     }
     return 'Hay avances registrados sin usar rachas ni castigos.';
   }

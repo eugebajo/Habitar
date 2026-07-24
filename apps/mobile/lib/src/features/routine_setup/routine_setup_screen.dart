@@ -47,9 +47,9 @@ class _RoutineSetupScreenState extends ConsumerState<RoutineSetupScreen> {
                 child: ListView(
                   children: [
                     const HabitarMoment(
-                      title: 'Que necesita pasar primero?',
+                      title: '¿Qué necesita pasar primero?',
                       body:
-                          'Tres pasos alcanzan. La idea no es completar perfecto, sino bajar la friccion del momento.',
+                          'Tres pasos alcanzan. La idea no es completar perfecto, sino bajar la fricción del momento.',
                       color: HabitarColors.surfaceMist,
                     ),
                     const SizedBox(height: HabitarSpacing.md),
@@ -66,7 +66,7 @@ class _RoutineSetupScreenState extends ConsumerState<RoutineSetupScreen> {
                       TextFormField(
                         controller: _stepControllers[index],
                         decoration: InputDecoration(
-                            labelText: 'Pequeno paso ${index + 1}'),
+                            labelText: 'Pequeño paso ${index + 1}'),
                         validator: _required,
                       ),
                       const SizedBox(height: HabitarSpacing.md),

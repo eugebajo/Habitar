@@ -16,7 +16,7 @@ class HabitSetupScreen extends ConsumerStatefulWidget {
 class _HabitSetupScreenState extends ConsumerState<HabitSetupScreen> {
   final _titleController = TextEditingController(text: 'Higiene dental');
   final _minimumController =
-      TextEditingController(text: 'Entrar al bano y preparar el cepillo');
+      TextEditingController(text: 'Entrar al baño y preparar el cepillo');
   var _confirmOverride = false;
   String? _message;
   List<Habit> _habits = [];
@@ -37,38 +37,38 @@ class _HabitSetupScreenState extends ConsumerState<HabitSetupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Habitos cuidados')),
+      appBar: AppBar(title: const Text('Hábitos cuidados')),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(HabitarSpacing.lg),
           children: [
             const HabitarMoment(
-              title: 'Elijamos algo pequeno.',
+              title: 'Elijamos algo pequeño.',
               body:
-                  'Un habito nuevo debe sentirse posible. Si pesa demasiado, lo hacemos mas pequeno.',
+                  'Un hábito nuevo debe sentirse posible. Si pesa demasiado, lo hacemos más pequeño.',
               color: HabitarColors.surfaceWarm,
             ),
             const SizedBox(height: HabitarSpacing.md),
             TextField(
                 controller: _titleController,
                 decoration:
-                    const InputDecoration(labelText: 'Que queremos cuidar?')),
+                    const InputDecoration(labelText: '¿Qué queremos cuidar?')),
             const SizedBox(height: HabitarSpacing.md),
             TextField(
                 controller: _minimumController,
                 decoration:
-                    const InputDecoration(labelText: 'Paso minimo posible')),
+                    const InputDecoration(labelText: 'Paso mínimo posible')),
             const SizedBox(height: HabitarSpacing.sm),
             CheckboxListTile(
               value: _confirmOverride,
               onChanged: (value) =>
                   setState(() => _confirmOverride = value ?? false),
               title: const Text(
-                  'Hoy podemos sostener un poco mas si un adulto lo decide'),
+                  'Hoy podemos sostener un poco más si un adulto lo decide'),
               controlAffinity: ListTileControlAffinity.leading,
             ),
             FilledButton(
-                onPressed: _createHabit, child: const Text('Preparar habito')),
+                onPressed: _createHabit, child: const Text('Preparar hábito')),
             if (_message != null) ...[
               const SizedBox(height: HabitarSpacing.md),
               Card(
@@ -104,7 +104,7 @@ class _HabitSetupScreenState extends ConsumerState<HabitSetupScreen> {
     final profileId = ref.read(currentProfileIdProvider);
     final profileKind = ref.read(currentProfileKindProvider);
     if (profileId == null || profileKind == null) {
-      setState(() => _message = 'Primero crea un perfil.');
+      setState(() => _message = 'Primero creá un perfil.');
       return;
     }
 
@@ -121,7 +121,7 @@ class _HabitSetupScreenState extends ConsumerState<HabitSetupScreen> {
     final warning = result.plan.decision.warning;
     setState(() {
       _message = result.wasActivated
-          ? 'Listo. Lo vamos a acompanar desde el paso mas pequeno.'
+          ? 'Listo. Lo vamos a acompañar desde el paso más pequeño.'
           : warning ?? 'Lo dejamos preparado sin sumar carga hoy.';
     });
     await _loadHabits();
@@ -163,7 +163,7 @@ class _HabitCard extends StatelessWidget {
             const SizedBox(height: HabitarSpacing.sm),
             Text(_statusText(habit.status)),
             if (habit.minimumVersion != null)
-              Text('Paso minimo: ${habit.minimumVersion}'),
+              Text('Paso mínimo: ${habit.minimumVersion}'),
             const SizedBox(height: HabitarSpacing.md),
             OutlinedButton(
                 onPressed: onRecord, child: const Text('Hoy lo logramos')),
@@ -175,10 +175,10 @@ class _HabitCard extends StatelessWidget {
 
   String _statusText(HabitStatus status) {
     return switch (status) {
-      HabitStatus.proposed => 'Preparado para mas adelante',
-      HabitStatus.newHabit => 'Nuevo y acompanado',
-      HabitStatus.practicing => 'En practica',
-      HabitStatus.stable => 'Ya se siente mas estable',
+      HabitStatus.proposed => 'Preparado para más adelante',
+      HabitStatus.newHabit => 'Nuevo y acompañado',
+      HabitStatus.practicing => 'En práctica',
+      HabitStatus.stable => 'Ya se siente más estable',
       HabitStatus.paused => 'Pausado con cuidado',
       HabitStatus.archived => 'Guardado en historial',
     };

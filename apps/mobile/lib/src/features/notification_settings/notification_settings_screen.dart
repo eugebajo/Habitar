@@ -29,9 +29,9 @@ class _NotificationSettingsScreenState
           padding: const EdgeInsets.all(HabitarSpacing.lg),
           children: [
             const HabitarMoment(
-              title: 'Como avisamos sin invadir?',
+              title: '¿Cómo avisamos sin invadir?',
               body:
-                  'Los recordatorios deben ayudar, no perseguir. Elige el tono que cuide mejor el momento.',
+                  'Los recordatorios deben ayudar, no perseguir. Elegí el tono que cuide mejor el momento.',
               color: HabitarColors.surfaceWarm,
             ),
             const SizedBox(height: HabitarSpacing.md),
@@ -104,7 +104,7 @@ class _NotificationSettingsScreenState
   Future<void> _saveConsent() async {
     final profileId = ref.read(currentProfileIdProvider);
     if (profileId == null) {
-      setState(() => _message = 'Primero crea un perfil.');
+      setState(() => _message = 'Primero creá un perfil.');
       return;
     }
     await ref.read(notificationServiceProvider).saveConsent(
@@ -114,13 +114,13 @@ class _NotificationSettingsScreenState
               : NotificationPermissionStatus.denied,
           intensity: _intensity,
         );
-    setState(() => _message = 'Listo. Los avisos respetaran este tono.');
+    setState(() => _message = 'Listo. Los avisos respetarán este tono.');
   }
 
   Future<void> _scheduleDemo() async {
     final profileId = ref.read(currentProfileIdProvider);
     if (profileId == null) {
-      setState(() => _message = 'Primero crea un perfil.');
+      setState(() => _message = 'Primero creá un perfil.');
       return;
     }
     final plan =

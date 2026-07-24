@@ -35,10 +35,10 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
         children: [
           const SizedBox(height: HabitarSpacing.xl),
           HabitarCompanionLayout(
-            eyebrow: 'Ahora pensemos en el',
-            title: 'Quien usara Habitar?',
+            eyebrow: 'Ahora pensemos en él',
+            title: '¿Quién usará Habitar?',
             body:
-                'Cada persona necesita un modo distinto de sentirse acompanada. Empezamos con lo esencial.',
+                'Cada persona necesita un modo distinto de sentirse acompañada. Empezamos con lo esencial.',
             child: Form(
               key: _formKey,
               child: Column(
@@ -48,8 +48,8 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                       Expanded(
                         child: _KindCard(
                           selected: _kind == ProfileKind.child,
-                          title: 'Nino o nina',
-                          body: 'Pasos claros, poca carga y mucho sosten.',
+                          title: 'Niño o niña',
+                          body: 'Pasos claros, poca carga y mucho sostén.',
                           onTap: () =>
                               setState(() => _kind = ProfileKind.child),
                         ),
@@ -59,7 +59,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                         child: _KindCard(
                           selected: _kind == ProfileKind.teen,
                           title: 'Adolescente',
-                          body: 'Mas autonomia, tono sobrio y respeto.',
+                          body: 'Más autonomía, tono sobrio y respeto.',
                           onTap: () => setState(() => _kind = ProfileKind.teen),
                         ),
                       ),
@@ -69,7 +69,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                   TextFormField(
                     controller: _nameController,
                     decoration: const InputDecoration(
-                      labelText: 'Como quiere que le llamemos?',
+                      labelText: '¿Cómo quiere que le llamemos?',
                     ),
                     validator: _required,
                   ),
@@ -77,14 +77,14 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                   TextFormField(
                     controller: _ageController,
                     decoration:
-                        const InputDecoration(labelText: 'Cuantos anos tiene?'),
+                        const InputDecoration(labelText: '¿Cuántos años tiene?'),
                     keyboardType: TextInputType.number,
                     validator: _ageValidator,
                   ),
                   const SizedBox(height: HabitarSpacing.lg),
                   FilledButton(
                     onPressed: _submit,
-                    child: const Text('Preparar su acompanamiento'),
+                    child: const Text('Preparar su acompañamiento'),
                   ),
                 ],
               ),

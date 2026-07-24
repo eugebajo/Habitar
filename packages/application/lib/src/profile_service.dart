@@ -141,10 +141,10 @@ class ProfileService {
     required double progressFraction,
   }) {
     if (completedGoals == 0 && pendingTasks == 0) {
-      return 'Todavia no hay tareas cargadas. Podemos crear una rutina o un habito pequeno.';
+      return 'Todavía no hay tareas cargadas. Podemos crear una rutina o un hábito pequeño.';
     }
     if (pendingTasks == 0) {
-      return 'Todo lo pendiente esta resuelto por ahora.';
+      return 'Todo lo pendiente está resuelto por ahora.';
     }
     if (progressFraction >= 0.6) {
       return 'Ya hay bastante camino hecho. Conviene cerrar una tarea simple.';
