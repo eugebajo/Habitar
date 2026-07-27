@@ -28,7 +28,7 @@ class FamilyDashboardScreen extends ConsumerWidget {
                   Text(
                       hasProfile
                           ? 'Perfil seleccionado - listo para acompañar'
-                          : 'Elige un perfil para comenzar',
+                          : 'Elegí un perfil para comenzar',
                       style: const TextStyle(color: HabitarColors.mutedInk)),
                 ])),
             PopupMenuButton<String>(

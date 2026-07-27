@@ -16,7 +16,7 @@ void main() {
     await tester.tap(find.text('Crear mi espacio'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Contame quien sostiene este espacio.'), findsOneWidget);
+    expect(find.text('Contame quién sostiene este espacio.'), findsOneWidget);
     expect(find.text('Seguir con mi familia'), findsOneWidget);
   });
 }

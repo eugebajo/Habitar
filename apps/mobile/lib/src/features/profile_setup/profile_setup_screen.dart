@@ -105,7 +105,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
   String? _ageValidator(String? value) {
     final age = int.tryParse(value ?? '');
     if (age == null || age < 3 || age > 17) {
-      return 'Usa una edad entre 3 y 17';
+      return 'Usá una edad entre 3 y 17';
     }
     return null;
   }
