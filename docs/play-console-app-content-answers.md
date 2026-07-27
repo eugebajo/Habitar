@@ -1,80 +1,85 @@
-# Play Console - App content answers draft
+# Play Console - Respuestas de contenido
 
-These are draft answers for Google Play Console. Review before submission.
+Borrador práctico para completar Google Play Console. Revisar antes de enviar.
 
-## App access
+## Acceso a la app
 
-If Google asks whether all or some functionality is restricted:
+Si Google pregunta si toda o parte de la funcionalidad está restringida:
 
-- Answer: Some functionality is restricted.
-- Instructions for reviewers:
+- Respuesta: parte de la funcionalidad está restringida.
+- Instrucciones para revisores:
 
 ```text
-Habitar requires an adult account to create family spaces, profiles, routines
-and habits. Child and teen modes are separated and only show assigned content.
-For review, use the provided test credentials or create a new adult account.
-Adult PIN demo for protected adult space: 1234.
+Habitar requiere una cuenta adulta para crear espacios familiares, perfiles,
+rutinas y hábitos. Los modos de niño y adolescente están separados y solo
+muestran contenido asignado por el adulto.
+
+Para revisión, pueden usar las credenciales de prueba provistas o crear una
+nueva cuenta adulta. PIN demo para entrar al espacio adulto protegido: 1234.
 ```
 
-## Ads
+## Anuncios
 
-Recommended answer for MVP:
+- ¿La app contiene anuncios? No.
 
-- Does your app contain ads? No.
+## Clasificación de contenido
 
-## Content rating notes
+Habitar es una app de organización familiar y acompañamiento cotidiano. No
+incluye violencia, contenido sexual, apuestas, contenido público generado por
+usuarios ni compras integradas en el MVP.
 
-Habitar is a family productivity/wellbeing support app. It does not include
-violence, sexual content, gambling, user-generated public content, or shopping.
+## Público objetivo
 
-## Target audience
+Intención de producto:
 
-Product intent:
+- Usuario principal / titular de cuenta: persona adulta cuidadora, madre, padre,
+  tutor, docente o profesional autorizado.
+- Perfiles de niños/adolescentes: modos separados para ver rutinas asignadas,
+  progreso y apoyos.
 
-- Primary user/account holder: adult caregiver, parent, tutor, teacher or
-  professional.
-- Child/adolescent profiles: separated modes for viewing assigned routines,
-  progress and support.
+Pregunta sensible:
 
-Important review question:
+Habitar debe presentarse como app administrada por adultos con modos infantiles
+y adolescentes separados. Evitar declararla como app donde niños crean su propio
+contenido o administran rutinas.
 
-Decide carefully whether Habitar is submitted as a child-directed app or as a
-caregiver-managed app with child/adolescent profile modes. This affects Families
-Policy declarations.
+## Seguridad de datos
 
-## Data safety draft answers
+Datos que puede recolectar:
 
-Data collected:
+- Dirección de email.
+- ID de usuario.
+- Nombres o nombres visibles.
+- Actividad dentro de la app.
+- Contenido opcional de check-in de bienestar.
 
-- Email address.
-- User IDs.
-- Names or display names.
-- App activity.
-- Optional health/wellbeing-adjacent check-in content.
+Finalidades:
 
-Purposes:
+- Funcionalidad de la app.
+- Administración de cuenta.
+- Sin publicidad.
+- Sin analítica de terceros en el MVP, salvo que se agregue un SDK más adelante.
 
-- App functionality.
-- Account management.
-- Analytics: no, unless an analytics SDK is added later.
-- Advertising: no.
+Compartición:
 
-Sharing:
+- No se venden datos personales.
+- Los datos pueden ser procesados por proveedores de infraestructura como
+  Supabase, Google Play y Apple App Store.
 
-- No sale of data.
-- Data processed by infrastructure providers such as Supabase.
+Seguridad:
 
-Security:
+- Datos cifrados en tránsito.
+- La persona usuaria puede solicitar eliminación de datos por soporte hasta que
+  exista eliminación automática dentro de la app.
 
-- Data encrypted in transit.
-- User can request deletion through support until self-service deletion is
-  implemented.
+## URLs
 
-## Privacy policy URL
+- Sitio web: `https://habitarpy.com`
+- Política de privacidad: `https://habitarpy.com/privacy/`
+- Términos: `https://habitarpy.com/terms/`
 
-Pending final domain.
+## Pendiente antes de revisión
 
-Recommended independent Habitar domain:
-
-- `https://habitarpy.com/privacy`
-- `https://habitarpy.com/terms`
+- Crear o reenviar `soporte@habitarpy.com`.
+- Definir credenciales de prueba para Google Play.
+- Confirmar que Supabase de producción tenga reglas de acceso por cuenta/familia.

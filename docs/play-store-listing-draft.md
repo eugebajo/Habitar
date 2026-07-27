@@ -1,58 +1,67 @@
-# Habitar - Play Store listing draft
+# Habitar - Ficha de Google Play
 
-This is a working draft for Google Play. Final wording should be reviewed before
-submission.
+Texto listo para copiar en Google Play Console. Revisar una vez más antes de
+enviar a revisión.
 
-## App name
+## Nombre de la app
 
 Habitar
 
-## Short description
+## Descripción corta
 
-Rutinas y habitos posibles para acompanar a ninos y adolescentes.
+Rutinas posibles para acompañar a niños y adolescentes.
 
-## Full description
+## Descripción completa
 
 Habitar ayuda a familias, cuidadores y profesionales a organizar rutinas,
-habitos y pequenos pasos de acompanamiento para ninos y adolescentes.
+hábitos y pequeños pasos de acompañamiento para niños y adolescentes.
 
 La app separa claramente el espacio adulto del espacio infantil y adolescente.
-Los adultos preparan rutinas, habitos y apoyos. Los ninos y adolescentes ven
-solo lo que necesitan para avanzar con calma: que hacer ahora, que viene
-despues y como pedir ayuda.
+Los adultos preparan rutinas, hábitos, perfiles y apoyos. Los niños y
+adolescentes ven solo lo que necesitan para avanzar con calma: qué hacer ahora,
+qué viene después y cómo pedir ayuda.
 
 Funciones iniciales:
 
 - Registro adulto y espacio familiar.
-- Perfiles para ninos y adolescentes.
+- Perfiles para niños y adolescentes.
 - Rutinas guiadas paso a paso.
-- Habitos con version minima posible.
+- Hábitos con versión mínima posible.
 - Panel adulto para administrar rutinas, progreso, biblioteca y familia.
 - Modo infantil simple.
 - Modo adolescente sobrio y privado.
 - Check-in emocional opcional.
-- Preparacion para sincronizacion segura.
+- Preparación para sincronización segura.
 
-Habitar no busca castigos, rachas ni comparaciones. La idea es bajar la
-friccion del dia y sostener avances pequenos.
+Habitar no busca castigos, rachas ni comparaciones. La idea es bajar la fricción
+del día y sostener avances pequeños.
 
-## Keywords / themes
+Habitar no reemplaza orientación médica, psicológica, educativa ni profesional.
+
+## Categoría sugerida
+
+Productividad o Estilo de vida. Elegir la que mejor encaje según cómo Google
+Play Console muestre las opciones disponibles.
+
+## Etiquetas / temas
 
 - rutinas
-- habitos
+- hábitos
 - familia
-- autonomia
-- acompanamiento
-- ninos
+- autonomía
+- acompañamiento
+- niños
 - adolescentes
-- neurodiversidad
-- AuDHD
+- organización familiar
 
-## Support
+## Datos de contacto
 
-Pending:
+- Sitio web: `https://habitarpy.com`
+- Política de privacidad: `https://habitarpy.com/privacy/`
+- Términos: `https://habitarpy.com/terms/`
+- Email de soporte previsto: `soporte@habitarpy.com`
 
-- Support email
-- Website
-- Privacy policy URL
-- Terms URL
+## Nota pendiente
+
+Antes de enviar a revisión, el email de soporte debe existir o reenviar a una
+casilla que Eugenia revise.

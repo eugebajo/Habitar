@@ -1,43 +1,51 @@
-# Store assets checklist
+# Checklist de recursos para tienda
 
-Assets needed before internal testing and public listing.
+Recursos necesarios antes de prueba interna y publicación.
 
 ## Google Play
 
-- App icon: 512 x 512 PNG.
-- Feature graphic: 1024 x 500 PNG.
-- Phone screenshots: at least 2, recommended 6-8.
-- Short description: max 80 characters.
-- Full description: max 4000 characters.
-- Support email.
-- Privacy policy URL.
-- Website URL.
+- Icono de app: PNG 512 x 512.
+- Gráfico destacado: PNG 1024 x 500.
+- Capturas de teléfono: mínimo 2, recomendado 6 a 8.
+- Descripción corta: máximo 80 caracteres.
+- Descripción completa: máximo 4000 caracteres.
+- Email de soporte funcionando.
+- URL de política de privacidad.
+- URL de sitio web.
 
-## Screenshot plan
+## Datos ya listos
 
-Capture these screens:
+- Sitio web: `https://habitarpy.com`
+- Política de privacidad: `https://habitarpy.com/privacy/`
+- Términos: `https://habitarpy.com/terms/`
+- Nombre de app: Habitar
+- Package Android: `com.habitarpy.app`
 
-1. Onboarding: Habitos posibles para familias reales.
-2. Adult dashboard: compact family overview.
-3. Profiles selector: adult/child/teen separation.
-4. Child mode: Ahora, Despues, ayuda.
-5. Teen mode: objective, habits, progress and privacy.
-6. Routine player: guided steps.
-7. Habit setup: minimum possible version.
-8. Wellbeing check-in: optional support.
+## Plan de capturas
 
-## Copy direction
+Capturar estas pantallas:
 
-Avoid medical claims. Use support/productivity language:
+1. Onboarding: "Hábitos posibles para familias reales."
+2. Panel adulto: vista compacta de familia.
+3. Selector de perfiles: separación adulto / niño / adolescente.
+4. Modo infantil: Ahora, Después y pedir ayuda.
+5. Modo adolescente: objetivo, hábitos, progreso y privacidad.
+6. Rutina guiada: pasos claros.
+7. Hábitos: versión mínima posible.
+8. Check-in de bienestar: apoyo opcional.
 
-- "acompanamiento familiar"
+## Dirección de copy para capturas
+
+Usar lenguaje de acompañamiento y organización:
+
+- "acompañamiento familiar"
 - "rutinas posibles"
-- "pequenos pasos"
+- "pequeños pasos"
 - "sin castigos ni comparaciones"
 
-Avoid unsupported claims:
+Evitar promesas médicas o claims no demostrables:
 
 - "tratamiento"
-- "diagnostico"
+- "diagnóstico"
 - "terapia"
-- "garantiza autonomia"
+- "garantiza autonomía"
