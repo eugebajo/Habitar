@@ -20,6 +20,8 @@ Recursos necesarios antes de prueba interna y publicación.
 - Términos: `https://habitarpy.com/terms/`
 - Nombre de app: Habitar
 - Package Android: `com.habitarpy.app`
+- Icono Play Store: `docs/store-assets/habitar-icon-512.png`
+- Gráfico destacado: `docs/store-assets/habitar-feature-graphic-1024x500.png`
 
 ## Plan de capturas
 
