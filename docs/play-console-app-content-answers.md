@@ -80,6 +80,9 @@ Seguridad:
 
 ## Pendiente antes de revisión
 
-- Crear o reenviar `soporte@habitarpy.com`.
 - Definir credenciales de prueba para Google Play.
 - Confirmar que Supabase de producción tenga reglas de acceso por cuenta/familia.
+
+## Listo
+
+- `soporte@habitarpy.com` existe y reenvía correctamente.

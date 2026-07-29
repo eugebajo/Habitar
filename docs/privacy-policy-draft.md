@@ -8,10 +8,10 @@ publicar en Google Play o App Store.
 Habitar es una aplicacion de acompanamiento familiar para rutinas, habitos y
 autonomia de ninos y adolescentes.
 
-Contacto previsto:
+Contacto:
 
 - Email: `soporte@habitarpy.com`
-- Sitio: pendiente de dominio propio de Habitar
+- Sitio: `https://habitarpy.com`
 
 ## Datos que podemos tratar
 

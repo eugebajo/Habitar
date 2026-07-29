@@ -59,9 +59,8 @@ Play Console muestre las opciones disponibles.
 - Sitio web: `https://habitarpy.com`
 - Política de privacidad: `https://habitarpy.com/privacy/`
 - Términos: `https://habitarpy.com/terms/`
-- Email de soporte previsto: `soporte@habitarpy.com`
+- Email de soporte: `soporte@habitarpy.com`
 
-## Nota pendiente
+## Estado
 
-Antes de enviar a revisión, el email de soporte debe existir o reenviar a una
-casilla que Eugenia revise.
+El email de soporte existe y reenvía a una casilla que Eugenia revisa.

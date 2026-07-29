@@ -8,7 +8,7 @@ The launch path is Android first, then iOS.
 - Package/application ID: `com.habitarpy.app`
 - App label: `Habitar`
 - Public domain: `habitarpy.com`
-- Planned support email: `soporte@habitarpy.com`
+- Support email: `soporte@habitarpy.com`
 - Compile SDK: 36
 - Target SDK: 36
 - Release signing: configured through private `apps/mobile/android/key.properties`
@@ -116,7 +116,6 @@ Supabase/Auth/API access.
 - Final splash screen.
 - Production Supabase security review.
 - Privacy policy and terms hosted on `habitarpy.com`.
-- Support email for Habitar using `soporte@habitarpy.com`.
 - Store screenshots.
 - Internal testing group.
 - iOS bundle/signing setup.
@@ -130,6 +129,7 @@ Supabase/Auth/API access.
 - Draft Play Console app-content answers:
   `docs/play-console-app-content-answers.md`.
 - Store assets checklist: `docs/store-assets-checklist.md`.
+- Support email forwarding: `soporte@habitarpy.com`.
 
 ## Official references checked
 
