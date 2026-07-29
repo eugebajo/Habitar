@@ -99,6 +99,7 @@ final appRouter = GoRouter(
         builder: (context, state) => const WearablesScreen()),
     GoRoute(
         path: '/child', builder: (context, state) => const ChildHomeScreen()),
+    GoRoute(path: '/kid', builder: (context, state) => const ChildHomeScreen()),
     GoRoute(
         path: '/child/achievements',
         builder: (context, state) => const SimpleModeScreen(

@@ -22,6 +22,20 @@ Recursos necesarios antes de prueba interna y publicación.
 - Package Android: `com.habitarpy.app`
 - Icono Play Store: `docs/store-assets/habitar-icon-512.png`
 - Gráfico destacado: `docs/store-assets/habitar-feature-graphic-1024x500.png`
+- Capturas de teléfono: `docs/store-assets/screenshots/`
+
+## Capturas generadas
+
+1. `01-onboarding.png`
+2. `02-adult-registration.png`
+3. `03-profile-setup.png`
+4. `04-profile-selector.png`
+5. `05-adult-dashboard.png`
+6. `06-child-mode.png`
+7. `07-teen-mode.png`
+8. `08-routine-create.png`
+9. `09-habit-setup.png`
+10. `10-wellbeing-checkin.png`
 
 ## Plan de capturas
 
