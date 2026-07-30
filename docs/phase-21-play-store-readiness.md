@@ -12,9 +12,11 @@ The launch path is Android first, then iOS.
 - Compile SDK: 36
 - Target SDK: 36
 - Release signing: configured through private `apps/mobile/android/key.properties`
-- Upload keystore: pending local creation
+- Upload keystore: created locally and ignored by Git
 - Debug APK: validated in Phase 20
-- Technical release AAB: validated in Phase 20
+- Signed release AAB: generated locally for internal testing
+- Current local AAB path:
+  `apps/mobile/build/app/outputs/bundle/release/app-release.aab`
 
 ## Why API 36 now
 
@@ -76,6 +78,13 @@ The signed bundle should be generated at:
 apps/mobile/build/app/outputs/bundle/release/app-release.aab
 ```
 
+Latest local validation:
+
+- `flutter analyze apps/mobile`: passed.
+- `flutter test apps/mobile`: passed.
+- `flutter build appbundle`: passed.
+- Generated AAB size: about 54.6 MB.
+
 ## Play Console checklist
 
 - Create app in Google Play Console.
@@ -112,13 +121,11 @@ Supabase/Auth/API access.
 
 ## Still pending before production
 
-- Final icon/adaptive icon.
-- Final splash screen.
 - Production Supabase security review.
-- Privacy policy and terms hosted on `habitarpy.com`.
-- Store screenshots.
 - Internal testing group.
 - iOS bundle/signing setup.
+- Google Play developer account verification.
+- Play Console app-content forms and store listing submission.
 
 ## Work completed while developer account verification is pending
 
@@ -129,6 +136,8 @@ Supabase/Auth/API access.
 - Draft Play Console app-content answers:
   `docs/play-console-app-content-answers.md`.
 - Store assets checklist: `docs/store-assets-checklist.md`.
+- Play Console upload guide: `docs/play-console-upload-steps.md`.
+- Store screenshots: `docs/store-assets/screenshots/`.
 - Support email forwarding: `soporte@habitarpy.com`.
 
 ## Official references checked
