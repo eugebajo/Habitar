@@ -26,6 +26,7 @@ Usar esta lista cuando Google termine de verificar la cuenta desarrolladora.
 3. Crear una lista de prueba interna con tu correo y cualquier tester inicial.
 4. Revisar si vamos a subir el AAB local-first actual o reconstruir con
    Supabase de producción.
+5. Preparar la prueba cerrada usando `docs/closed-testing-plan.md`.
 
 ## Variante recomendada para la primera prueba interna
 
@@ -95,6 +96,13 @@ Respuestas clave:
 5. Entrar al modo niño y confirmar que solo ve acciones asignadas.
 6. Probar PIN adulto `1234`.
 7. Revisar que privacidad y términos abran correctamente.
+
+## Paquete de prueba cerrada
+
+- Plan: `docs/closed-testing-plan.md`
+- Invitación: `docs/tester-invitation-message.md`
+- Instrucciones: `docs/tester-instructions.md`
+- Formulario de feedback: `docs/tester-feedback-form.md`
 
 ## Antes de producción pública
 
