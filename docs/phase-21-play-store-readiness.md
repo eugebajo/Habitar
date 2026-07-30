@@ -15,6 +15,7 @@ The launch path is Android first, then iOS.
 - Upload keystore: created locally and ignored by Git
 - Debug APK: validated in Phase 20
 - Signed release AAB: generated locally for internal testing
+- Current AAB mode: local-first, built without Supabase `--dart-define` values
 - Current local AAB path:
   `apps/mobile/build/app/outputs/bundle/release/app-release.aab`
 
@@ -85,6 +86,12 @@ Latest local validation:
 - `flutter build appbundle`: passed.
 - Generated AAB size: about 54.6 MB.
 
+The current internal-test AAB lets a reviewer create an adult space directly on
+the device. It does not require a Supabase account or remote synchronization.
+Before a production launch with cross-device sync, rebuild with the production
+Supabase `SUPABASE_URL` and `SUPABASE_ANON_KEY` dart defines and re-check data
+safety answers.
+
 ## Play Console checklist
 
 - Create app in Google Play Console.
@@ -122,6 +129,7 @@ Supabase/Auth/API access.
 ## Still pending before production
 
 - Production Supabase security review.
+- Production Supabase-enabled AAB, if launch requires cloud auth/sync.
 - Internal testing group.
 - iOS bundle/signing setup.
 - Google Play developer account verification.
