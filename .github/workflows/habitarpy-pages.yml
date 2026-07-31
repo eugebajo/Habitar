@@ -38,7 +38,10 @@ jobs:
 
       - name: Build Flutter web app
         working-directory: apps/mobile
-        run: flutter build web --release --base-href /app/
+        run: >
+          flutter build web --release --base-href /app/
+          --dart-define=SUPABASE_URL=${{ vars.SUPABASE_URL }}
+          --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
 
       - name: Copy Flutter web app into site
         shell: bash

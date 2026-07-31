@@ -130,6 +130,7 @@ Supabase/Auth/API access.
 
 - Production Supabase security review.
 - Production Supabase-enabled AAB, if launch requires cloud auth/sync.
+- Supabase Auth activation steps: `docs/supabase-activation.md`.
 - Internal testing group.
 - iOS bundle/signing setup.
 - Google Play developer account verification.

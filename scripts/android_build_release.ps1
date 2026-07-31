@@ -38,7 +38,14 @@ if (-not $SkipTests) {
 
 Push-Location apps/mobile
 try {
-    & $flutter build appbundle
+    $buildArgs = @("build", "appbundle")
+    if ($env:SUPABASE_URL) {
+        $buildArgs += "--dart-define=SUPABASE_URL=$env:SUPABASE_URL"
+    }
+    if ($env:SUPABASE_ANON_KEY) {
+        $buildArgs += "--dart-define=SUPABASE_ANON_KEY=$env:SUPABASE_ANON_KEY"
+    }
+    & $flutter @buildArgs
 } finally {
     Pop-Location
 }
