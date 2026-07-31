@@ -1,101 +1,115 @@
 # Habitar
 
-Aplicacion movil de acompanamiento de habitos, rutinas y autonomia para ninos y adolescentes con perfiles AuDHD.
+Habitar es una aplicación de acompañamiento familiar para hábitos, rutinas, autonomía y bienestar cotidiano de niños, niñas y adolescentes.
 
-El nombre del producto es provisional y no esta acoplado al codigo. La base tecnica usa un monorepo con Flutter para la app movil principal y paquetes Dart separados para dominio, aplicacion, datos, accesibilidad, notificaciones y sistema de diseno.
+El producto está pensado para que adultos responsables, tutores, profesionales o docentes creen el marco de acompañamiento. Los niños y adolescentes entran a una experiencia separada, simple y cuidada, donde ven lo que necesitan hacer, su progreso y las formas de pedir ayuda.
 
-## Estado de Fase 1
+## Estado actual
 
-Implementado:
+- App Flutter principal en `apps/mobile`.
+- Landing pública, términos y privacidad en `sites/habitarpy`.
+- App web publicada en `https://habitarpy.com/app/`.
+- Dominio público: `https://habitarpy.com`.
+- Autenticación Supabase integrada cuando se configuran `SUPABASE_URL` y `SUPABASE_ANON_KEY`.
+- Persistencia local activa: Drift/SQLite en plataformas con sistema de archivos y almacenamiento web en navegador.
+- CI en GitHub Actions para app móvil y paquetes Dart.
+- Flujo de publicación web por GitHub Pages.
+- Preparación de Play Store en curso, pendiente de verificación de Google Play Console.
 
-- Monorepo inicial.
-- App Flutter base en `apps/mobile`.
-- Separacion `domain`, `application`, `data`, `presentation` y preparacion de integraciones de plataforma.
-- Modelos iniciales del dominio.
-- Politica de activacion gradual de habitos nuevos.
-- Flujo base de registro adulto y creacion de perfil infantil/adolescente.
-- Navegacion base con GoRouter.
-- Tokens de diseno y tema de baja estimulacion.
-- Contratos para autenticacion, perfiles, almacenamiento local y Supabase.
-- Migracion inicial de Supabase con Row Level Security.
-- Pruebas unitarias de la politica central de habitos.
-- Motor de rutina guiada con sesiones persistibles.
-- Crear rutina de 3 pasos desde la app.
-- Ejecutar rutina paso a paso con Ahora / Despues.
-- Acciones de rutina: hecho, mas tiempo, pausa, ayuda, posponer y omitir.
-- Motor de habitos con limite gradual de 2 a 3 habitos nuevos.
-- Pantalla de habitos con version minima y panel semanal simple.
-- Configuracion de recordatorios con consentimiento, intensidad y solicitudes programadas simuladas.
-- Check-in emocional opcional con apoyos breves.
-- Biblioteca demo de cuentos con lector, preguntas, actividad y progreso.
-- Preparacion de watchOS y Wear OS con contratos de snapshots y acciones rapidas.
-- Persistencia local inicial con `FileLocalStore` y repositorios locales para entidades centrales.
-- Conexion del store local al arranque de la app en plataformas con sistema de archivos.
-- Persistencia local ampliada para notificaciones, bienestar, cuentos y wearables.
-- Recuperacion local de familia, perfil y sesion activa al abrir la app.
-- Cola de sincronizacion local-remota persistente.
-- Adaptador de Auth Supabase preparado por gateway.
-- Plan verificable de migracion JSON a Drift/SQLite.
-- Supabase Auth real integrado en Flutter con `supabase_flutter` y fallback local.
-- Drift/SQLite real activo como backend local en plataformas con sistema de archivos.
-- Bienvenida visual, login y logout integrados con restauracion de sesion local.
+## Estructura
 
-Simulado/preparado:
+```text
+apps/
+  mobile/          App Flutter principal
+  watchos/         Diseño técnico preparatorio para watchOS
+  wearos/          Diseño técnico preparatorio para Wear OS
+packages/
+  domain/          Entidades y reglas centrales
+  application/     Casos de uso y contratos de repositorios
+  data/            Persistencia local, Auth Supabase y adaptadores
+  design_system/   Tema visual, tokens y componentes compartidos
+  routine_engine/  Motor de rutinas guiadas
+  habit_engine/    Políticas de hábitos
+  notifications/   Contratos de recordatorios
+  story_library/   Biblioteca de cuentos y actividades
+  wearable_bridge/ Contratos para relojes
+  analytics_core/  Eventos analíticos
+  accessibility/   Preferencias de accesibilidad
+sites/
+  habitarpy/       Sitio público y salida web publicada
+supabase/
+  migrations/      Esquema inicial de base de datos
+docs/              Documentación de producto, arquitectura y lanzamiento
+scripts/           Automatizaciones locales
+```
 
-- Persistencia local: SQLite con Drift activo en plataformas `dart:io`; web conserva modo memoria/preview.
-- Persistencia de rutina: funciona en memoria y esta preparada para Drift/Supabase.
-- Supabase: configuracion, migracion y Auth inicial preparados; requiere variables de entorno reales.
-- Supabase Auth: `supabase_flutter` integrado con registro, login y logout; falta lectura/escritura remota de familias/perfiles.
-- Auditoria de excepciones de habitos: regla de producto implementada, escritura real en `audit_logs` pendiente.
-- Notificaciones nativas: planificador implementado, integracion `flutter_local_notifications` pendiente.
-- Audio de cuentos: marcado como pendiente.
-- Wearables nativos: contratos y UI preparatoria implementados; targets nativos pendientes.
-- Recordatorios locales: paquete preparado; implementacion completa queda para Fase 4.
+Más detalle: `docs/project-structure.md`.
 
-Pendiente:
-
-- Lectura/escritura remota Supabase para familias, perfiles, rutinas, habitos y progreso.
-- Pruebas de widgets e integracion completas.
-- watchOS, Wear OS, Live Activities, widgets y notificaciones avanzadas.
-
-## Requisitos
-
-- Flutter SDK estable.
-- Dart SDK incluido con Flutter.
-- Un proyecto Supabase para sincronizacion real.
-
-## Comandos
-
-Ver guia de previsualizacion en `docs/preview.md`.
+## Desarrollo local
 
 ```powershell
 cd apps/mobile
 flutter pub get
-flutter analyze
-flutter test
 flutter run
 ```
 
-Ejecutar todos los checks locales:
+Para abrir la app web local:
+
+```powershell
+cd apps/mobile
+flutter run -d chrome
+```
+
+## Verificación
+
+Checks completos:
 
 ```powershell
 .\scripts\checks.ps1
 ```
 
-Estado MVP: `docs/mvp-status.md`.
-
-Para paquetes puros:
+Checks principales de la app:
 
 ```powershell
-cd packages/domain
-dart test
+cd apps/mobile
+flutter analyze
+flutter test
+flutter build web --release --base-href /app/
 ```
 
-## Variables de entorno
+## Supabase
 
-Copiar `.env.example` a `.env` y completar:
+La app lee estas variables en build/runtime:
 
 - `SUPABASE_URL`
-- `SUPABASE_ANON_KEY` con la publishable key publica de Supabase
+- `SUPABASE_ANON_KEY`
 
-No se deben versionar secretos reales.
+En GitHub Pages:
+
+- `SUPABASE_URL` va como variable del entorno `github-pages`.
+- `SUPABASE_ANON_KEY` va como secreto del entorno `github-pages`.
+
+La publishable key de Supabase no es una service role key, pero igual debe tratarse con cuidado y no escribirse directamente en el código.
+
+Más detalle: `docs/authentication.md` y `docs/data-flow.md`.
+
+## Publicación
+
+- Web pública: GitHub Pages desde `.github/workflows/habitarpy-pages.yml`.
+- CI: `.github/workflows/ci.yml`.
+- Android: preparación de Play Store en curso.
+- iOS: pendiente de preparación específica para App Store Connect.
+
+Más detalle: `docs/deployment.md`.
+
+## Documentación útil
+
+- `docs/architecture.md`
+- `docs/project-structure.md`
+- `docs/routing.md`
+- `docs/data-flow.md`
+- `docs/authentication.md`
+- `docs/testing.md`
+- `docs/deployment.md`
+- `docs/development-guide.md`
+- `docs/mvp-status.md`
