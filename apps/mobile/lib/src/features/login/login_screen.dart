@@ -65,8 +65,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   const SizedBox(height: HabitarSpacing.md),
                   HabitarConversationCard(
                     title: 'No pudimos abrir el espacio todavía',
-                    body:
-                        'Revisá el correo y la contraseña. Si es la primera vez, podemos crear tu espacio en un minuto.',
+                    body: _error!,
                     color: HabitarColors.surfaceWarm,
                   ),
                 ],
@@ -140,18 +139,33 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (mounted) {
         context.go('/');
       }
-    } catch (_) {
+    } catch (error) {
       if (!mounted) {
         return;
       }
       setState(() {
-        _error =
-            'No pudimos entrar con esos datos. Revisá el correo y la contraseña.';
+        _error = _loginErrorMessage(error);
       });
     } finally {
       if (mounted) {
         setState(() => _isSubmitting = false);
       }
     }
+  }
+
+  String _loginErrorMessage(Object error) {
+    final message = error.toString().toLowerCase();
+    if (message.contains('confirm') || message.contains('email')) {
+      return 'Puede faltar confirmar el correo en Supabase. Revisá tu email o confirmá el usuario desde Authentication > Users.';
+    }
+    if (message.contains('invalid') ||
+        message.contains('credential') ||
+        message.contains('password')) {
+      return 'El correo o la contraseña no coinciden. Revisá los datos o creá un espacio nuevo con otro correo de prueba.';
+    }
+    if (message.contains('not found')) {
+      return 'No encontramos ese espacio en este dispositivo. Si recién creaste la cuenta en Supabase, todavía falta crear la familia local.';
+    }
+    return 'No pudimos entrar. Revisá el correo, la contraseña y el estado del usuario en Supabase.';
   }
 }

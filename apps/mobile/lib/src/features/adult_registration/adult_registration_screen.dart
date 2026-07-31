@@ -82,10 +82,9 @@ class _AdultRegistrationScreenState
                   ),
                   if (_error != null) ...[
                     const SizedBox(height: HabitarSpacing.md),
-                    const HabitarConversationCard(
+                    HabitarConversationCard(
                       title: 'No pudimos crear el espacio todavía',
-                      body:
-                          'Puede que ese correo ya exista. Intentá entrar o revisá los datos con calma.',
+                      body: _error!,
                       color: HabitarColors.surfaceWarm,
                     ),
                   ],
@@ -140,11 +139,10 @@ class _AdultRegistrationScreenState
       if (mounted) {
         context.go('/profile');
       }
-    } catch (_) {
+    } catch (error) {
       if (mounted) {
         setState(() {
-          _error =
-              'No pudimos crear el espacio. Revisá los datos o intentá entrar si ya existe.';
+          _error = _registrationErrorMessage(error);
         });
       }
     } finally {
@@ -152,5 +150,24 @@ class _AdultRegistrationScreenState
         setState(() => _isSubmitting = false);
       }
     }
+  }
+
+  String _registrationErrorMessage(Object error) {
+    final message = error.toString().toLowerCase();
+    if (message.contains('already') ||
+        message.contains('registered') ||
+        message.contains('exists')) {
+      return 'Ese correo parece estar registrado. Tocá "Ya tengo mi espacio" e intentá entrar con la misma contraseña.';
+    }
+    if (message.contains('confirm') || message.contains('email')) {
+      return 'Supabase necesita confirmar el correo. Revisá tu email o confirmá el usuario desde Authentication > Users.';
+    }
+    if (message.contains('password')) {
+      return 'La contraseña no cumple la regla de Supabase. Probá con una contraseña más larga, con letras y números.';
+    }
+    if (message.contains('supabase') || message.contains('auth')) {
+      return 'Supabase rechazó el registro. Revisá en Supabase Authentication si el usuario se creó o si falta confirmar el correo.';
+    }
+    return 'No pudimos crear el espacio. Probá entrar si ese correo ya existe o intentá con otro correo de prueba.';
   }
 }
