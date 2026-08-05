@@ -109,18 +109,26 @@ class _RoutineBody extends StatelessWidget {
     final isPaused = session.status == RoutineSessionStatus.paused ||
         session.status == RoutineSessionStatus.postponed;
     final isComplete = session.status == RoutineSessionStatus.completed;
+    final totalSteps = session.orderedSteps.length;
+    final stepNumber = (session.activeStepIndex + 1)
+        .clamp(1, totalSteps == 0 ? 1 : totalSteps);
+    final progress = session.progressFraction.clamp(0, 1).toDouble();
+    final estimatedStepMinutes = activeStep?.estimatedMinutes;
 
     return ListView(
       padding: const EdgeInsets.all(HabitarSpacing.lg),
       children: [
-        Text('Estoy contigo',
-            style: Theme.of(context).textTheme.displaySmall),
+        Text(
+            isComplete ? 'Camino terminado' : 'Paso $stepNumber de $totalSteps',
+            style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: HabitarSpacing.sm),
         Text(session.routine.title,
             style: Theme.of(context)
                 .textTheme
                 .titleLarge
                 ?.copyWith(color: HabitarColors.mutedInk)),
+        const SizedBox(height: HabitarSpacing.md),
+        LinearProgressIndicator(value: progress),
         const SizedBox(height: HabitarSpacing.xl),
         if (isComplete)
           const _MainStepCard(
@@ -129,8 +137,11 @@ class _RoutineBody extends StatelessWidget {
         else
           _MainStepCard(
             title: activeStep?.title ?? 'Sin paso activo',
-            subtitle:
-                isPaused ? 'Podemos pausar. No se perdió nada.' : 'Ahora',
+            subtitle: isPaused
+                ? 'Podemos pausar. No se perdió nada.'
+                : estimatedStepMinutes == null
+                    ? 'Ahora'
+                    : 'Ahora - $estimatedStepMinutes min aprox.',
           ),
         const SizedBox(height: HabitarSpacing.md),
         _TimerPanel(
@@ -143,24 +154,28 @@ class _RoutineBody extends StatelessWidget {
         if (!isComplete) ...[
           FilledButton(
               onPressed: isPaused ? onResume : onDone,
-              child: Text(isPaused ? 'Volver cuando quieras' : 'Ya lo hice')),
+              child: Text(isPaused ? 'Volver cuando quieras' : 'Listo')),
           const SizedBox(height: HabitarSpacing.sm),
           OutlinedButton(
               onPressed: onMoreTime, child: const Text('Necesito más tiempo')),
           const SizedBox(height: HabitarSpacing.sm),
-          OutlinedButton(
-              onPressed: onHelp,
-              child: Text(session.helpRequested
-                  ? 'Ayuda solicitada'
-                  : 'Necesito ayuda')),
-          const SizedBox(height: HabitarSpacing.sm),
+          if (session.routine.canRequestHelp) ...[
+            OutlinedButton(
+                onPressed: onHelp,
+                child: Text(session.helpRequested
+                    ? 'Ayuda solicitada'
+                    : 'Necesito ayuda')),
+            const SizedBox(height: HabitarSpacing.sm),
+          ],
           OutlinedButton(
               onPressed: isPaused ? onResume : onPause,
               child: Text(isPaused ? 'Estoy listo' : 'Necesito una pausa')),
           const SizedBox(height: HabitarSpacing.sm),
-          OutlinedButton(
-              onPressed: onPostpone, child: const Text('5 minutos después')),
-          const SizedBox(height: HabitarSpacing.sm),
+          if (session.routine.canPostpone) ...[
+            OutlinedButton(
+                onPressed: onPostpone, child: const Text('5 minutos después')),
+            const SizedBox(height: HabitarSpacing.sm),
+          ],
           TextButton(onPressed: onSkip, child: const Text('Omitir este paso')),
         ],
       ],

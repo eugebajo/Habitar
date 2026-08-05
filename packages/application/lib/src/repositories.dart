@@ -66,11 +66,42 @@ abstract interface class FamilyRepository {
   Future<Family?> currentFamily(String ownerUserId);
 }
 
+abstract interface class AdultProfileRepository {
+  Future<AdultProfile> createAdultProfile({
+    required String familyId,
+    required String profileId,
+    required String displayName,
+    required AdultProfileKind kind,
+    String? email,
+    String? roleLabel,
+  });
+
+  Future<List<AdultProfile>> adultProfilesForProfile(String profileId);
+}
+
 abstract interface class RoutineRepository {
-  Future<Routine> createRoutine(
-      {required String profileId,
-      required String title,
-      required List<String> stepTitles});
+  Future<Routine> createRoutine({
+    required String profileId,
+    required String title,
+    required List<String> stepTitles,
+    List<int> weekdays = const [],
+    int? scheduledHour,
+    int? scheduledMinute,
+    int? estimatedDurationMinutes,
+    int leadReminderMinutes = 10,
+    RoutineRepeatPolicy repeatPolicy = RoutineRepeatPolicy.weekly,
+    String? responsibleAdultProfileId,
+    String? contextLabel,
+    String? minimumVersion,
+    String? benefitDescription,
+    int maxReminderCount = 2,
+    int reminderIntervalMinutes = 5,
+    bool vibrationEnabled = true,
+    bool soundEnabled = false,
+    bool silentNotification = false,
+    bool canPostpone = true,
+    bool canRequestHelp = true,
+  });
 
   Future<List<RoutineStep>> stepsForRoutine(String routineId);
 

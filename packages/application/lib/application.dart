@@ -1,3 +1,4 @@
+export 'src/adult_profile_service.dart';
 export 'src/auth_service.dart';
 export 'src/habit_service.dart';
 export 'src/notification_service.dart';

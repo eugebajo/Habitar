@@ -1,6 +1,6 @@
-name: habitar_mobile
+﻿name: habitar_mobile
 publish_to: none
-version: 0.1.0+1
+version: 0.1.1+2
 resolution: workspace
 
 environment:
@@ -45,3 +45,4 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+

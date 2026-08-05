@@ -160,16 +160,74 @@ class LocalProfileRepository implements ProfileRepository {
   }
 }
 
+class LocalAdultProfileRepository implements AdultProfileRepository {
+  LocalAdultProfileRepository(this.store);
+
+  final LocalStore store;
+
+  @override
+  Future<AdultProfile> createAdultProfile({
+    required String familyId,
+    required String profileId,
+    required String displayName,
+    required AdultProfileKind kind,
+    String? email,
+    String? roleLabel,
+  }) async {
+    final now = DateTime.now();
+    final adultProfile = AdultProfile(
+      metadata: EntityMetadata(
+          id: _uuid.v4(), createdAt: now, updatedAt: now, ownerId: familyId),
+      familyId: familyId,
+      profileId: profileId,
+      displayName: displayName,
+      kind: kind,
+      email: email,
+      roleLabel: roleLabel,
+    );
+    await store.put(LocalStoreCollections.adultProfiles,
+        adultProfile.metadata.id, _adultProfileToJson(adultProfile));
+    return adultProfile;
+  }
+
+  @override
+  Future<List<AdultProfile>> adultProfilesForProfile(String profileId) async {
+    final records = await store.list(LocalStoreCollections.adultProfiles);
+    return records
+        .map(_adultProfileFromJson)
+        .where((profile) => profile.profileId == profileId)
+        .toList(growable: false);
+  }
+}
+
 class LocalRoutineRepository implements RoutineRepository {
   LocalRoutineRepository(this.store);
 
   final LocalStore store;
 
   @override
-  Future<Routine> createRoutine(
-      {required String profileId,
-      required String title,
-      required List<String> stepTitles}) async {
+  Future<Routine> createRoutine({
+    required String profileId,
+    required String title,
+    required List<String> stepTitles,
+    List<int> weekdays = const [],
+    int? scheduledHour,
+    int? scheduledMinute,
+    int? estimatedDurationMinutes,
+    int leadReminderMinutes = 10,
+    RoutineRepeatPolicy repeatPolicy = RoutineRepeatPolicy.weekly,
+    String? responsibleAdultProfileId,
+    String? contextLabel,
+    String? minimumVersion,
+    String? benefitDescription,
+    int maxReminderCount = 2,
+    int reminderIntervalMinutes = 5,
+    bool vibrationEnabled = true,
+    bool soundEnabled = false,
+    bool silentNotification = false,
+    bool canPostpone = true,
+    bool canRequestHelp = true,
+  }) async {
     if (stepTitles.length < 3) {
       throw ArgumentError.value(
           stepTitles.length, 'stepTitles', 'A routine needs at least 3 steps.');
@@ -196,6 +254,23 @@ class LocalRoutineRepository implements RoutineRepository {
       profileId: profileId,
       title: title,
       stepIds: stepIds,
+      weekdays: weekdays,
+      scheduledHour: scheduledHour,
+      scheduledMinute: scheduledMinute,
+      estimatedDurationMinutes: estimatedDurationMinutes,
+      leadReminderMinutes: leadReminderMinutes,
+      repeatPolicy: repeatPolicy,
+      responsibleAdultProfileId: responsibleAdultProfileId,
+      contextLabel: contextLabel,
+      minimumVersion: minimumVersion,
+      benefitDescription: benefitDescription,
+      maxReminderCount: maxReminderCount,
+      reminderIntervalMinutes: reminderIntervalMinutes,
+      vibrationEnabled: vibrationEnabled,
+      soundEnabled: soundEnabled,
+      silentNotification: silentNotification,
+      canPostpone: canPostpone,
+      canRequestHelp: canRequestHelp,
     );
     await store.put(LocalStoreCollections.routines, routine.metadata.id,
         _routineToJson(routine));
@@ -613,6 +688,27 @@ ChildProfile _childProfileFromJson(Map<String, Object?> json) => ChildProfile(
       age: json['age'] as int,
     );
 
+Map<String, Object?> _adultProfileToJson(AdultProfile profile) => {
+      'metadata': _metadataToJson(profile.metadata),
+      'family_id': profile.familyId,
+      'profile_id': profile.profileId,
+      'display_name': profile.displayName,
+      'kind': profile.kind.name,
+      'email': profile.email,
+      'role_label': profile.roleLabel,
+    };
+
+AdultProfile _adultProfileFromJson(Map<String, Object?> json) => AdultProfile(
+      metadata: _metadataFromJson(_object(json['metadata'])),
+      familyId: json['family_id'] as String,
+      profileId: json['profile_id'] as String,
+      displayName: json['display_name'] as String,
+      kind: _byName(AdultProfileKind.values,
+          json['kind'] as String? ?? AdultProfileKind.caregiver.name),
+      email: json['email'] as String?,
+      roleLabel: json['role_label'] as String?,
+    );
+
 Map<String, Object?> _teenProfileToJson(TeenProfile profile) => {
       'metadata': _metadataToJson(profile.metadata),
       'family_id': profile.familyId,
@@ -635,6 +731,23 @@ Map<String, Object?> _routineToJson(Routine routine) => {
       'profile_id': routine.profileId,
       'title': routine.title,
       'step_ids': routine.stepIds,
+      'weekdays': routine.weekdays,
+      'scheduled_hour': routine.scheduledHour,
+      'scheduled_minute': routine.scheduledMinute,
+      'estimated_duration_minutes': routine.estimatedDurationMinutes,
+      'lead_reminder_minutes': routine.leadReminderMinutes,
+      'repeat_policy': routine.repeatPolicy.name,
+      'responsible_adult_profile_id': routine.responsibleAdultProfileId,
+      'context_label': routine.contextLabel,
+      'minimum_version': routine.minimumVersion,
+      'benefit_description': routine.benefitDescription,
+      'max_reminder_count': routine.maxReminderCount,
+      'reminder_interval_minutes': routine.reminderIntervalMinutes,
+      'vibration_enabled': routine.vibrationEnabled,
+      'sound_enabled': routine.soundEnabled,
+      'silent_notification': routine.silentNotification,
+      'can_postpone': routine.canPostpone,
+      'can_request_help': routine.canRequestHelp,
     };
 
 Routine _routineFromJson(Map<String, Object?> json) => Routine(
@@ -642,6 +755,25 @@ Routine _routineFromJson(Map<String, Object?> json) => Routine(
       profileId: json['profile_id'] as String,
       title: json['title'] as String,
       stepIds: _stringList(json['step_ids']),
+      weekdays: _intList(json['weekdays']),
+      scheduledHour: json['scheduled_hour'] as int?,
+      scheduledMinute: json['scheduled_minute'] as int?,
+      estimatedDurationMinutes: json['estimated_duration_minutes'] as int?,
+      leadReminderMinutes: json['lead_reminder_minutes'] as int? ?? 10,
+      repeatPolicy: _byName(RoutineRepeatPolicy.values,
+          json['repeat_policy'] as String? ?? RoutineRepeatPolicy.weekly.name),
+      responsibleAdultProfileId:
+          json['responsible_adult_profile_id'] as String?,
+      contextLabel: json['context_label'] as String?,
+      minimumVersion: json['minimum_version'] as String?,
+      benefitDescription: json['benefit_description'] as String?,
+      maxReminderCount: json['max_reminder_count'] as int? ?? 2,
+      reminderIntervalMinutes: json['reminder_interval_minutes'] as int? ?? 5,
+      vibrationEnabled: json['vibration_enabled'] as bool? ?? true,
+      soundEnabled: json['sound_enabled'] as bool? ?? false,
+      silentNotification: json['silent_notification'] as bool? ?? false,
+      canPostpone: json['can_postpone'] as bool? ?? true,
+      canRequestHelp: json['can_request_help'] as bool? ?? true,
     );
 
 Map<String, Object?> _routineStepToJson(RoutineStep step) => {
@@ -853,6 +985,9 @@ List<Map<String, Object?>> _objectList(Object? value) {
       .map((item) => (item as Map).cast<String, Object?>())
       .toList(growable: false);
 }
+
+List<int> _intList(Object? value) =>
+    (value as List? ?? const []).cast<int>().toList(growable: false);
 
 List<String> _stringList(Object? value) =>
     (value as List? ?? const []).cast<String>().toList(growable: false);

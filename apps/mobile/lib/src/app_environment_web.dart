@@ -22,6 +22,8 @@ Future<List<Override>> buildProductionOverrides() async {
     familyRepositoryProvider.overrideWithValue(LocalFamilyRepository(store)),
     profileRepositoryProvider.overrideWithValue(LocalProfileRepository(store)),
     routineRepositoryProvider.overrideWithValue(LocalRoutineRepository(store)),
+    adultProfileRepositoryProvider
+        .overrideWithValue(LocalAdultProfileRepository(store)),
     routineSessionRepositoryProvider
         .overrideWithValue(LocalRoutineSessionRepository(store)),
     habitRepositoryProvider.overrideWithValue(LocalHabitRepository(store)),
@@ -37,7 +39,8 @@ Future<List<Override>> buildProductionOverrides() async {
         .overrideWithValue(LocalStoryProgressRepository(store)),
     wearableGatewayRepositoryProvider
         .overrideWithValue(LocalWearableGatewayRepository(store)),
-    syncQueueRepositoryProvider.overrideWithValue(LocalSyncQueueRepository(store)),
+    syncQueueRepositoryProvider
+        .overrideWithValue(LocalSyncQueueRepository(store)),
   ];
 }
 

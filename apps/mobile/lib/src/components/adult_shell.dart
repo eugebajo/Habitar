@@ -18,7 +18,8 @@ class AdultShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).uri.path;
     final selected = destinations.indexWhere((item) =>
-        location == item.$3 || (item.$3 != '/dashboard' && location.startsWith(item.$3)));
+        location == item.$3 ||
+        (item.$3 != '/dashboard' && location.startsWith(item.$3)));
     final current = selected < 0 ? 0 : selected;
     return LayoutBuilder(builder: (context, constraints) {
       final desktop = constraints.maxWidth >= 900;
@@ -37,9 +38,17 @@ class AdultShell extends StatelessWidget {
               onDestinationSelected: (i) => context.go(destinations[i].$3),
               leading: const Padding(
                 padding: EdgeInsets.symmetric(vertical: 24),
-                child: Text('HABITAR', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.5, color: HabitarColors.deepGreen)),
+                child: Text('HABITAR',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.5,
+                        color: HabitarColors.deepGreen)),
               ),
-              destinations: [for (final item in destinations) NavigationRailDestination(icon: Icon(item.$2), label: Text(item.$1))],
+              destinations: [
+                for (final item in destinations)
+                  NavigationRailDestination(
+                      icon: Icon(item.$2), label: Text(item.$1))
+              ],
             ),
             const VerticalDivider(width: 1),
             Expanded(child: content),
@@ -51,7 +60,10 @@ class AdultShell extends StatelessWidget {
         bottomNavigationBar: NavigationBar(
           selectedIndex: current,
           onDestinationSelected: (i) => context.go(destinations[i].$3),
-          destinations: [for (final item in destinations) NavigationDestination(icon: Icon(item.$2), label: item.$1)],
+          destinations: [
+            for (final item in destinations)
+              NavigationDestination(icon: Icon(item.$2), label: item.$1)
+          ],
         ),
       );
     });
@@ -59,7 +71,8 @@ class AdultShell extends StatelessWidget {
 }
 
 class AdultPage extends StatelessWidget {
-  const AdultPage({super.key, required this.title, required this.child, this.action});
+  const AdultPage(
+      {super.key, required this.title, required this.child, this.action});
   final String title;
   final Widget child;
   final Widget? action;
@@ -67,7 +80,42 @@ class AdultPage extends StatelessWidget {
   Widget build(BuildContext context) => AdultShell(
         child: SafeArea(
           child: ListView(padding: const EdgeInsets.all(24), children: [
-            Row(children: [Expanded(child: Text(title, style: Theme.of(context).textTheme.headlineSmall)), if (action != null) action!]),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final compact = constraints.maxWidth < 520 ||
+                    MediaQuery.textScalerOf(context).scale(1) > 1.2;
+                final titleWidget = Text(
+                  title,
+                  style: Theme.of(context).textTheme.headlineSmall,
+                  softWrap: true,
+                );
+                final pageAction = action;
+                if (pageAction == null) {
+                  return titleWidget;
+                }
+                if (compact) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      titleWidget,
+                      const SizedBox(height: 12),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: pageAction,
+                      ),
+                    ],
+                  );
+                }
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(child: titleWidget),
+                    const SizedBox(width: 12),
+                    pageAction,
+                  ],
+                );
+              },
+            ),
             const SizedBox(height: 20),
             child,
           ]),

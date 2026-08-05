@@ -14,6 +14,8 @@ final profileRepositoryProvider =
     Provider<ProfileRepository>((ref) => InMemoryProfileRepository());
 final routineRepositoryProvider =
     Provider<RoutineRepository>((ref) => InMemoryRoutineRepository());
+final adultProfileRepositoryProvider =
+    Provider<AdultProfileRepository>((ref) => InMemoryAdultProfileRepository());
 final routineSessionRepositoryProvider = Provider<RoutineSessionRepository>(
     (ref) => InMemoryRoutineSessionRepository());
 final habitRepositoryProvider =
@@ -46,6 +48,12 @@ final adultRegistrationServiceProvider =
 
 final sessionServiceProvider = Provider<SessionService>((ref) {
   return SessionService(ref.watch(authRepositoryProvider));
+});
+
+final adultProfileServiceProvider = Provider<AdultProfileService>((ref) {
+  return AdultProfileService(
+    repository: ref.watch(adultProfileRepositoryProvider),
+  );
 });
 
 final profileServiceProvider = Provider<ProfileService>((ref) {

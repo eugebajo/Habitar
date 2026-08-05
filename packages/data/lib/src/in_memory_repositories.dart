@@ -122,15 +122,68 @@ class InMemoryProfileRepository implements ProfileRepository {
   }
 }
 
+class InMemoryAdultProfileRepository implements AdultProfileRepository {
+  final List<AdultProfile> _adultProfiles = [];
+
+  @override
+  Future<AdultProfile> createAdultProfile({
+    required String familyId,
+    required String profileId,
+    required String displayName,
+    required AdultProfileKind kind,
+    String? email,
+    String? roleLabel,
+  }) async {
+    final now = DateTime.now();
+    final adultProfile = AdultProfile(
+      metadata: EntityMetadata(
+          id: _uuid.v4(), createdAt: now, updatedAt: now, ownerId: familyId),
+      familyId: familyId,
+      profileId: profileId,
+      displayName: displayName,
+      kind: kind,
+      email: email,
+      roleLabel: roleLabel,
+    );
+    _adultProfiles.add(adultProfile);
+    return adultProfile;
+  }
+
+  @override
+  Future<List<AdultProfile>> adultProfilesForProfile(String profileId) async {
+    return _adultProfiles
+        .where((profile) => profile.profileId == profileId)
+        .toList(growable: false);
+  }
+}
+
 class InMemoryRoutineRepository implements RoutineRepository {
   final List<Routine> _routines = [];
   final List<RoutineStep> _steps = [];
 
   @override
-  Future<Routine> createRoutine(
-      {required String profileId,
-      required String title,
-      required List<String> stepTitles}) async {
+  Future<Routine> createRoutine({
+    required String profileId,
+    required String title,
+    required List<String> stepTitles,
+    List<int> weekdays = const [],
+    int? scheduledHour,
+    int? scheduledMinute,
+    int? estimatedDurationMinutes,
+    int leadReminderMinutes = 10,
+    RoutineRepeatPolicy repeatPolicy = RoutineRepeatPolicy.weekly,
+    String? responsibleAdultProfileId,
+    String? contextLabel,
+    String? minimumVersion,
+    String? benefitDescription,
+    int maxReminderCount = 2,
+    int reminderIntervalMinutes = 5,
+    bool vibrationEnabled = true,
+    bool soundEnabled = false,
+    bool silentNotification = false,
+    bool canPostpone = true,
+    bool canRequestHelp = true,
+  }) async {
     if (stepTitles.length < 3) {
       throw ArgumentError.value(
           stepTitles.length, 'stepTitles', 'A routine needs at least 3 steps.');
@@ -158,6 +211,23 @@ class InMemoryRoutineRepository implements RoutineRepository {
       profileId: profileId,
       title: title,
       stepIds: stepIds,
+      weekdays: weekdays,
+      scheduledHour: scheduledHour,
+      scheduledMinute: scheduledMinute,
+      estimatedDurationMinutes: estimatedDurationMinutes,
+      leadReminderMinutes: leadReminderMinutes,
+      repeatPolicy: repeatPolicy,
+      responsibleAdultProfileId: responsibleAdultProfileId,
+      contextLabel: contextLabel,
+      minimumVersion: minimumVersion,
+      benefitDescription: benefitDescription,
+      maxReminderCount: maxReminderCount,
+      reminderIntervalMinutes: reminderIntervalMinutes,
+      vibrationEnabled: vibrationEnabled,
+      soundEnabled: soundEnabled,
+      silentNotification: silentNotification,
+      canPostpone: canPostpone,
+      canRequestHelp: canRequestHelp,
     );
     _routines.add(routine);
     return routine;

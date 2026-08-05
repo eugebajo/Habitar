@@ -1,9 +1,12 @@
 import 'entities.dart';
 
 class HabitActivationDecision {
-  const HabitActivationDecision.allowed() : isAllowed = true, warning = null;
+  const HabitActivationDecision.allowed()
+      : isAllowed = true,
+        warning = null;
 
-  const HabitActivationDecision.requiresAdultOverride(this.warning) : isAllowed = false;
+  const HabitActivationDecision.requiresAdultOverride(this.warning)
+      : isAllowed = false;
 
   final bool isAllowed;
   final String? warning;
@@ -24,7 +27,8 @@ class HabitActivationPolicy {
     required Iterable<Habit> activeHabits,
   }) {
     final newActiveCount = activeHabits.where((habit) {
-      return habit.status == HabitStatus.newHabit || habit.status == HabitStatus.practicing;
+      return habit.status == HabitStatus.newHabit ||
+          habit.status == HabitStatus.practicing;
     }).length;
 
     final limit = recommendedLimit(profileKind);

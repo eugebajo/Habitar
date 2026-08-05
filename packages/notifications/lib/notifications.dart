@@ -1,10 +1,35 @@
-enum ReminderIntensity { quiet, visible, persistentAllowed, silent, wearableOnly }
+enum ReminderIntensity {
+  quiet,
+  visible,
+  persistentAllowed,
+  silent,
+  wearableOnly
+}
 
 enum NotificationPermissionStatus { unknown, denied, granted }
 
-enum ReminderAction { startRoutine, addFiveMinutes, requestHelp, skipWithReason }
+enum ReminderAction {
+  startRoutine,
+  addFiveMinutes,
+  requestHelp,
+  skipWithReason
+}
 
-enum NotificationPlatformFeature { androidPersistentRoutine, iosLiveActivity, exactAlarm, timeSensitive }
+enum RoutineSignalKind {
+  softVibration,
+  doubleVibration,
+  shortSound,
+  vibrationAndSound,
+  silentNotice,
+  remindInFive
+}
+
+enum NotificationPlatformFeature {
+  androidPersistentRoutine,
+  iosLiveActivity,
+  exactAlarm,
+  timeSensitive
+}
 
 class LocalReminderRequest {
   const LocalReminderRequest({
@@ -16,6 +41,8 @@ class LocalReminderRequest {
     this.actions = const [],
     this.channelId = 'routine_reminders',
     this.requiresExactAlarm = false,
+    this.vibration = true,
+    this.sound = false,
   });
 
   final String id;
@@ -26,6 +53,30 @@ class LocalReminderRequest {
   final List<ReminderAction> actions;
   final String channelId;
   final bool requiresExactAlarm;
+  final bool vibration;
+  final bool sound;
+}
+
+class RoutineSignalLimits {
+  const RoutineSignalLimits({
+    this.maxSignalsPerRoutine = 2,
+    this.minInterval = const Duration(minutes: 5),
+  });
+
+  final int maxSignalsPerRoutine;
+  final Duration minInterval;
+}
+
+class RoutineSignalHistoryEntry {
+  const RoutineSignalHistoryEntry({
+    required this.routineId,
+    required this.sentAt,
+    required this.sentByAdultId,
+  });
+
+  final String routineId;
+  final DateTime sentAt;
+  final String sentByAdultId;
 }
 
 abstract interface class LocalReminderScheduler {
@@ -54,7 +105,8 @@ class NotificationConsent {
   final List<NotificationPlatformFeature> allowedFeatures;
 
   bool get canSchedule {
-    return permissionStatus == NotificationPermissionStatus.granted && intensity != ReminderIntensity.silent;
+    return permissionStatus == NotificationPermissionStatus.granted &&
+        intensity != ReminderIntensity.silent;
   }
 }
 
@@ -70,6 +122,81 @@ class ReminderPlan {
 class RoutineReminderPlanner {
   const RoutineReminderPlanner();
 
+  ReminderPlan planManualSignal({
+    required String routineId,
+    required String routineTitle,
+    required String firstStepTitle,
+    required String sentByName,
+    required DateTime now,
+    required RoutineSignalKind kind,
+    required NotificationConsent consent,
+    required List<RoutineSignalHistoryEntry> recentSignals,
+    RoutineSignalLimits limits = const RoutineSignalLimits(),
+  }) {
+    if (!consent.canSchedule && kind != RoutineSignalKind.silentNotice) {
+      return const ReminderPlan(
+        requests: [],
+        blockedReason:
+            'Las notificaciones no tienen permiso para enviar señales.',
+      );
+    }
+
+    final routineSignals = recentSignals
+        .where((entry) => entry.routineId == routineId)
+        .toList(growable: false);
+    if (routineSignals.length >= limits.maxSignalsPerRoutine) {
+      return const ReminderPlan(
+        requests: [],
+        blockedReason:
+            'Ya se enviaron las señales permitidas para esta rutina.',
+      );
+    }
+    if (routineSignals.isNotEmpty) {
+      final latest = routineSignals
+          .map((entry) => entry.sentAt)
+          .reduce((a, b) => a.isAfter(b) ? a : b);
+      if (now.difference(latest) < limits.minInterval) {
+        return const ReminderPlan(
+          requests: [],
+          blockedReason: 'Esperá unos minutos antes de enviar otra señal.',
+        );
+      }
+    }
+
+    final scheduledAt = kind == RoutineSignalKind.remindInFive
+        ? now.add(const Duration(minutes: 5))
+        : now;
+    final sound = kind == RoutineSignalKind.shortSound ||
+        kind == RoutineSignalKind.vibrationAndSound;
+    final vibration = kind == RoutineSignalKind.softVibration ||
+        kind == RoutineSignalKind.doubleVibration ||
+        kind == RoutineSignalKind.vibrationAndSound;
+    final intensity = kind == RoutineSignalKind.silentNotice
+        ? ReminderIntensity.silent
+        : consent.intensity;
+
+    return ReminderPlan(
+      requests: [
+        LocalReminderRequest(
+          id: '$routineId-signal-${now.millisecondsSinceEpoch}',
+          title: routineTitle,
+          body: '$sentByName envió una señal. Primer paso: $firstStepTitle',
+          scheduledAt: scheduledAt,
+          intensity: intensity,
+          actions: const [
+            ReminderAction.startRoutine,
+            ReminderAction.requestHelp,
+            ReminderAction.addFiveMinutes,
+          ],
+          channelId: 'routine_signals',
+          vibration: vibration,
+          sound: sound,
+        ),
+      ],
+      blockedReason: null,
+    );
+  }
+
   ReminderPlan planRoutineStart({
     required String routineId,
     required String routineTitle,
@@ -78,7 +205,10 @@ class RoutineReminderPlanner {
     required NotificationConsent consent,
   }) {
     if (!consent.canSchedule) {
-      return const ReminderPlan(requests: [], blockedReason: 'Las notificaciones no tienen permiso o estan en modo silencioso.');
+      return const ReminderPlan(
+          requests: [],
+          blockedReason:
+              'Las notificaciones no tienen permiso o están en modo silencioso.');
     }
 
     final actions = [
@@ -96,7 +226,8 @@ class RoutineReminderPlanner {
         scheduledAt: scheduledAt,
         intensity: consent.intensity,
         actions: actions,
-        requiresExactAlarm: consent.intensity == ReminderIntensity.persistentAllowed,
+        requiresExactAlarm:
+            consent.intensity == ReminderIntensity.persistentAllowed,
       ),
     ];
 

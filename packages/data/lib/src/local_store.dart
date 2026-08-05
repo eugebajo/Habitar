@@ -11,6 +11,7 @@ class LocalStoreCollections {
   static const families = 'families';
   static const childProfiles = 'child_profiles';
   static const teenProfiles = 'teen_profiles';
+  static const adultProfiles = 'adult_profiles';
   static const routines = 'routines';
   static const routineSteps = 'routine_steps';
   static const routineSessions = 'routine_sessions';

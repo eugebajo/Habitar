@@ -2,14 +2,22 @@ enum EntityStatus { active, paused, archived, deleted }
 
 enum AccessScope { owner, family, caregiver, professional }
 
+enum AdultProfileKind { parent, caregiver, professional, teacher }
+
 enum ProfileKind { child, teen }
 
 enum HabitStatus { proposed, newHabit, practicing, stable, paused, archived }
 
 enum RoutineStepStatus { pending, active, completed, skipped, paused }
 
+enum RoutineRepeatPolicy { once, daily, weekly, weekdays, custom }
+
 class AccessRule {
-  const AccessRule({required this.scope, required this.canRead, required this.canWrite});
+  const AccessRule({
+    required this.scope,
+    required this.canRead,
+    required this.canWrite,
+  });
 
   final AccessScope scope;
   final bool canRead;
@@ -41,14 +49,22 @@ abstract class AppEntity {
 }
 
 class User extends AppEntity {
-  const User({required super.metadata, required this.displayName, required this.email});
+  const User({
+    required super.metadata,
+    required this.displayName,
+    required this.email,
+  });
 
   final String displayName;
   final String email;
 }
 
 class Family extends AppEntity {
-  const Family({required super.metadata, required this.name, required this.adultUserIds});
+  const Family({
+    required super.metadata,
+    required this.name,
+    required this.adultUserIds,
+  });
 
   final String name;
   final List<String> adultUserIds;
@@ -82,8 +98,32 @@ class TeenProfile extends AppEntity {
   final bool privateReflectionEnabled;
 }
 
+class AdultProfile extends AppEntity {
+  const AdultProfile({
+    required super.metadata,
+    required this.familyId,
+    required this.profileId,
+    required this.displayName,
+    required this.kind,
+    this.email,
+    this.roleLabel,
+  });
+
+  final String familyId;
+  final String profileId;
+  final String displayName;
+  final AdultProfileKind kind;
+  final String? email;
+  final String? roleLabel;
+}
+
 class CaregiverRole extends AppEntity {
-  const CaregiverRole({required super.metadata, required this.userId, required this.familyId, required this.label});
+  const CaregiverRole({
+    required super.metadata,
+    required this.userId,
+    required this.familyId,
+    required this.label,
+  });
 
   final String userId;
   final String familyId;
@@ -91,7 +131,12 @@ class CaregiverRole extends AppEntity {
 }
 
 class ProfessionalRole extends AppEntity {
-  const ProfessionalRole({required super.metadata, required this.userId, required this.familyId, required this.permissions});
+  const ProfessionalRole({
+    required super.metadata,
+    required this.userId,
+    required this.familyId,
+    required this.permissions,
+  });
 
   final String userId;
   final String familyId;
@@ -99,11 +144,61 @@ class ProfessionalRole extends AppEntity {
 }
 
 class Routine extends AppEntity {
-  const Routine({required super.metadata, required this.profileId, required this.title, this.stepIds = const []});
+  const Routine({
+    required super.metadata,
+    required this.profileId,
+    required this.title,
+    this.stepIds = const [],
+    this.weekdays = const [],
+    this.scheduledHour,
+    this.scheduledMinute,
+    this.estimatedDurationMinutes,
+    this.leadReminderMinutes = 10,
+    this.repeatPolicy = RoutineRepeatPolicy.weekly,
+    this.responsibleAdultProfileId,
+    this.contextLabel,
+    this.minimumVersion,
+    this.benefitDescription,
+    this.maxReminderCount = 2,
+    this.reminderIntervalMinutes = 5,
+    this.vibrationEnabled = true,
+    this.soundEnabled = false,
+    this.silentNotification = false,
+    this.canPostpone = true,
+    this.canRequestHelp = true,
+  });
 
   final String profileId;
   final String title;
   final List<String> stepIds;
+  final List<int> weekdays;
+  final int? scheduledHour;
+  final int? scheduledMinute;
+  final int? estimatedDurationMinutes;
+  final int leadReminderMinutes;
+  final RoutineRepeatPolicy repeatPolicy;
+  final String? responsibleAdultProfileId;
+  final String? contextLabel;
+  final String? minimumVersion;
+  final String? benefitDescription;
+  final int maxReminderCount;
+  final int reminderIntervalMinutes;
+  final bool vibrationEnabled;
+  final bool soundEnabled;
+  final bool silentNotification;
+  final bool canPostpone;
+  final bool canRequestHelp;
+
+  String? get scheduledTimeLabel {
+    final hour = scheduledHour;
+    final minute = scheduledMinute;
+    if (hour == null || minute == null) {
+      return null;
+    }
+    return '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
+  }
+
+  bool get hasSchedule => scheduledHour != null && scheduledMinute != null;
 }
 
 class RoutineStep extends AppEntity {
@@ -139,7 +234,12 @@ class Habit extends AppEntity {
 }
 
 class HabitActivation extends AppEntity {
-  const HabitActivation({required super.metadata, required this.habitId, required this.startedAt, this.confirmedOverride = false});
+  const HabitActivation({
+    required super.metadata,
+    required this.habitId,
+    required this.startedAt,
+    this.confirmedOverride = false,
+  });
 
   final String habitId;
   final DateTime startedAt;
@@ -147,7 +247,12 @@ class HabitActivation extends AppEntity {
 }
 
 class ScheduleItem extends AppEntity {
-  const ScheduleItem({required super.metadata, required this.profileId, required this.title, this.startsAt});
+  const ScheduleItem({
+    required super.metadata,
+    required this.profileId,
+    required this.title,
+    this.startsAt,
+  });
 
   final String profileId;
   final String title;
@@ -155,7 +260,12 @@ class ScheduleItem extends AppEntity {
 }
 
 class VisualChoiceBoard extends AppEntity {
-  const VisualChoiceBoard({required super.metadata, required this.profileId, required this.title, required this.options});
+  const VisualChoiceBoard({
+    required super.metadata,
+    required this.profileId,
+    required this.title,
+    required this.options,
+  });
 
   final String profileId;
   final String title;
@@ -163,7 +273,12 @@ class VisualChoiceBoard extends AppEntity {
 }
 
 class EmotionCheckIn extends AppEntity {
-  const EmotionCheckIn({required super.metadata, required this.profileId, this.emotion, this.energyLevel});
+  const EmotionCheckIn({
+    required super.metadata,
+    required this.profileId,
+    this.emotion,
+    this.energyLevel,
+  });
 
   final String profileId;
   final String? emotion;
@@ -171,7 +286,12 @@ class EmotionCheckIn extends AppEntity {
 }
 
 class SupportRequest extends AppEntity {
-  const SupportRequest({required super.metadata, required this.profileId, required this.kind, this.note});
+  const SupportRequest({
+    required super.metadata,
+    required this.profileId,
+    required this.kind,
+    this.note,
+  });
 
   final String profileId;
   final String kind;
@@ -179,7 +299,8 @@ class SupportRequest extends AppEntity {
 }
 
 class Reward extends AppEntity {
-  const Reward({required super.metadata, required this.familyId, required this.title});
+  const Reward(
+      {required super.metadata, required this.familyId, required this.title});
 
   final String familyId;
   final String title;
@@ -201,7 +322,12 @@ class Story extends AppEntity {
 }
 
 class StoryProgress extends AppEntity {
-  const StoryProgress({required super.metadata, required this.storyId, required this.profileId, this.isFavorite = false});
+  const StoryProgress({
+    required super.metadata,
+    required this.storyId,
+    required this.profileId,
+    this.isFavorite = false,
+  });
 
   final String storyId;
   final String profileId;
@@ -209,21 +335,31 @@ class StoryProgress extends AppEntity {
 }
 
 class NotificationPreference extends AppEntity {
-  const NotificationPreference({required super.metadata, required this.profileId, required this.intensity});
+  const NotificationPreference({
+    required super.metadata,
+    required this.profileId,
+    required this.intensity,
+  });
 
   final String profileId;
   final String intensity;
 }
 
 class Device extends AppEntity {
-  const Device({required super.metadata, required this.userId, required this.platform});
+  const Device(
+      {required super.metadata, required this.userId, required this.platform});
 
   final String userId;
   final String platform;
 }
 
 class WearableConnection extends AppEntity {
-  const WearableConnection({required super.metadata, required this.deviceId, required this.platform, this.enabled = false});
+  const WearableConnection({
+    required super.metadata,
+    required this.deviceId,
+    required this.platform,
+    this.enabled = false,
+  });
 
   final String deviceId;
   final String platform;
@@ -231,7 +367,12 @@ class WearableConnection extends AppEntity {
 }
 
 class ConsentRecord extends AppEntity {
-  const ConsentRecord({required super.metadata, required this.familyId, required this.consentType, required this.grantedAt});
+  const ConsentRecord({
+    required super.metadata,
+    required this.familyId,
+    required this.consentType,
+    required this.grantedAt,
+  });
 
   final String familyId;
   final String consentType;
@@ -239,7 +380,12 @@ class ConsentRecord extends AppEntity {
 }
 
 class AuditLog extends AppEntity {
-  const AuditLog({required super.metadata, required this.actorId, required this.action, required this.targetType});
+  const AuditLog({
+    required super.metadata,
+    required this.actorId,
+    required this.action,
+    required this.targetType,
+  });
 
   final String actorId;
   final String action;

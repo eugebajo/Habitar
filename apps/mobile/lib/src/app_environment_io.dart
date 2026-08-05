@@ -24,6 +24,8 @@ Future<List<Override>> buildProductionOverrides() async {
     familyRepositoryProvider.overrideWithValue(LocalFamilyRepository(store)),
     profileRepositoryProvider.overrideWithValue(LocalProfileRepository(store)),
     routineRepositoryProvider.overrideWithValue(LocalRoutineRepository(store)),
+    adultProfileRepositoryProvider
+        .overrideWithValue(LocalAdultProfileRepository(store)),
     routineSessionRepositoryProvider
         .overrideWithValue(LocalRoutineSessionRepository(store)),
     habitRepositoryProvider.overrideWithValue(LocalHabitRepository(store)),

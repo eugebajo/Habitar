@@ -1,14 +1,52 @@
+import 'package:habitar_domain/domain.dart';
 import 'package:habitar_routine_engine/routine_engine.dart';
 
 import 'repositories.dart';
 
 class CreateRoutineInput {
-  const CreateRoutineInput(
-      {required this.profileId, required this.title, required this.stepTitles});
+  const CreateRoutineInput({
+    required this.profileId,
+    required this.title,
+    required this.stepTitles,
+    this.weekdays = const [],
+    this.scheduledHour,
+    this.scheduledMinute,
+    this.estimatedDurationMinutes,
+    this.leadReminderMinutes = 10,
+    this.repeatPolicy = RoutineRepeatPolicy.weekly,
+    this.responsibleAdultProfileId,
+    this.contextLabel,
+    this.minimumVersion,
+    this.benefitDescription,
+    this.maxReminderCount = 2,
+    this.reminderIntervalMinutes = 5,
+    this.vibrationEnabled = true,
+    this.soundEnabled = false,
+    this.silentNotification = false,
+    this.canPostpone = true,
+    this.canRequestHelp = true,
+  });
 
   final String profileId;
   final String title;
   final List<String> stepTitles;
+  final List<int> weekdays;
+  final int? scheduledHour;
+  final int? scheduledMinute;
+  final int? estimatedDurationMinutes;
+  final int leadReminderMinutes;
+  final RoutineRepeatPolicy repeatPolicy;
+  final String? responsibleAdultProfileId;
+  final String? contextLabel;
+  final String? minimumVersion;
+  final String? benefitDescription;
+  final int maxReminderCount;
+  final int reminderIntervalMinutes;
+  final bool vibrationEnabled;
+  final bool soundEnabled;
+  final bool silentNotification;
+  final bool canPostpone;
+  final bool canRequestHelp;
 }
 
 class RoutineService {
@@ -27,6 +65,23 @@ class RoutineService {
       profileId: input.profileId,
       title: input.title,
       stepTitles: input.stepTitles,
+      weekdays: input.weekdays,
+      scheduledHour: input.scheduledHour,
+      scheduledMinute: input.scheduledMinute,
+      estimatedDurationMinutes: input.estimatedDurationMinutes,
+      leadReminderMinutes: input.leadReminderMinutes,
+      repeatPolicy: input.repeatPolicy,
+      responsibleAdultProfileId: input.responsibleAdultProfileId,
+      contextLabel: input.contextLabel,
+      minimumVersion: input.minimumVersion,
+      benefitDescription: input.benefitDescription,
+      maxReminderCount: input.maxReminderCount,
+      reminderIntervalMinutes: input.reminderIntervalMinutes,
+      vibrationEnabled: input.vibrationEnabled,
+      soundEnabled: input.soundEnabled,
+      silentNotification: input.silentNotification,
+      canPostpone: input.canPostpone,
+      canRequestHelp: input.canRequestHelp,
     );
     final steps = await routineRepository.stepsForRoutine(routine.metadata.id);
     final session = engine.start(
