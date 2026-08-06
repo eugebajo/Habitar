@@ -135,6 +135,12 @@ abstract interface class HabitProgressRepository {
   Future<List<HabitProgressEntry>> entriesForHabit(String habitId);
 }
 
+abstract interface class TimeBankRepository {
+  Future<List<TimeBankBenefit>> benefitsForProfile(String profileId);
+
+  Future<TimeBankBenefit> saveBenefit(TimeBankBenefit benefit);
+}
+
 abstract interface class NotificationPreferenceRepository {
   Future<NotificationConsent?> consentForProfile(String profileId);
 

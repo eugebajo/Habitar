@@ -12,6 +12,19 @@ enum RoutineStepStatus { pending, active, completed, skipped, paused }
 
 enum RoutineRepeatPolicy { once, daily, weekly, weekdays, custom }
 
+enum BenefitKind {
+  digitalTime,
+  appTime,
+  activity,
+  story,
+  music,
+  adultTime,
+  custom,
+  recognition
+}
+
+enum BenefitStatus { available, pendingApproval, used, expired, corrected }
+
 class AccessRule {
   const AccessRule({
     required this.scope,
@@ -296,6 +309,84 @@ class SupportRequest extends AppEntity {
   final String profileId;
   final String kind;
   final String? note;
+}
+
+class TimeBankBenefit extends AppEntity {
+  const TimeBankBenefit({
+    required super.metadata,
+    required this.profileId,
+    required this.description,
+    required this.minutesEarned,
+    this.routineId,
+    this.habitId,
+    this.kind = BenefitKind.digitalTime,
+    this.minutesUsed = 0,
+    this.dailyLimitMinutes,
+    this.expiresAt,
+    this.accumulationAllowed = true,
+    this.status = BenefitStatus.available,
+    this.sourceAction,
+    this.idempotencyKey,
+    this.approvedByAdultId,
+  });
+
+  final String profileId;
+  final String? routineId;
+  final String? habitId;
+  final BenefitKind kind;
+  final String description;
+  final int minutesEarned;
+  final int minutesUsed;
+  final int? dailyLimitMinutes;
+  final DateTime? expiresAt;
+  final bool accumulationAllowed;
+  final BenefitStatus status;
+  final String? sourceAction;
+  final String? idempotencyKey;
+  final String? approvedByAdultId;
+
+  int get balanceMinutes => minutesEarned - minutesUsed;
+
+  bool get hasBalance =>
+      balanceMinutes > 0 && status == BenefitStatus.available;
+
+  TimeBankBenefit copyWith({
+    int? minutesUsed,
+    BenefitStatus? status,
+    String? approvedByAdultId,
+  }) {
+    return TimeBankBenefit(
+      metadata: metadata,
+      profileId: profileId,
+      routineId: routineId,
+      habitId: habitId,
+      kind: kind,
+      description: description,
+      minutesEarned: minutesEarned,
+      minutesUsed: minutesUsed ?? this.minutesUsed,
+      dailyLimitMinutes: dailyLimitMinutes,
+      expiresAt: expiresAt,
+      accumulationAllowed: accumulationAllowed,
+      status: status ?? this.status,
+      sourceAction: sourceAction,
+      idempotencyKey: idempotencyKey,
+      approvedByAdultId: approvedByAdultId ?? this.approvedByAdultId,
+    );
+  }
+}
+
+class TimeBankSummary {
+  const TimeBankSummary({
+    required this.profileId,
+    required this.availableMinutes,
+    required this.usedMinutes,
+    required this.benefits,
+  });
+
+  final String profileId;
+  final int availableMinutes;
+  final int usedMinutes;
+  final List<TimeBankBenefit> benefits;
 }
 
 class Reward extends AppEntity {

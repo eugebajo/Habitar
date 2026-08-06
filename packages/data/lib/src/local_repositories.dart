@@ -392,6 +392,28 @@ class LocalHabitProgressRepository implements HabitProgressRepository {
   }
 }
 
+class LocalTimeBankRepository implements TimeBankRepository {
+  LocalTimeBankRepository(this.store);
+
+  final LocalStore store;
+
+  @override
+  Future<List<TimeBankBenefit>> benefitsForProfile(String profileId) async {
+    final records = await store.list(LocalStoreCollections.timeBankBenefits);
+    return records
+        .map(_timeBankBenefitFromJson)
+        .where((benefit) => benefit.profileId == profileId)
+        .toList(growable: false);
+  }
+
+  @override
+  Future<TimeBankBenefit> saveBenefit(TimeBankBenefit benefit) async {
+    await store.put(LocalStoreCollections.timeBankBenefits, benefit.metadata.id,
+        _timeBankBenefitToJson(benefit));
+    return benefit;
+  }
+}
+
 class LocalNotificationPreferenceRepository
     implements NotificationPreferenceRepository {
   LocalNotificationPreferenceRepository(this.store);
@@ -867,6 +889,44 @@ HabitProgressEntry _habitProgressFromJson(Map<String, Object?> json) =>
       note: json['note'] as String?,
     );
 
+Map<String, Object?> _timeBankBenefitToJson(TimeBankBenefit benefit) => {
+      'metadata': _metadataToJson(benefit.metadata),
+      'profile_id': benefit.profileId,
+      'routine_id': benefit.routineId,
+      'habit_id': benefit.habitId,
+      'kind': benefit.kind.name,
+      'description': benefit.description,
+      'minutes_earned': benefit.minutesEarned,
+      'minutes_used': benefit.minutesUsed,
+      'daily_limit_minutes': benefit.dailyLimitMinutes,
+      'expires_at': benefit.expiresAt?.toIso8601String(),
+      'accumulation_allowed': benefit.accumulationAllowed,
+      'status': benefit.status.name,
+      'source_action': benefit.sourceAction,
+      'idempotency_key': benefit.idempotencyKey,
+      'approved_by_adult_id': benefit.approvedByAdultId,
+    };
+
+TimeBankBenefit _timeBankBenefitFromJson(Map<String, Object?> json) =>
+    TimeBankBenefit(
+      metadata: _metadataFromJson(_object(json['metadata'])),
+      profileId: json['profile_id'] as String,
+      routineId: json['routine_id'] as String?,
+      habitId: json['habit_id'] as String?,
+      kind: _byName(BenefitKind.values,
+          json['kind'] as String? ?? BenefitKind.digitalTime.name),
+      description: json['description'] as String,
+      minutesEarned: json['minutes_earned'] as int,
+      minutesUsed: json['minutes_used'] as int? ?? 0,
+      dailyLimitMinutes: json['daily_limit_minutes'] as int?,
+      expiresAt: _dateTimeOrNull(json['expires_at']),
+      accumulationAllowed: json['accumulation_allowed'] as bool? ?? true,
+      status: _byName(BenefitStatus.values,
+          json['status'] as String? ?? BenefitStatus.available.name),
+      sourceAction: json['source_action'] as String?,
+      idempotencyKey: json['idempotency_key'] as String?,
+      approvedByAdultId: json['approved_by_adult_id'] as String?,
+    );
 Map<String, Object?> _notificationConsentToJson(NotificationConsent consent) =>
     {
       'profile_id': consent.profileId,

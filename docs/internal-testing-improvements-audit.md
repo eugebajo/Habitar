@@ -175,4 +175,27 @@ Validation:
 - `flutter build appbundle --release`: OK, generated `apps/mobile/build/app/outputs/bundle/release/app-release.aab`.
 
 No GitHub push, PR, release, tag, or remote change was performed.
+## Phase 4 - Agreements, Benefits And Time Bank
+
+Completed locally:
+- Added non-punitive time bank domain models: benefit kind, status, benefit entity and profile summary.
+- Added `TimeBankService` with idempotent minute grants and adult-approved minute usage.
+- Added in-memory and local persisted repositories for time bank benefits.
+- Added route `/rewards` with visible adult screen `Acuerdos y beneficios`.
+- The adult can credit minutes for starting, minimum progress or completion and register 5-minute usage.
+- Added safe Supabase migration `0003_time_bank_benefits.sql` with unique idempotency index.
+- Added persistence test for idempotency, available balance and used minutes.
+
+Validation:
+- `dart pub get`: OK.
+- `dart analyze`: application, data OK.
+- `flutter analyze`: apps/mobile OK.
+- `dart test`: data OK.
+- `flutter test`: apps/mobile OK.
+- `flutter build appbundle --release`: OK, generated `apps/mobile/build/app/outputs/bundle/release/app-release.aab`.
+
+Limitations kept honest:
+- This is a digital time bank and approval ledger, not real app blocking.
+- Native Android UsageStats / iOS Screen Time control remains future work.
+- Backend RLS and multi-adult audit persistence still need Supabase implementation before open production launch.
 

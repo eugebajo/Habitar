@@ -329,6 +329,29 @@ class InMemoryHabitProgressRepository implements HabitProgressRepository {
   }
 }
 
+class InMemoryTimeBankRepository implements TimeBankRepository {
+  final List<TimeBankBenefit> _benefits = [];
+
+  @override
+  Future<List<TimeBankBenefit>> benefitsForProfile(String profileId) async {
+    return _benefits
+        .where((benefit) => benefit.profileId == profileId)
+        .toList(growable: false);
+  }
+
+  @override
+  Future<TimeBankBenefit> saveBenefit(TimeBankBenefit benefit) async {
+    final index =
+        _benefits.indexWhere((item) => item.metadata.id == benefit.metadata.id);
+    if (index == -1) {
+      _benefits.add(benefit);
+    } else {
+      _benefits[index] = benefit;
+    }
+    return benefit;
+  }
+}
+
 class InMemoryNotificationPreferenceRepository
     implements NotificationPreferenceRepository {
   final Map<String, NotificationConsent> _consentsByProfile = {};

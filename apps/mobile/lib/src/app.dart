@@ -13,6 +13,7 @@ import 'features/profiles/profiles_screen.dart';
 import 'features/profile_setup/profile_setup_screen.dart';
 import 'features/portal/portal_screens.dart';
 import 'features/routine_player/routine_player_screen.dart';
+import 'features/rewards/rewards_screen.dart';
 import 'features/routine_setup/routine_setup_screen.dart';
 import 'features/startup/startup_screen.dart';
 import 'features/story_library/story_library_screen.dart';
@@ -30,21 +31,21 @@ final appRouter = GoRouter(
     GoRoute(
         path: '/privacy',
         builder: (context, state) => const LegalScreen(
-              title: 'Política de privacidad',
+              title: 'PolÃ­tica de privacidad',
               kind: LegalDocumentKind.privacy,
             )),
     GoRoute(
         path: '/terms',
         builder: (context, state) => const LegalScreen(
-              title: 'Términos de uso',
+              title: 'TÃ©rminos de uso',
               kind: LegalDocumentKind.terms,
             )),
     GoRoute(
         path: '/recover',
         builder: (context, state) => const SimpleModeScreen(
-            title: 'Recuperar contraseña',
+            title: 'Recuperar contraseÃ±a',
             message:
-                'Escribí a soporte@habitarpy.com desde el correo de tu cuenta.')),
+                'EscribÃ­ a soporte@habitarpy.com desde el correo de tu cuenta.')),
     GoRoute(
         path: '/register',
         builder: (context, state) => const AdultRegistrationScreen()),
@@ -71,8 +72,7 @@ final appRouter = GoRouter(
         path: '/habits/list',
         builder: (context, state) => const AdultSectionScreen(kind: 'habits')),
     GoRoute(
-        path: '/rewards',
-        builder: (context, state) => const AdultSectionScreen(kind: 'rewards')),
+        path: '/rewards', builder: (context, state) => const RewardsScreen()),
     GoRoute(
         path: '/settings',
         builder: (context, state) =>
@@ -104,7 +104,8 @@ final appRouter = GoRouter(
         path: '/child/achievements',
         builder: (context, state) => const SimpleModeScreen(
             title: 'Mis logros',
-            message: 'Cada paso cuenta. Aquí aparecen tus avances recientes.')),
+            message:
+                'Cada paso cuenta. AquÃƒÂ­ aparecen tus avances recientes.')),
     GoRoute(
         path: '/child/stories',
         builder: (context, state) => const StoryLibraryScreen()),
@@ -115,26 +116,26 @@ final appRouter = GoRouter(
     GoRoute(
         path: '/teen/habits',
         builder: (context, state) => const SimpleModeScreen(
-            title: 'Mis hábitos',
-            message: 'Elegí una versión pequeña y posible para hoy.',
+            title: 'Mis hÃ¡bitos',
+            message: 'ElegÃ­ una versiÃƒÂ³n pequeÃƒÂ±a y posible para hoy.',
             teen: true)),
     GoRoute(
         path: '/teen/progress',
         builder: (context, state) => const SimpleModeScreen(
             title: 'Mi progreso',
-            message: 'Observá lo que funcionó sin compararte.',
+            message: 'ObservÃ¡ lo que funcionÃ³ sin compararte.',
             teen: true)),
     GoRoute(
         path: '/teen/reflection',
         builder: (context, state) => const SimpleModeScreen(
-            title: 'Reflexión diaria',
-            message: 'Este espacio es privado. Escribí solo si te ayuda.',
+            title: 'ReflexiÃ³n diaria',
+            message: 'Este espacio es privado. EscribÃ­ solo si te ayuda.',
             teen: true)),
     GoRoute(
         path: '/teen/privacy',
         builder: (context, state) => const SimpleModeScreen(
             title: 'Privacidad',
-            message: 'Vos decidís qué reflexiones compartir.',
+            message: 'Vos decidÃƒÂ­s quÃ© reflexiones compartir.',
             teen: true)),
   ],
 );
@@ -145,7 +146,7 @@ class HabitarMobileApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'Hábitos y rutinas',
+      title: 'HÃ¡bitos y rutinas',
       theme: buildHabitarTheme(),
       routerConfig: appRouter,
       debugShowCheckedModeBanner: false,

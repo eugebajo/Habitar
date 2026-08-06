@@ -206,6 +206,45 @@ void main() {
     expect(wearableStatus, WearableConnectionStatus.syncing);
   });
 
+  test('persists time bank benefits and usage', () async {
+    final directory =
+        await Directory.systemTemp.createTemp('habitar_local_store_test_');
+    addTearDown(() => directory.delete(recursive: true));
+    final file = File('${directory.path}/habitar.json');
+    final store = FileLocalStore(file);
+    final repository = LocalTimeBankRepository(store);
+    final service = TimeBankService(repository: repository);
+
+    final benefit = await service.grantTime(
+      const GrantTimeBenefitInput(
+        profileId: 'profile-1',
+        description: '10 minutos por empezar',
+        minutes: 10,
+        idempotencyKey: 'routine-1-started',
+        sourceAction: 'comenzar',
+      ),
+    );
+    final duplicate = await service.grantTime(
+      const GrantTimeBenefitInput(
+        profileId: 'profile-1',
+        description: '10 minutos por empezar',
+        minutes: 10,
+        idempotencyKey: 'routine-1-started',
+        sourceAction: 'comenzar',
+      ),
+    );
+    await service.useMinutes(profileId: 'profile-1', minutes: 5);
+
+    final restoredService = TimeBankService(
+      repository: LocalTimeBankRepository(FileLocalStore(file)),
+    );
+    final summary = await restoredService.summaryForProfile('profile-1');
+
+    expect(duplicate.metadata.id, benefit.metadata.id);
+    expect(summary.availableMinutes, 5);
+    expect(summary.usedMinutes, 5);
+    expect(summary.benefits, hasLength(1));
+  });
   test('persists sync queue state transitions', () async {
     final directory =
         await Directory.systemTemp.createTemp('habitar_local_store_test_');

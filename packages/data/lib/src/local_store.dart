@@ -17,6 +17,7 @@ class LocalStoreCollections {
   static const routineSessions = 'routine_sessions';
   static const habits = 'habits';
   static const habitProgress = 'habit_progress';
+  static const timeBankBenefits = 'time_bank_benefits';
   static const notificationPreferences = 'notification_preferences';
   static const emotionCheckIns = 'emotion_check_ins';
   static const supportRequests = 'support_requests';

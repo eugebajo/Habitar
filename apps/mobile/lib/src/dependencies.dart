@@ -22,6 +22,8 @@ final habitRepositoryProvider =
     Provider<HabitRepository>((ref) => InMemoryHabitRepository());
 final habitProgressRepositoryProvider = Provider<HabitProgressRepository>(
     (ref) => InMemoryHabitProgressRepository());
+final timeBankRepositoryProvider =
+    Provider<TimeBankRepository>((ref) => InMemoryTimeBankRepository());
 final notificationPreferenceRepositoryProvider =
     Provider<NotificationPreferenceRepository>(
         (ref) => InMemoryNotificationPreferenceRepository());
@@ -83,6 +85,10 @@ final habitServiceProvider = Provider<HabitService>((ref) {
     habitRepository: ref.watch(habitRepositoryProvider),
     progressRepository: ref.watch(habitProgressRepositoryProvider),
   );
+});
+
+final timeBankServiceProvider = Provider<TimeBankService>((ref) {
+  return TimeBankService(repository: ref.watch(timeBankRepositoryProvider));
 });
 
 final notificationServiceProvider = Provider<NotificationService>((ref) {

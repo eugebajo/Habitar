@@ -8,3 +8,4 @@ export 'src/routine_service.dart';
 export 'src/sync_service.dart';
 export 'src/wearable_service.dart';
 export 'src/wellbeing_service.dart';
+export 'src/time_bank_service.dart';
