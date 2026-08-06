@@ -25,26 +25,26 @@ class FamilyDashboardScreen extends ConsumerWidget {
                 child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                  Text('Hola. Ã‚Â¿QuÃƒÂ© necesita tu familia hoy?',
+                  Text('Hola. ¿Qué necesita tu familia hoy?',
                       style: Theme.of(context).textTheme.headlineSmall),
                   const SizedBox(height: 6),
                   Text(
                       hasProfile
-                          ? 'Perfil seleccionado - listo para acompaÃƒÂ±ar'
-                          : 'ElegÃƒÂ­ un perfil para comenzar',
+                          ? 'Perfil seleccionado - listo para acompañar'
+                          : 'Elegí un perfil para comenzar',
                       style: const TextStyle(color: HabitarColors.mutedInk)),
                 ])),
             PopupMenuButton<String>(
-                tooltip: 'MÃƒÂ¡s opciones',
+                tooltip: 'Más opciones',
                 onSelected: (value) {
                   if (value == 'settings') context.go('/settings');
                   if (value == 'logout') _signOut(context, ref);
                 },
                 itemBuilder: (_) => const [
                       PopupMenuItem(
-                          value: 'settings', child: Text('ConfiguraciÃƒÂ³n')),
+                          value: 'settings', child: Text('Configuración')),
                       PopupMenuItem(
-                          value: 'logout', child: Text('Cerrar sesiÃƒÂ³n'))
+                          value: 'logout', child: Text('Cerrar sesión'))
                     ]),
           ]),
           const SizedBox(height: 18),
@@ -69,7 +69,7 @@ class FamilyDashboardScreen extends ConsumerWidget {
                     const Icon(Icons.expand_more_rounded)
                   ]))),
           const SizedBox(height: 26),
-          Text('Accesos rÃƒÂ¡pidos',
+          Text('Accesos rápidos',
               style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 12),
           GridView.count(
@@ -88,7 +88,7 @@ class FamilyDashboardScreen extends ConsumerWidget {
                         .go(hasProfile ? '/routine/create' : '/profiles')),
                 _Quick(
                     icon: Icons.wb_sunny_rounded,
-                    label: 'Crear hÃƒÂ¡bito',
+                    label: 'Crear hábito',
                     color: HabitarColors.sunlit,
                     onTap: () =>
                         context.go(hasProfile ? '/habits' : '/profiles')),
@@ -120,12 +120,12 @@ class FamilyDashboardScreen extends ConsumerWidget {
                           Text(
                               hasProfile
                                   ? '2 de 3 prioridades listas'
-                                  : 'Sin prioridades todavÃƒÂ­a',
+                                  : 'Sin prioridades todavía',
                               style: Theme.of(context).textTheme.titleMedium),
                           const SizedBox(height: 4),
                           Text(
                               hasProfile
-                                  ? 'PrÃƒÂ³ximo: preparar la mochila - 18:30'
+                                  ? 'Próximo: preparar la mochila - 18:30'
                                   : 'Crea o selecciona un perfil.',
                               style: const TextStyle(
                                   color: HabitarColors.mutedInk))
@@ -136,7 +136,7 @@ class FamilyDashboardScreen extends ConsumerWidget {
             FilledButton.icon(
               onPressed: () => _sendRoutineSignal(context, ref),
               icon: const Icon(Icons.vibration_rounded),
-              label: const Text('Enviar seÃ±al'),
+              label: const Text('Enviar señal'),
             ),
           ],
           const SizedBox(height: 18),
@@ -147,15 +147,15 @@ class FamilyDashboardScreen extends ConsumerWidget {
           const SizedBox(height: 12),
           const _SummaryRow(
               icon: Icons.check_circle_outline,
-              title: 'HÃƒÂ¡bitos completados',
+              title: 'Hábitos completados',
               value: '8'),
           const _SummaryRow(
               icon: Icons.favorite_outline,
               title: 'Logro reciente',
-              value: 'PidiÃƒÂ³ una pausa'),
+              value: 'Pidió una pausa'),
           const _SummaryRow(
               icon: Icons.battery_2_bar_rounded,
-              title: 'Momento mÃƒÂ¡s difÃƒÂ­cil',
+              title: 'Momento más difícil',
               value: 'Tardes'),
           const SizedBox(height: 16),
           OutlinedButton.icon(
@@ -184,7 +184,7 @@ class FamilyDashboardScreen extends ConsumerWidget {
     if (routines.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('Primero preparÃ¡ una rutina para este perfil.')),
+            content: Text('Primero prepará una rutina para este perfil.')),
       );
       return;
     }
@@ -209,7 +209,7 @@ class FamilyDashboardScreen extends ConsumerWidget {
       SnackBar(
         content: Text(plan.isBlocked
             ? plan.blockedReason!
-            : 'SeÃ±al enviada con suavidad.'),
+            : 'Señal enviada con suavidad.'),
       ),
     );
   }
@@ -285,8 +285,7 @@ class _AdultTeamCard extends ConsumerWidget {
           leading: const Icon(Icons.groups_rounded,
               color: HabitarColors.primaryGreen),
           title: const Text('Equipo adulto'),
-          subtitle:
-              const Text('ElegÃƒÂ­ un perfil para sumar acompaÃƒÂ±antes.'),
+          subtitle: const Text('Elegí un perfil para sumar acompañantes.'),
           trailing: TextButton(
             onPressed: () => context.go('/profiles'),
             child: const Text('Perfiles'),
@@ -328,7 +327,7 @@ class _AdultTeamCard extends ConsumerWidget {
                 const SizedBox(height: 8),
                 if (adults.isEmpty)
                   const Text(
-                    'SumÃƒÂ¡ madres, padres, cuidadores, docentes o profesionales vinculados a este perfil.',
+                    'Sumá madres, padres, cuidadores, docentes o profesionales vinculados a este perfil.',
                     style: TextStyle(color: HabitarColors.mutedInk),
                   )
                 else

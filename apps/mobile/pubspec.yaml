@@ -1,6 +1,6 @@
-﻿name: habitar_mobile
+name: habitar_mobile
 publish_to: none
-version: 0.1.1+2
+version: 0.1.2+3
 resolution: workspace
 
 environment:

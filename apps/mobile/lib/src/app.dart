@@ -31,21 +31,21 @@ final appRouter = GoRouter(
     GoRoute(
         path: '/privacy',
         builder: (context, state) => const LegalScreen(
-              title: 'PolÃ­tica de privacidad',
+              title: 'Política de privacidad',
               kind: LegalDocumentKind.privacy,
             )),
     GoRoute(
         path: '/terms',
         builder: (context, state) => const LegalScreen(
-              title: 'TÃ©rminos de uso',
+              title: 'Términos de uso',
               kind: LegalDocumentKind.terms,
             )),
     GoRoute(
         path: '/recover',
         builder: (context, state) => const SimpleModeScreen(
-            title: 'Recuperar contraseÃ±a',
+            title: 'Recuperar contraseña',
             message:
-                'EscribÃ­ a soporte@habitarpy.com desde el correo de tu cuenta.')),
+                'Escribí a soporte@habitarpy.com desde el correo de tu cuenta.')),
     GoRoute(
         path: '/register',
         builder: (context, state) => const AdultRegistrationScreen()),
@@ -104,8 +104,7 @@ final appRouter = GoRouter(
         path: '/child/achievements',
         builder: (context, state) => const SimpleModeScreen(
             title: 'Mis logros',
-            message:
-                'Cada paso cuenta. AquÃƒÂ­ aparecen tus avances recientes.')),
+            message: 'Cada paso cuenta. Aquí aparecen tus avances recientes.')),
     GoRoute(
         path: '/child/stories',
         builder: (context, state) => const StoryLibraryScreen()),
@@ -116,26 +115,26 @@ final appRouter = GoRouter(
     GoRoute(
         path: '/teen/habits',
         builder: (context, state) => const SimpleModeScreen(
-            title: 'Mis hÃ¡bitos',
-            message: 'ElegÃ­ una versiÃƒÂ³n pequeÃƒÂ±a y posible para hoy.',
+            title: 'Mis hábitos',
+            message: 'Elegí una versión pequeña y posible para hoy.',
             teen: true)),
     GoRoute(
         path: '/teen/progress',
         builder: (context, state) => const SimpleModeScreen(
             title: 'Mi progreso',
-            message: 'ObservÃ¡ lo que funcionÃ³ sin compararte.',
+            message: 'Observá lo que funcionó sin compararte.',
             teen: true)),
     GoRoute(
         path: '/teen/reflection',
         builder: (context, state) => const SimpleModeScreen(
-            title: 'ReflexiÃ³n diaria',
-            message: 'Este espacio es privado. EscribÃ­ solo si te ayuda.',
+            title: 'Reflexión diaria',
+            message: 'Este espacio es privado. Escribí solo si te ayuda.',
             teen: true)),
     GoRoute(
         path: '/teen/privacy',
         builder: (context, state) => const SimpleModeScreen(
             title: 'Privacidad',
-            message: 'Vos decidÃƒÂ­s quÃ© reflexiones compartir.',
+            message: 'Vos decidís qué reflexiones compartir.',
             teen: true)),
   ],
 );
@@ -146,10 +145,49 @@ class HabitarMobileApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'HÃ¡bitos y rutinas',
+      title: 'Hábitos y rutinas',
       theme: buildHabitarTheme(),
       routerConfig: appRouter,
+      builder: (context, child) => _AppBackGuard(
+        child: child ?? const SizedBox.shrink(),
+      ),
       debugShowCheckedModeBanner: false,
     );
+  }
+}
+
+class _AppBackGuard extends StatelessWidget {
+  const _AppBackGuard({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        final location = appRouter.routeInformationProvider.value.uri.path;
+        final target = _safeBackTarget(location);
+        if (target != null && target != location) {
+          appRouter.go(target);
+        }
+      },
+      child: child,
+    );
+  }
+
+  String? _safeBackTarget(String location) {
+    if (location == '/' || location == '/onboarding') return null;
+    if (location == '/login' ||
+        location == '/register' ||
+        location == '/recover') {
+      return '/onboarding';
+    }
+    if (location == '/profile' || location == '/profiles') return '/dashboard';
+    if (location.startsWith('/child') || location.startsWith('/teen')) {
+      return '/profiles';
+    }
+    return '/dashboard';
   }
 }

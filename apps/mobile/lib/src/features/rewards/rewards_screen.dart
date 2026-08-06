@@ -30,9 +30,9 @@ class _RewardsScreenState extends ConsumerState<RewardsScreen> {
       child: profileId == null
           ? const EmptyState(
               icon: Icons.card_giftcard_rounded,
-              title: 'ElegÃ­ un perfil',
+              title: 'Elegí un perfil',
               message:
-                  'El banco de tiempo se calcula para cada niÃ±o o adolescente.',
+                  'El banco de tiempo se calcula para cada niño o adolescente.',
             )
           : FutureBuilder<TimeBankSummary>(
               key: ValueKey(_refresh),
@@ -56,7 +56,7 @@ class _RewardsScreenState extends ConsumerState<RewardsScreen> {
                             onPressed: () =>
                                 _grant(profileId, 2, action: 'comenzar'),
                             icon: const Icon(Icons.play_circle_outline),
-                            label: const Text('ComenzÃ³'),
+                            label: const Text('Comenzó'),
                           ),
                         ),
                         const SizedBox(width: HabitarSpacing.sm),
@@ -65,7 +65,7 @@ class _RewardsScreenState extends ConsumerState<RewardsScreen> {
                             onPressed: () => _grant(profileId, 15,
                                 action: 'rutina completa'),
                             icon: const Icon(Icons.task_alt_rounded),
-                            label: const Text('CompletÃ³'),
+                            label: const Text('Completó'),
                           ),
                         ),
                       ],
@@ -85,9 +85,9 @@ class _RewardsScreenState extends ConsumerState<RewardsScreen> {
                     if (summary.benefits.isEmpty)
                       const EmptyState(
                         icon: Icons.celebration_outlined,
-                        title: 'AÃºn no hay beneficios',
+                        title: 'Aún no hay beneficios',
                         message:
-                            'PodÃ©s acreditar minutos por empezar, pedir ayuda o completar una versiÃ³n posible.',
+                            'Podés acreditar minutos por empezar, pedir ayuda o completar una versión posible.',
                       )
                     else
                       for (final benefit in summary.benefits)
@@ -97,7 +97,7 @@ class _RewardsScreenState extends ConsumerState<RewardsScreen> {
                                 color: HabitarColors.primaryGreen),
                             title: Text(benefit.description),
                             subtitle: Text(
-                              '${benefit.minutesEarned} min ganados Â· ${benefit.minutesUsed} min usados',
+                              '${benefit.minutesEarned} min ganados · ${benefit.minutesUsed} min usados',
                             ),
                             trailing: Text(
                               '${benefit.balanceMinutes} min',
@@ -114,7 +114,7 @@ class _RewardsScreenState extends ConsumerState<RewardsScreen> {
   }
 
   Future<void> _grant(String profileId, int minutes,
-      {String action = 'versiÃ³n mÃ­nima'}) async {
+      {String action = 'versión mínima'}) async {
     final key =
         'manual-$profileId-$action-${DateTime.now().toIso8601String().substring(0, 10)}';
     await ref.read(timeBankServiceProvider).grantTime(
@@ -144,7 +144,7 @@ class _RewardsScreenState extends ConsumerState<RewardsScreen> {
     if (mounted) {
       setState(() => _refresh += 1);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Se registrÃ³ el uso de $minutes minutos.')),
+        SnackBar(content: Text('Se registró el uso de $minutes minutos.')),
       );
     }
   }
@@ -177,7 +177,7 @@ class _BalancePanel extends StatelessWidget {
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: HabitarSpacing.sm),
-            Text('${summary.usedMinutes} min usados con aprobaciÃ³n adulta.'),
+            Text('${summary.usedMinutes} min usados con aprobación adulta.'),
           ],
         ),
       ),
