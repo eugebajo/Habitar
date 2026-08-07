@@ -116,7 +116,7 @@ final appRouter = GoRouter(
         path: '/teen/habits',
         builder: (context, state) => const SimpleModeScreen(
             title: 'Mis hábitos',
-            message: 'Elegí una versión pequeña y posible para hoy.',
+            message: 'Elegí una vers?ón pequeña y posible para hoy.',
             teen: true)),
     GoRoute(
         path: '/teen/progress',

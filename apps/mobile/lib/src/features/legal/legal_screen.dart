@@ -36,7 +36,7 @@ class LegalScreen extends StatelessWidget {
           Text(title, style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: HabitarSpacing.sm),
           Text(
-            'Documento preliminar para la versión inicial de Habitar.',
+            'Documento preliminar para la vers?ón inicial de Habitar.',
             style: Theme.of(context)
                 .textTheme
                 .bodyMedium

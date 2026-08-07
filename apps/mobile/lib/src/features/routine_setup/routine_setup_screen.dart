@@ -191,7 +191,7 @@ class _RoutineSetupScreenState extends ConsumerState<RoutineSetupScreen> {
                     TextFormField(
                       controller: _minimumVersionController,
                       decoration:
-                          const InputDecoration(labelText: 'Versión mínima'),
+                          const InputDecoration(labelText: 'Vers?ón mínima'),
                     ),
                     const SizedBox(height: HabitarSpacing.md),
                     TextFormField(

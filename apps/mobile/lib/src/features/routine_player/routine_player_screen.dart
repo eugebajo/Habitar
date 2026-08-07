@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:habitar_application/application.dart';
 import 'package:habitar_design_system/design_system.dart';
 import 'package:habitar_routine_engine/routine_engine.dart';
@@ -75,23 +76,20 @@ class _RoutinePlayerScreenState extends ConsumerState<RoutinePlayerScreen> {
     final service = ref.read(routineServiceProvider);
     final updated = await action(service);
     ref.read(currentRoutineSessionIdProvider.notifier).state = updated.id;
-    if (mounted) {
-      setState(() => _session = updated);
-    }
+    if (mounted) setState(() => _session = updated);
   }
 }
 
 class _RoutineBody extends StatelessWidget {
-  const _RoutineBody({
-    required this.session,
-    required this.onDone,
-    required this.onMoreTime,
-    required this.onPause,
-    required this.onResume,
-    required this.onHelp,
-    required this.onPostpone,
-    required this.onSkip,
-  });
+  const _RoutineBody(
+      {required this.session,
+      required this.onDone,
+      required this.onMoreTime,
+      required this.onPause,
+      required this.onResume,
+      required this.onHelp,
+      required this.onPostpone,
+      required this.onSkip});
 
   final RoutineSession session;
   final VoidCallback onDone;
@@ -115,169 +113,113 @@ class _RoutineBody extends StatelessWidget {
     final progress = session.progressFraction.clamp(0, 1).toDouble();
     final estimatedStepMinutes = activeStep?.estimatedMinutes;
 
-    return ListView(
-      padding: const EdgeInsets.all(HabitarSpacing.lg),
+    return HabitarPage(
+      maxWidth: 620,
+      padding: const EdgeInsets.fromLTRB(22, 16, 22, 18),
       children: [
+        Row(children: [
+          IconButton(
+              onPressed: () => context.go('/child'),
+              icon: const Icon(Icons.arrow_back_rounded)),
+          const Spacer(),
+          const HabitarWordmark(compact: true),
+          const Spacer(),
+          const SizedBox(width: 48),
+        ]),
+        const SizedBox(height: 12),
         Text(
             isComplete ? 'Camino terminado' : 'Paso $stepNumber de $totalSteps',
+            textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: HabitarSpacing.sm),
-        Text(session.routine.title,
-            style: Theme.of(context)
-                .textTheme
-                .titleLarge
-                ?.copyWith(color: HabitarColors.mutedInk)),
-        const SizedBox(height: HabitarSpacing.md),
-        LinearProgressIndicator(value: progress),
-        const SizedBox(height: HabitarSpacing.xl),
-        if (isComplete)
-          const _MainStepCard(
-              title: 'Terminamos por ahora.',
-              subtitle: 'Lo hiciste paso a paso.')
-        else
-          _MainStepCard(
-            title: activeStep?.title ?? 'Sin paso activo',
-            subtitle: isPaused
-                ? 'Podemos pausar. No se perdió nada.'
-                : estimatedStepMinutes == null
-                    ? 'Ahora'
-                    : 'Ahora - $estimatedStepMinutes min aprox.',
+        const SizedBox(height: 12),
+        ClipRRect(
+            borderRadius: BorderRadius.circular(99),
+            child: LinearProgressIndicator(
+                value: progress,
+                minHeight: 10,
+                backgroundColor: HabitarColors.surfaceWarm,
+                color: HabitarColors.primaryGreen)),
+        const SizedBox(height: 28),
+        HabitarCard(
+          borderColor: HabitarColors.primaryGreen.withValues(alpha: .35),
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            HabitarPill(
+              icon: Icons.wb_sunny_outlined,
+              label: isPaused
+                  ? 'Pausa'
+                  : estimatedStepMinutes == null
+                      ? 'Ahora'
+                      : 'Ahora · $estimatedStepMinutes min aprox.',
+              color: HabitarColors.surfaceWarm,
+            ),
+            const SizedBox(height: 16),
+            Text(
+                isComplete
+                    ? 'Terminamos por ahora.'
+                    : activeStep?.title ?? 'Sin paso activo',
+                style: Theme.of(context).textTheme.displaySmall),
+            const SizedBox(height: 10),
+            SizedBox(height: 270, child: HabitarSoftIllustration(label: 'bag')),
+          ]),
+        ),
+        const SizedBox(height: 14),
+        if (!isComplete && nextStep != null)
+          HabitarCard(
+            color: HabitarColors.card,
+            child: Row(children: [
+              Expanded(
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                    const HabitarPill(
+                        label: 'Después', color: HabitarColors.surfaceWarm),
+                    const SizedBox(height: 8),
+                    Text(nextStep.title,
+                        style: Theme.of(context).textTheme.headlineSmall),
+                  ])),
+              const SizedBox(
+                  width: 110,
+                  height: 90,
+                  child: HabitarSoftIllustration(label: 'shoes')),
+            ]),
           ),
-        const SizedBox(height: HabitarSpacing.md),
-        _TimerPanel(
-            minutes: session.estimatedRemainingMinutes, isPaused: isPaused),
-        const SizedBox(height: HabitarSpacing.md),
-        _NowNextPanel(
-            nowTitle: activeStep?.title ?? 'Listo',
-            nextTitle: nextStep?.title ?? 'Después terminamos'),
-        const SizedBox(height: HabitarSpacing.lg),
+        const SizedBox(height: 18),
         if (!isComplete) ...[
           FilledButton(
               onPressed: isPaused ? onResume : onDone,
-              child: Text(isPaused ? 'Volver cuando quieras' : 'Listo')),
-          const SizedBox(height: HabitarSpacing.sm),
-          OutlinedButton(
-              onPressed: onMoreTime, child: const Text('Necesito más tiempo')),
-          const SizedBox(height: HabitarSpacing.sm),
+              child:
+                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                Text(isPaused ? 'Volver cuando quieras' : 'Listo'),
+                const SizedBox(width: 14),
+                const Icon(Icons.check_rounded)
+              ])),
+          const SizedBox(height: 10),
+          OutlinedButton.icon(
+              onPressed: onMoreTime,
+              icon: const Icon(Icons.schedule_rounded),
+              label: const Text('Necesito más tiempo')),
+          const SizedBox(height: 10),
           if (session.routine.canRequestHelp) ...[
-            OutlinedButton(
+            OutlinedButton.icon(
                 onPressed: onHelp,
-                child: Text(session.helpRequested
+                icon: const Icon(Icons.pan_tool_alt_rounded),
+                label: Text(session.helpRequested
                     ? 'Ayuda solicitada'
                     : 'Necesito ayuda')),
-            const SizedBox(height: HabitarSpacing.sm),
+            const SizedBox(height: 10),
           ],
-          OutlinedButton(
+          OutlinedButton.icon(
               onPressed: isPaused ? onResume : onPause,
-              child: Text(isPaused ? 'Estoy listo' : 'Necesito una pausa')),
-          const SizedBox(height: HabitarSpacing.sm),
-          if (session.routine.canPostpone) ...[
-            OutlinedButton(
+              icon: const Icon(Icons.cloud_outlined),
+              label: Text(isPaused ? 'Estoy listo' : 'Necesito una pausa')),
+          const SizedBox(height: 8),
+          if (session.routine.canPostpone)
+            TextButton(
                 onPressed: onPostpone, child: const Text('5 minutos después')),
-            const SizedBox(height: HabitarSpacing.sm),
-          ],
           TextButton(onPressed: onSkip, child: const Text('Omitir este paso')),
         ],
       ],
-    );
-  }
-}
-
-class _MainStepCard extends StatelessWidget {
-  const _MainStepCard({required this.title, required this.subtitle});
-
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      color: HabitarColors.sunlit,
-      child: Padding(
-        padding: const EdgeInsets.all(HabitarSpacing.lg),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(subtitle, style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: HabitarSpacing.md),
-            Text(title, style: Theme.of(context).textTheme.displaySmall),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _TimerPanel extends StatelessWidget {
-  const _TimerPanel({required this.minutes, required this.isPaused});
-
-  final int minutes;
-  final bool isPaused;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(HabitarSpacing.md),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 64,
-              height: 64,
-              child: CircularProgressIndicator(
-                  value: isPaused ? 0 : 0.65, strokeWidth: 8),
-            ),
-            const SizedBox(width: HabitarSpacing.md),
-            Expanded(
-              child: Text(isPaused
-                  ? 'Temporizador pausado'
-                  : 'Tiempo aproximado restante: $minutes min'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _NowNextPanel extends StatelessWidget {
-  const _NowNextPanel({required this.nowTitle, required this.nextTitle});
-
-  final String nowTitle;
-  final String nextTitle;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(child: _SmallPanel(label: 'Ahora', title: nowTitle)),
-        const SizedBox(width: HabitarSpacing.sm),
-        Expanded(child: _SmallPanel(label: 'Después', title: nextTitle)),
-      ],
-    );
-  }
-}
-
-class _SmallPanel extends StatelessWidget {
-  const _SmallPanel({required this.label, required this.title});
-
-  final String label;
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(HabitarSpacing.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(label, style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: HabitarSpacing.sm),
-            Text(title),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -287,22 +229,17 @@ class _EmptyRoutine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(HabitarSpacing.lg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Hoy no hay una tarea preparada.',
-                style: Theme.of(context).textTheme.headlineSmall),
-            const SizedBox(height: HabitarSpacing.md),
-            const Text(
-              'Un adulto puede preparar el próximo paso. Por ahora podés respirar.',
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
+    return HabitarPage(children: [
+      const SizedBox(height: 80),
+      const EmptyState(
+        icon: Icons.self_improvement_rounded,
+        title: 'Hoy no hay una tarea preparada.',
+        message:
+            'Un adulto puede preparar el próximo paso. Por ahora podés respirar.',
       ),
-    );
+      const SizedBox(height: 18),
+      FilledButton(
+          onPressed: () => context.go('/child'), child: const Text('Volver')),
+    ]);
   }
 }

@@ -29,35 +29,59 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
     return Scaffold(
       body: HabitarPage(
-        maxWidth: 560,
+        maxWidth: 620,
+        padding: const EdgeInsets.fromLTRB(22, 22, 22, 18),
         children: [
-          const SizedBox(height: HabitarSpacing.xl),
-          HabitarMoment(
-            title: 'Volvamos a tu espacio.',
-            body:
-                'Usá el acceso del adulto. Habitar buscará lo preparado para tu familia.',
-            color: HabitarColors.surfaceMist,
+          IconButton(
+            alignment: Alignment.centerLeft,
+            onPressed: () => context.go('/onboarding'),
+            icon: const Icon(Icons.arrow_back_rounded),
           ),
-          const SizedBox(height: HabitarSpacing.lg),
+          const Center(child: HabitarLogo(size: 70)),
+          const SizedBox(height: 18),
+          HabitarCard(
+            color: HabitarColors.card,
+            child: Column(
+              children: [
+                const HabitarSoftIllustration(height: 170, label: 'home'),
+                const SizedBox(height: 18),
+                Text('Volvamos a\ntu espacio.',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.displaySmall),
+                const SizedBox(height: 10),
+                Text(
+                  'Usá el acceso del adulto. Habitar buscará lo preparado para tu familia.',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 22),
           Form(
             key: _formKey,
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 TextFormField(
                   controller: _emailController,
-                  decoration:
-                      const InputDecoration(labelText: 'Correo del adulto'),
+                  decoration: const InputDecoration(
+                    labelText: 'Correo del adulto',
+                    prefixIcon: Icon(Icons.mail_outline_rounded),
+                  ),
                   keyboardType: TextInputType.emailAddress,
                   validator: _required,
                 ),
                 const SizedBox(height: HabitarSpacing.md),
                 TextFormField(
                   controller: _passwordController,
-                  decoration: const InputDecoration(labelText: 'Contraseña'),
+                  decoration: const InputDecoration(
+                    labelText: 'Contraseña',
+                    prefixIcon: Icon(Icons.lock_outline_rounded),
+                    suffixIcon: Icon(Icons.visibility_outlined),
+                  ),
                   obscureText: true,
                   validator: _required,
                 ),
@@ -72,43 +96,57 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const SizedBox(height: HabitarSpacing.lg),
                 FilledButton(
                   onPressed: _isSubmitting ? null : _submit,
-                  child:
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
                       Text(_isSubmitting ? 'Buscando tu espacio...' : 'Entrar'),
+                      const SizedBox(width: 12),
+                      const Icon(Icons.arrow_forward_rounded),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: HabitarSpacing.sm),
-                TextButton(
-                  onPressed:
-                      _isSubmitting ? null : () => context.go('/recover'),
-                  child: const Text('Olvidé mi contraseña'),
-                ),
-                TextButton(
-                  onPressed:
-                      _isSubmitting ? null : () => context.go('/register'),
-                  child: const Text('Crear mi espacio familiar'),
-                ),
-                Wrap(
-                  alignment: WrapAlignment.center,
-                  spacing: HabitarSpacing.sm,
+                const SizedBox(height: 10),
+                Row(
                   children: [
-                    TextButton(
-                      onPressed: () => context.go('/privacy'),
-                      child: const Text('Privacidad'),
+                    Expanded(
+                      child: TextButton(
+                        onPressed:
+                            _isSubmitting ? null : () => context.go('/recover'),
+                        child: const Text('Olvidé mi contraseña'),
+                      ),
                     ),
-                    TextButton(
-                      onPressed: () => context.go('/terms'),
-                      child: const Text('Términos'),
+                    Expanded(
+                      child: TextButton(
+                        onPressed: _isSubmitting
+                            ? null
+                            : () => context.go('/register'),
+                        child: const Text('Crear mi espacio familiar'),
+                      ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 12),
+                const HabitarPill(
+                  icon: Icons.lock_outline_rounded,
+                  label:
+                      'Tu información familiar no se muestra al niño desde esta entrada.',
+                  color: HabitarColors.surfaceMist,
                 ),
               ],
             ),
           ),
-          const SizedBox(height: HabitarSpacing.lg),
-          Text(
-            'Tu información familiar no se muestra al niño desde esta entrada.',
-            style:
-                textTheme.bodyMedium?.copyWith(color: HabitarColors.mutedInk),
-            textAlign: TextAlign.center,
+          const SizedBox(height: 18),
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: HabitarSpacing.lg,
+            children: [
+              TextButton(
+                  onPressed: () => context.go('/privacy'),
+                  child: const Text('Privacidad')),
+              TextButton(
+                  onPressed: () => context.go('/terms'),
+                  child: const Text('Términos')),
+            ],
           ),
         ],
       ),
@@ -116,16 +154,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   String? _required(String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return 'Completa este dato';
-    }
+    if (value == null || value.trim().isEmpty) return 'Completá este dato';
     return null;
   }
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
+    if (!_formKey.currentState!.validate()) return;
     setState(() {
       _isSubmitting = true;
       _error = null;
@@ -136,28 +170,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             password: _passwordController.text,
           );
       ref.invalidate(appRestoreProvider);
-      if (mounted) {
-        context.go('/');
-      }
+      if (mounted) context.go('/');
     } catch (error) {
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _error = _loginErrorMessage(error);
-      });
+      if (!mounted) return;
+      setState(() => _error = _loginErrorMessage(error));
     } finally {
-      if (mounted) {
-        setState(() => _isSubmitting = false);
-      }
+      if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
   String _loginErrorMessage(Object error) {
     final message = error.toString().toLowerCase();
     if (message.contains('not found') || message.contains('family')) {
-      return 'Iniciamos sesión, pero tuvimos un problema al cargar tu espacio familiar. Intentá nuevamente.';
+      return 'Iniciamos ses?ón, pero tuvimos un problema al cargar tu espacio familiar. Intentá nuevamente.';
     }
-    return 'No pudimos iniciar sesión. Revisá tu correo y contraseña.';
+    return 'No pudimos iniciar ses?ón. Revisá tu correo y contraseña.';
   }
 }
