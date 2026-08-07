@@ -78,7 +78,7 @@ rutinas y hábitos. Los modos de niño y adolescente están separados y solo
 muestran contenido asignado por el adulto.
 
 Para revisión, pueden usar las credenciales de prueba provistas o crear una
-nueva cuenta adulta. PIN demo para entrar al espacio adulto protegido: 1234.
+nueva cuenta adulta. PIN adulto configurado por la familia.
 ```
 
 Pendiente antes de enviar a revisión:

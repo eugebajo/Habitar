@@ -63,10 +63,12 @@ Observá:
 2. Volvé al espacio adulto.
 3. Probá el PIN adulto.
 
-PIN demo:
+Acceso adulto:
+
+Us? la cuenta adulta registrada para administrar perfiles, rutinas y recompensas.
 
 ```text
-1234
+
 ```
 
 Observá:

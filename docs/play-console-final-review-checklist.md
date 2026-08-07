@@ -50,7 +50,7 @@ Pasos sugeridos:
 4. Crear un perfil de niño o adolescente.
 5. Entrar al modo niño/adolescente desde el selector de perfiles.
 
-PIN demo para entrar al espacio adulto protegido: 1234.
+PIN adulto configurado por la familia.
 ```
 
 ## Ficha de tienda
@@ -94,7 +94,7 @@ Respuestas clave:
 3. Crear un perfil infantil.
 4. Crear una rutina de tres pasos.
 5. Entrar al modo niño y confirmar que solo ve acciones asignadas.
-6. Probar PIN adulto `1234`.
+6. Probar PIN adulto configurado por la familia.
 7. Revisar que privacidad y términos abran correctamente.
 
 ## Paquete de prueba cerrada

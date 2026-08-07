@@ -35,11 +35,11 @@ List<DemoStoryContent> demoStoryContent() {
         title: 'La mochila que esperaba',
         ageRange: '6-9',
         value: 'pedir ayuda',
-        body: 'Nico miraba su mochila abierta. Había una botella, un cuaderno y una campera. Todo parecía mucho junto. Respiró una vez y dijo: necesito una pista. Su mamá señaló la botella. Nico la guardó. Después eligió el cuaderno. Cuando terminó, la mochila ya no parecía una montaña. Era solo una mochila esperando paso a paso.',
+        body: 'Tomi miraba su mochila abierta. Había una botella, un cuaderno y una campera. Todo parecía mucho junto. Respiró una vez y dijo: necesito una pista. Su mamá señaló la botella. Tomi la guardó. Después eligió el cuaderno. Cuando terminó, la mochila ya no parecía una montaña. Era solo una mochila esperando paso a paso.',
       ),
       durationMinutes: 3,
       mainEmotion: 'agobio',
-      questions: ['¿Qué hizo Nico cuando todo parecía mucho?', '¿Qué pista te gustaría pedir hoy?'],
+      questions: ['¿Qué hizo Tomi cuando todo parecía mucho?', '¿Qué pista te gustaría pedir hoy?'],
       activity: 'Elegir una tarea pequeña y pedir una pista antes de empezar.',
     ),
     DemoStoryContent(

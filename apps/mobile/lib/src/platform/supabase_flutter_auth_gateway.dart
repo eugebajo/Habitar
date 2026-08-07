@@ -25,7 +25,7 @@ class FlutterSupabaseAuthGateway implements SupabaseAuthGateway {
     );
     final user = response.user;
     if (user == null) {
-      throw StateError('Supabase did not return a user after sign up.');
+      throw StateError('No pudimos crear el usuario.');
     }
     return _mapUser(user);
   }
@@ -41,7 +41,7 @@ class FlutterSupabaseAuthGateway implements SupabaseAuthGateway {
     );
     final user = response.user;
     if (user == null) {
-      throw StateError('Supabase did not return a user after sign in.');
+      throw StateError('No pudimos iniciar sesi?n.');
     }
     return _mapUser(user);
   }

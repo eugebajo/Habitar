@@ -125,13 +125,13 @@ class ChildHomeScreen extends StatelessWidget {
             children: [
               Row(children: [
                 const HabitarAvatar(
-                    label: 'Nico', size: 64, color: HabitarColors.softBlue),
+                    label: 'Tomi', size: 64, color: HabitarColors.softBlue),
                 const SizedBox(width: 12),
                 Expanded(
                     child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                      Text('Hola, Nico',
+                      Text('Hola, Tomi',
                           style: Theme.of(context).textTheme.headlineSmall),
                       const Text('Viernes por la tarde',
                           style: TextStyle(color: HabitarColors.mutedInk))
@@ -326,14 +326,14 @@ class AdultPinScreen extends StatelessWidget {
                 children: [
                   const EmptyState(
                     icon: Icons.lock_outline,
-                    title: 'Confirma el PIN adulto',
+                    title: 'Verificar cuenta adulta',
                     message:
                         'Las rutinas, hábitos y cambios familiares quedan protegidos.',
                   ),
                   const SizedBox(height: 16),
                   FilledButton(
                     onPressed: () => showAdultPin(context),
-                    child: const Text('Ingresar PIN'),
+                    child: const Text('Verificar acceso'),
                   ),
                 ],
               ),
@@ -344,17 +344,12 @@ class AdultPinScreen extends StatelessWidget {
 }
 
 void showAdultPin(BuildContext context) {
-  final controller = TextEditingController();
   showDialog<void>(
     context: context,
     builder: (dialogContext) => AlertDialog(
-      title: const Text('Ingresa el PIN adulto'),
-      content: TextField(
-        controller: controller,
-        keyboardType: TextInputType.number,
-        obscureText: true,
-        maxLength: 4,
-        decoration: const InputDecoration(labelText: 'PIN demo: 1234'),
+      title: const Text('Verificar adulto'),
+      content: const Text(
+        'Para administrar rutinas, perfiles y recompensas, entrá con la cuenta adulta.',
       ),
       actions: [
         TextButton(
@@ -363,16 +358,10 @@ void showAdultPin(BuildContext context) {
         ),
         FilledButton(
           onPressed: () {
-            if (controller.text != '1234') {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('PIN incorrecto')),
-              );
-              return;
-            }
             Navigator.pop(dialogContext);
-            context.go('/dashboard');
+            context.go('/login');
           },
-          child: const Text('Entrar'),
+          child: const Text('Entrar como adulto'),
         ),
       ],
     ),

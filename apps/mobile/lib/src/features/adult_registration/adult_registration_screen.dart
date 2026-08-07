@@ -159,15 +159,12 @@ class _AdultRegistrationScreenState
         message.contains('exists')) {
       return 'Ese correo parece estar registrado. Tocá "Ya tengo mi espacio" e intentá entrar con la misma contraseña.';
     }
-    if (message.contains('confirm') || message.contains('email')) {
-      return 'Supabase necesita confirmar el correo. Revisá tu email o confirmá el usuario desde Authentication > Users.';
-    }
     if (message.contains('password')) {
-      return 'La contraseña no cumple la regla de Supabase. Probá con una contraseña más larga, con letras y números.';
+      return 'La contraseña no cumple los requisitos. Probá con una contraseña más larga, con letras y números.';
     }
-    if (message.contains('supabase') || message.contains('auth')) {
-      return 'Supabase rechazó el registro. Revisá en Supabase Authentication si el usuario se creó o si falta confirmar el correo.';
+    if (message.contains('confirm') || message.contains('email')) {
+      return 'Ese correo necesita confirmación. Revisá tu email e intentá entrar nuevamente.';
     }
-    return 'No pudimos crear el espacio. Probá entrar si ese correo ya existe o intentá con otro correo de prueba.';
+    return 'No pudimos crear el espacio todavía. Revisá los datos e intentá nuevamente.';
   }
 }

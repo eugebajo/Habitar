@@ -155,17 +155,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   String _loginErrorMessage(Object error) {
     final message = error.toString().toLowerCase();
-    if (message.contains('confirm') || message.contains('email')) {
-      return 'Puede faltar confirmar el correo en Supabase. Revisá tu email o confirmá el usuario desde Authentication > Users.';
+    if (message.contains('not found') || message.contains('family')) {
+      return 'Iniciamos sesión, pero tuvimos un problema al cargar tu espacio familiar. Intentá nuevamente.';
     }
-    if (message.contains('invalid') ||
-        message.contains('credential') ||
-        message.contains('password')) {
-      return 'El correo o la contraseña no coinciden. Revisá los datos o creá un espacio nuevo con otro correo de prueba.';
-    }
-    if (message.contains('not found')) {
-      return 'No encontramos ese espacio en este dispositivo. Si recién creaste la cuenta en Supabase, todavía falta crear la familia local.';
-    }
-    return 'No pudimos entrar. Revisá el correo, la contraseña y el estado del usuario en Supabase.';
+    return 'No pudimos iniciar sesión. Revisá tu correo y contraseña.';
   }
 }

@@ -163,28 +163,43 @@ class _AppBackGuard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, result) {
-        if (didPop) return;
-        final location = appRouter.routeInformationProvider.value.uri.path;
-        final target = _safeBackTarget(location);
-        if (target != null && target != location) {
-          appRouter.go(target);
-        }
+    return ValueListenableBuilder(
+      valueListenable: appRouter.routeInformationProvider,
+      builder: (context, routeInformation, _) {
+        final location = routeInformation.uri.path;
+        return PopScope(
+          canPop: _isExitRoot(location),
+          onPopInvokedWithResult: (didPop, result) {
+            if (didPop) return;
+            final target = _safeBackTarget(location);
+            if (target != null && target != location) {
+              appRouter.go(target);
+            }
+          },
+          child: child,
+        );
       },
-      child: child,
     );
   }
 
+  bool _isExitRoot(String location) {
+    return location == '/' ||
+        location == '/onboarding' ||
+        location == '/dashboard';
+  }
+
   String? _safeBackTarget(String location) {
-    if (location == '/' || location == '/onboarding') return null;
+    if (_isExitRoot(location)) return null;
     if (location == '/login' ||
         location == '/register' ||
         location == '/recover') {
       return '/onboarding';
     }
     if (location == '/profile' || location == '/profiles') return '/dashboard';
+    if (location == '/routine/create' || location == '/habits') {
+      return '/routines';
+    }
+    if (location == '/routine/player') return '/child';
     if (location.startsWith('/child') || location.startsWith('/teen')) {
       return '/profiles';
     }
