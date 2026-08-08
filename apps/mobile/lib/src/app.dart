@@ -84,7 +84,9 @@ final appRouter = GoRouter(
         builder: (context, state) => const NotificationSettingsScreen()),
     GoRoute(
         path: '/routine/create',
-        builder: (context, state) => const RoutineSetupScreen()),
+        builder: (context, state) => RoutineSetupScreen(
+              routineId: state.uri.queryParameters['edit'],
+            )),
     GoRoute(
         path: '/routine/player',
         builder: (context, state) => const RoutinePlayerScreen()),

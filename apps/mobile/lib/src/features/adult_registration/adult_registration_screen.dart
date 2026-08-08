@@ -107,9 +107,14 @@ class _AdultRegistrationScreenState
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text(_isSubmitting
-                              ? 'Preparando tu espacio...'
-                              : 'Seguir con mi familia'),
+                          Flexible(
+                            child: Text(
+                              _isSubmitting
+                                  ? 'Preparando tu espacio...'
+                                  : 'Seguir con mi familia',
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
                           const SizedBox(width: 12),
                           const Icon(Icons.arrow_forward_rounded),
                         ],

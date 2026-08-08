@@ -4,6 +4,10 @@ enum AccessScope { owner, family, caregiver, professional }
 
 enum AdultProfileKind { parent, caregiver, professional, teacher }
 
+enum FamilyMemberRole { owner, parent, caregiver, professional, viewer }
+
+enum AdultInvitationStatus { pending, accepted, revoked, expired }
+
 enum ProfileKind { child, teen }
 
 enum HabitStatus { proposed, newHabit, practicing, stable, paused, archived }
@@ -11,6 +15,15 @@ enum HabitStatus { proposed, newHabit, practicing, stable, paused, archived }
 enum RoutineStepStatus { pending, active, completed, skipped, paused }
 
 enum RoutineRepeatPolicy { once, daily, weekly, weekdays, custom }
+
+enum RoutineOverrideType {
+  changeTime,
+  pauseToday,
+  skipToday,
+  runningLate,
+  sick,
+  traveling
+}
 
 enum BenefitKind {
   digitalTime,
@@ -81,6 +94,42 @@ class Family extends AppEntity {
 
   final String name;
   final List<String> adultUserIds;
+}
+
+class FamilyMember extends AppEntity {
+  const FamilyMember({
+    required super.metadata,
+    required this.familyId,
+    required this.userId,
+    required this.role,
+    this.email,
+    this.displayName,
+  });
+
+  final String familyId;
+  final String userId;
+  final FamilyMemberRole role;
+  final String? email;
+  final String? displayName;
+}
+
+class AdultInvitation extends AppEntity {
+  const AdultInvitation({
+    required super.metadata,
+    required this.familyId,
+    required this.email,
+    required this.role,
+    required this.status,
+    this.invitedByUserId,
+    this.acceptedByUserId,
+  });
+
+  final String familyId;
+  final String email;
+  final FamilyMemberRole role;
+  final AdultInvitationStatus status;
+  final String? invitedByUserId;
+  final String? acceptedByUserId;
 }
 
 class ChildProfile extends AppEntity {
@@ -229,6 +278,31 @@ class RoutineStep extends AppEntity {
   final int order;
   final int? estimatedMinutes;
   final RoutineStepStatus status;
+}
+
+class RoutineOverride extends AppEntity {
+  const RoutineOverride({
+    required super.metadata,
+    required this.routineId,
+    required this.profileId,
+    required this.date,
+    required this.type,
+    this.startHour,
+    this.startMinute,
+    this.isPaused = false,
+    this.note,
+    this.createdBy,
+  });
+
+  final String routineId;
+  final String profileId;
+  final DateTime date;
+  final RoutineOverrideType type;
+  final int? startHour;
+  final int? startMinute;
+  final bool isPaused;
+  final String? note;
+  final String? createdBy;
 }
 
 class Habit extends AppEntity {

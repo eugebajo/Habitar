@@ -45,6 +45,78 @@ class SupabaseFamilyRepository implements FamilyRepository {
         await client.from('families').select().eq('id', familyId).maybeSingle();
     return familyRow == null ? null : _familyFromRow(familyRow);
   }
+
+  @override
+  Future<List<FamilyMember>> membersForFamily(String familyId) async {
+    final rows = await client
+        .from('family_members')
+        .select()
+        .eq('family_id', familyId)
+        .order('created_at');
+    return rows.map(_familyMemberFromRow).toList(growable: false);
+  }
+
+  @override
+  Future<AdultInvitation> createAdultInvitation({
+    required String familyId,
+    required String email,
+    required FamilyMemberRole role,
+    required String invitedByUserId,
+  }) async {
+    final row = await client
+        .from('adult_invitations')
+        .insert({
+          'family_id': familyId,
+          'email': email.trim().toLowerCase(),
+          'role': role.name,
+          'status': AdultInvitationStatus.pending.name,
+          'invited_by_user_id': invitedByUserId,
+        })
+        .select()
+        .single();
+    return _adultInvitationFromRow(row);
+  }
+
+  @override
+  Future<List<AdultInvitation>> invitationsForFamily(String familyId) async {
+    final rows = await client
+        .from('adult_invitations')
+        .select()
+        .eq('family_id', familyId)
+        .order('created_at');
+    return rows.map(_adultInvitationFromRow).toList(growable: false);
+  }
+
+  @override
+  Future<FamilyMember> acceptInvitation({
+    required String invitationId,
+    required String userId,
+  }) async {
+    final invitationRow = await client
+        .from('adult_invitations')
+        .select()
+        .eq('id', invitationId)
+        .maybeSingle();
+    if (invitationRow == null) {
+      throw StateError('Invitation not found: $invitationId');
+    }
+    final invitation = _adultInvitationFromRow(invitationRow);
+    final memberRow = await client
+        .from('family_members')
+        .insert({
+          'family_id': invitation.familyId,
+          'user_id': userId,
+          'role': invitation.role.name,
+        })
+        .select()
+        .single();
+    await client.from('adult_invitations').update({
+      'status': AdultInvitationStatus.accepted.name,
+      'accepted_by_user_id': userId,
+      'updated_at': DateTime.now().toUtc().toIso8601String(),
+    }).eq('id', invitationId);
+    return _familyMemberFromRow(memberRow);
+  }
 }
 
 class SupabaseProfileRepository implements ProfileRepository {
@@ -220,6 +292,137 @@ class SupabaseRoutineRepository implements RoutineRepository {
   }
 
   @override
+  Future<Routine?> routineById(String routineId) async {
+    final row = await client
+        .from('routines')
+        .select()
+        .eq('id', routineId)
+        .neq('status', 'deleted')
+        .maybeSingle();
+    if (row == null) {
+      return null;
+    }
+    final steps = await stepsForRoutine(routineId);
+    return _routineFromRow(
+      row,
+      stepIds: steps.map((step) => step.metadata.id).toList(growable: false),
+    );
+  }
+
+  @override
+  Future<Routine> updateRoutine({
+    required Routine routine,
+    required List<String> stepTitles,
+  }) async {
+    if (stepTitles.length < 3) {
+      throw ArgumentError.value(
+          stepTitles.length, 'stepTitles', 'A routine needs at least 3 steps.');
+    }
+    final now = DateTime.now().toUtc().toIso8601String();
+    final row = await client
+        .from('routines')
+        .update({
+          'title': routine.title,
+          'weekdays': routine.weekdays,
+          'scheduled_hour': routine.scheduledHour,
+          'scheduled_minute': routine.scheduledMinute,
+          'estimated_duration_minutes': routine.estimatedDurationMinutes,
+          'lead_reminder_minutes': routine.leadReminderMinutes,
+          'repeat_policy': routine.repeatPolicy.name,
+          'responsible_adult_profile_id': routine.responsibleAdultProfileId,
+          'context_label': routine.contextLabel,
+          'minimum_version': routine.minimumVersion,
+          'benefit_description': routine.benefitDescription,
+          'max_reminder_count': routine.maxReminderCount,
+          'reminder_interval_minutes': routine.reminderIntervalMinutes,
+          'vibration_enabled': routine.vibrationEnabled,
+          'sound_enabled': routine.soundEnabled,
+          'silent_notification': routine.silentNotification,
+          'can_postpone': routine.canPostpone,
+          'can_request_help': routine.canRequestHelp,
+          'updated_at': now,
+        })
+        .eq('id', routine.metadata.id)
+        .select()
+        .single();
+    final existingSteps = await stepsForRoutine(routine.metadata.id);
+    final userId = _currentUserId(client);
+    final stepIds = <String>[];
+    for (var index = 0; index < stepTitles.length; index += 1) {
+      final previous =
+          index < existingSteps.length ? existingSteps[index] : null;
+      if (previous == null) {
+        final inserted = await client
+            .from('routine_steps')
+            .insert({
+              'owner': userId,
+              'routine_id': routine.metadata.id,
+              'title': stepTitles[index],
+              'step_order': index + 1,
+              'estimated_minutes': 5,
+              'access_rules': <Object?>[],
+            })
+            .select()
+            .single();
+        stepIds.add(inserted['id'] as String);
+      } else {
+        final updated = await client
+            .from('routine_steps')
+            .update({
+              'title': stepTitles[index],
+              'step_order': index + 1,
+              'updated_at': now,
+              'status': previous.metadata.status.name,
+            })
+            .eq('id', previous.metadata.id)
+            .select()
+            .single();
+        stepIds.add(updated['id'] as String);
+      }
+    }
+    for (var index = stepTitles.length;
+        index < existingSteps.length;
+        index += 1) {
+      await client
+          .from('routine_steps')
+          .update({'status': 'deleted', 'updated_at': now}).eq(
+              'id', existingSteps[index].metadata.id);
+    }
+    return _routineFromRow(row, stepIds: stepIds);
+  }
+
+  @override
+  Future<Routine> duplicateRoutine(String routineId) async {
+    final routine = await routineById(routineId);
+    if (routine == null) {
+      throw StateError('Routine not found: $routineId');
+    }
+    final steps = await stepsForRoutine(routineId);
+    return createRoutine(
+      profileId: routine.profileId,
+      title: '${routine.title} — copia',
+      stepTitles: steps.map((step) => step.title).toList(growable: false),
+      weekdays: routine.weekdays,
+      scheduledHour: routine.scheduledHour,
+      scheduledMinute: routine.scheduledMinute,
+      estimatedDurationMinutes: routine.estimatedDurationMinutes,
+      leadReminderMinutes: routine.leadReminderMinutes,
+      repeatPolicy: routine.repeatPolicy,
+      responsibleAdultProfileId: routine.responsibleAdultProfileId,
+      contextLabel: routine.contextLabel,
+      minimumVersion: routine.minimumVersion,
+      benefitDescription: routine.benefitDescription,
+      maxReminderCount: routine.maxReminderCount,
+      reminderIntervalMinutes: routine.reminderIntervalMinutes,
+      vibrationEnabled: routine.vibrationEnabled,
+      soundEnabled: routine.soundEnabled,
+      silentNotification: routine.silentNotification,
+      canPostpone: routine.canPostpone,
+      canRequestHelp: routine.canRequestHelp,
+    );
+  }
+
+  @override
   Future<Routine> updateRoutineStatus(
       String routineId, EntityStatus status) async {
     final row = await client
@@ -250,6 +453,48 @@ class SupabaseRoutineRepository implements RoutineRepository {
   }
 }
 
+class SupabaseRoutineOverrideRepository implements RoutineOverrideRepository {
+  const SupabaseRoutineOverrideRepository(this.client);
+
+  final SupabaseClient client;
+
+  @override
+  Future<RoutineOverride> saveOverride(RoutineOverride override) async {
+    final row = await client
+        .from('routine_overrides')
+        .upsert({
+          'id': override.metadata.id,
+          'routine_id': override.routineId,
+          'profile_id': override.profileId,
+          'override_date': _dateOnly(override.date),
+          'override_type': override.type.name,
+          'start_hour': override.startHour,
+          'start_minute': override.startMinute,
+          'is_paused': override.isPaused,
+          'note': override.note,
+          'created_by': override.createdBy ?? _currentUserId(client),
+          'updated_at': DateTime.now().toUtc().toIso8601String(),
+        })
+        .select()
+        .single();
+    return _routineOverrideFromRow(row);
+  }
+
+  @override
+  Future<List<RoutineOverride>> overridesForProfileDate({
+    required String profileId,
+    required DateTime date,
+  }) async {
+    final rows = await client
+        .from('routine_overrides')
+        .select()
+        .eq('profile_id', profileId)
+        .eq('override_date', _dateOnly(date))
+        .order('created_at');
+    return rows.map(_routineOverrideFromRow).toList(growable: false);
+  }
+}
+
 String _currentUserId(SupabaseClient client) {
   final userId = client.auth.currentUser?.id;
   if (userId == null) {
@@ -263,6 +508,29 @@ Family _familyFromRow(Map<String, dynamic> row) {
     metadata: _metadataFromRow(row),
     name: row['name'] as String,
     adultUserIds: const [],
+  );
+}
+
+FamilyMember _familyMemberFromRow(Map<String, dynamic> row) {
+  return FamilyMember(
+    metadata: _metadataFromRow(row),
+    familyId: row['family_id'] as String,
+    userId: row['user_id'] as String,
+    role: _familyMemberRole(row['role'] as String?),
+    email: row['email'] as String?,
+    displayName: row['display_name'] as String?,
+  );
+}
+
+AdultInvitation _adultInvitationFromRow(Map<String, dynamic> row) {
+  return AdultInvitation(
+    metadata: _metadataFromRow(row),
+    familyId: row['family_id'] as String,
+    email: row['email'] as String,
+    role: _familyMemberRole(row['role'] as String?),
+    status: _adultInvitationStatus(row['status'] as String?),
+    invitedByUserId: row['invited_by_user_id'] as String?,
+    acceptedByUserId: row['accepted_by_user_id'] as String?,
   );
 }
 
@@ -326,6 +594,23 @@ RoutineStep _routineStepFromRow(Map<String, dynamic> row) {
   );
 }
 
+RoutineOverride _routineOverrideFromRow(Map<String, dynamic> row) {
+  final dateValue = row['override_date'];
+  return RoutineOverride(
+    metadata: _metadataFromRow(row),
+    routineId: row['routine_id'] as String,
+    profileId: row['profile_id'] as String,
+    date:
+        dateValue is DateTime ? dateValue : DateTime.parse(dateValue as String),
+    type: _routineOverrideType(row['override_type'] as String?),
+    startHour: row['start_hour'] as int?,
+    startMinute: row['start_minute'] as int?,
+    isPaused: row['is_paused'] as bool? ?? false,
+    note: row['note'] as String?,
+    createdBy: row['created_by'] as String?,
+  );
+}
+
 EntityMetadata _metadataFromRow(Map<String, dynamic> row) {
   final createdAt = DateTime.parse(row['created_at'] as String);
   final updatedAt = DateTime.parse(
@@ -335,7 +620,10 @@ EntityMetadata _metadataFromRow(Map<String, dynamic> row) {
     id: row['id'] as String,
     createdAt: createdAt,
     updatedAt: updatedAt,
-    ownerId: row['owner'] as String,
+    ownerId: (row['owner'] ??
+        row['user_id'] ??
+        row['invited_by_user_id'] ??
+        row['family_id']) as String,
     status: _entityStatus(row['status'] as String?),
   );
 }
@@ -348,6 +636,40 @@ EntityStatus _entityStatus(String? status) {
     _ => EntityStatus.active,
   };
 }
+
+FamilyMemberRole _familyMemberRole(String? role) {
+  return switch (role) {
+    'owner' => FamilyMemberRole.owner,
+    'parent' => FamilyMemberRole.parent,
+    'caregiver' => FamilyMemberRole.caregiver,
+    'professional' => FamilyMemberRole.professional,
+    _ => FamilyMemberRole.viewer,
+  };
+}
+
+AdultInvitationStatus _adultInvitationStatus(String? status) {
+  return switch (status) {
+    'accepted' => AdultInvitationStatus.accepted,
+    'revoked' => AdultInvitationStatus.revoked,
+    'expired' => AdultInvitationStatus.expired,
+    _ => AdultInvitationStatus.pending,
+  };
+}
+
+RoutineOverrideType _routineOverrideType(String? type) {
+  return switch (type) {
+    'pauseToday' => RoutineOverrideType.pauseToday,
+    'skipToday' => RoutineOverrideType.skipToday,
+    'runningLate' => RoutineOverrideType.runningLate,
+    'sick' => RoutineOverrideType.sick,
+    'traveling' => RoutineOverrideType.traveling,
+    _ => RoutineOverrideType.changeTime,
+  };
+}
+
+String _dateOnly(DateTime date) => '${date.year.toString().padLeft(4, '0')}-'
+    '${date.month.toString().padLeft(2, '0')}-'
+    '${date.day.toString().padLeft(2, '0')}';
 
 List<int> _intList(Object? value) {
   return (value as List? ?? const []).map((item) => item as int).toList();

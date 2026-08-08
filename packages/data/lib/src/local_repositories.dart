@@ -84,11 +84,30 @@ class LocalFamilyRepository implements FamilyRepository {
     );
     await store.put(LocalStoreCollections.families, family.metadata.id,
         _familyToJson(family));
+    final member = FamilyMember(
+      metadata: EntityMetadata(
+          id: _uuid.v4(), createdAt: now, updatedAt: now, ownerId: ownerUserId),
+      familyId: family.metadata.id,
+      userId: ownerUserId,
+      role: FamilyMemberRole.owner,
+    );
+    await store.put(LocalStoreCollections.familyMembers, member.metadata.id,
+        _familyMemberToJson(member));
     return family;
   }
 
   @override
   Future<Family?> currentFamily(String ownerUserId) async {
+    final memberRecords = await store.list(LocalStoreCollections.familyMembers);
+    for (final record in memberRecords) {
+      final member = _familyMemberFromJson(record);
+      if (member.userId != ownerUserId) {
+        continue;
+      }
+      final familyRecord =
+          await store.get(LocalStoreCollections.families, member.familyId);
+      return familyRecord == null ? null : _familyFromJson(familyRecord);
+    }
     final records = await store.list(LocalStoreCollections.families);
     for (final record in records) {
       final family = _familyFromJson(record);
@@ -97,6 +116,90 @@ class LocalFamilyRepository implements FamilyRepository {
       }
     }
     return null;
+  }
+
+  @override
+  Future<List<FamilyMember>> membersForFamily(String familyId) async {
+    final records = await store.list(LocalStoreCollections.familyMembers);
+    return records
+        .map(_familyMemberFromJson)
+        .where((member) => member.familyId == familyId)
+        .toList(growable: false);
+  }
+
+  @override
+  Future<AdultInvitation> createAdultInvitation({
+    required String familyId,
+    required String email,
+    required FamilyMemberRole role,
+    required String invitedByUserId,
+  }) async {
+    final now = DateTime.now();
+    final invitation = AdultInvitation(
+      metadata: EntityMetadata(
+          id: _uuid.v4(),
+          createdAt: now,
+          updatedAt: now,
+          ownerId: invitedByUserId),
+      familyId: familyId,
+      email: email.trim().toLowerCase(),
+      role: role,
+      status: AdultInvitationStatus.pending,
+      invitedByUserId: invitedByUserId,
+    );
+    await store.put(LocalStoreCollections.adultInvitations,
+        invitation.metadata.id, _adultInvitationToJson(invitation));
+    return invitation;
+  }
+
+  @override
+  Future<List<AdultInvitation>> invitationsForFamily(String familyId) async {
+    final records = await store.list(LocalStoreCollections.adultInvitations);
+    return records
+        .map(_adultInvitationFromJson)
+        .where((invitation) => invitation.familyId == familyId)
+        .toList(growable: false);
+  }
+
+  @override
+  Future<FamilyMember> acceptInvitation({
+    required String invitationId,
+    required String userId,
+  }) async {
+    final record =
+        await store.get(LocalStoreCollections.adultInvitations, invitationId);
+    if (record == null) {
+      throw StateError('Invitation not found: $invitationId');
+    }
+    final invitation = _adultInvitationFromJson(record);
+    final now = DateTime.now();
+    final member = FamilyMember(
+      metadata: EntityMetadata(
+          id: _uuid.v4(), createdAt: now, updatedAt: now, ownerId: userId),
+      familyId: invitation.familyId,
+      userId: userId,
+      role: invitation.role,
+      email: invitation.email,
+    );
+    await store.put(LocalStoreCollections.familyMembers, member.metadata.id,
+        _familyMemberToJson(member));
+    final accepted = AdultInvitation(
+      metadata: EntityMetadata(
+        id: invitation.metadata.id,
+        createdAt: invitation.metadata.createdAt,
+        updatedAt: now,
+        ownerId: invitation.metadata.ownerId,
+      ),
+      familyId: invitation.familyId,
+      email: invitation.email,
+      role: invitation.role,
+      status: AdultInvitationStatus.accepted,
+      invitedByUserId: invitation.invitedByUserId,
+      acceptedByUserId: userId,
+    );
+    await store.put(LocalStoreCollections.adultInvitations, invitationId,
+        _adultInvitationToJson(accepted));
+    return member;
   }
 }
 
@@ -289,6 +392,93 @@ class LocalRoutineRepository implements RoutineRepository {
   }
 
   @override
+  Future<Routine?> routineById(String routineId) async {
+    final record = await store.get(LocalStoreCollections.routines, routineId);
+    if (record == null) {
+      return null;
+    }
+    final routine = _routineFromJson(record);
+    return routine.metadata.status == EntityStatus.deleted ? null : routine;
+  }
+
+  @override
+  Future<Routine> updateRoutine({
+    required Routine routine,
+    required List<String> stepTitles,
+  }) async {
+    if (stepTitles.length < 3) {
+      throw ArgumentError.value(
+          stepTitles.length, 'stepTitles', 'A routine needs at least 3 steps.');
+    }
+    final existingSteps = await stepsForRoutine(routine.metadata.id);
+    final now = DateTime.now();
+    final stepIds = <String>[];
+    for (var index = 0; index < stepTitles.length; index += 1) {
+      final previous =
+          index < existingSteps.length ? existingSteps[index] : null;
+      final step = RoutineStep(
+        metadata: EntityMetadata(
+          id: previous?.metadata.id ?? _uuid.v4(),
+          createdAt: previous?.metadata.createdAt ?? now,
+          updatedAt: now,
+          ownerId: previous?.metadata.ownerId ?? routine.profileId,
+        ),
+        routineId: routine.metadata.id,
+        title: stepTitles[index],
+        order: index + 1,
+        estimatedMinutes: previous?.estimatedMinutes ?? 5,
+        status: previous?.status ?? RoutineStepStatus.pending,
+      );
+      stepIds.add(step.metadata.id);
+      await store.put(LocalStoreCollections.routineSteps, step.metadata.id,
+          _routineStepToJson(step));
+    }
+    for (var index = stepTitles.length;
+        index < existingSteps.length;
+        index += 1) {
+      final step = existingSteps[index];
+      final deleted = _routineStepWithStatus(step, EntityStatus.deleted);
+      await store.put(LocalStoreCollections.routineSteps, step.metadata.id,
+          _routineStepToJson(deleted));
+    }
+    final updated = _routineWithValues(routine, stepIds: stepIds);
+    await store.put(LocalStoreCollections.routines, updated.metadata.id,
+        _routineToJson(updated));
+    return updated;
+  }
+
+  @override
+  Future<Routine> duplicateRoutine(String routineId) async {
+    final routine = await routineById(routineId);
+    if (routine == null) {
+      throw StateError('Routine not found: $routineId');
+    }
+    final steps = await stepsForRoutine(routineId);
+    return createRoutine(
+      profileId: routine.profileId,
+      title: '${routine.title} — copia',
+      stepTitles: steps.map((step) => step.title).toList(growable: false),
+      weekdays: routine.weekdays,
+      scheduledHour: routine.scheduledHour,
+      scheduledMinute: routine.scheduledMinute,
+      estimatedDurationMinutes: routine.estimatedDurationMinutes,
+      leadReminderMinutes: routine.leadReminderMinutes,
+      repeatPolicy: routine.repeatPolicy,
+      responsibleAdultProfileId: routine.responsibleAdultProfileId,
+      contextLabel: routine.contextLabel,
+      minimumVersion: routine.minimumVersion,
+      benefitDescription: routine.benefitDescription,
+      maxReminderCount: routine.maxReminderCount,
+      reminderIntervalMinutes: routine.reminderIntervalMinutes,
+      vibrationEnabled: routine.vibrationEnabled,
+      soundEnabled: routine.soundEnabled,
+      silentNotification: routine.silentNotification,
+      canPostpone: routine.canPostpone,
+      canRequestHelp: routine.canRequestHelp,
+    );
+  }
+
+  @override
   Future<Routine> updateRoutineStatus(
       String routineId, EntityStatus status) async {
     final record = await store.get(LocalStoreCollections.routines, routineId);
@@ -343,6 +533,32 @@ class LocalRoutineSessionRepository implements RoutineSessionRepository {
   Future<void> save(RoutineSession session) async {
     await store.put(LocalStoreCollections.routineSessions, session.id,
         _routineSessionToJson(session));
+  }
+}
+
+class LocalRoutineOverrideRepository implements RoutineOverrideRepository {
+  LocalRoutineOverrideRepository(this.store);
+
+  final LocalStore store;
+
+  @override
+  Future<RoutineOverride> saveOverride(RoutineOverride override) async {
+    await store.put(LocalStoreCollections.routineOverrides,
+        override.metadata.id, _routineOverrideToJson(override));
+    return override;
+  }
+
+  @override
+  Future<List<RoutineOverride>> overridesForProfileDate({
+    required String profileId,
+    required DateTime date,
+  }) async {
+    final records = await store.list(LocalStoreCollections.routineOverrides);
+    return records
+        .map(_routineOverrideFromJson)
+        .where((override) =>
+            override.profileId == profileId && _sameDay(override.date, date))
+        .toList(growable: false);
   }
 }
 
@@ -714,6 +930,48 @@ Family _familyFromJson(Map<String, Object?> json) => Family(
       adultUserIds: _stringList(json['adult_user_ids']),
     );
 
+Map<String, Object?> _familyMemberToJson(FamilyMember member) => {
+      'metadata': _metadataToJson(member.metadata),
+      'family_id': member.familyId,
+      'user_id': member.userId,
+      'role': member.role.name,
+      'email': member.email,
+      'display_name': member.displayName,
+    };
+
+FamilyMember _familyMemberFromJson(Map<String, Object?> json) => FamilyMember(
+      metadata: _metadataFromJson(_object(json['metadata'])),
+      familyId: json['family_id'] as String,
+      userId: json['user_id'] as String,
+      role: _byName(FamilyMemberRole.values,
+          json['role'] as String? ?? FamilyMemberRole.viewer.name),
+      email: json['email'] as String?,
+      displayName: json['display_name'] as String?,
+    );
+
+Map<String, Object?> _adultInvitationToJson(AdultInvitation invitation) => {
+      'metadata': _metadataToJson(invitation.metadata),
+      'family_id': invitation.familyId,
+      'email': invitation.email,
+      'role': invitation.role.name,
+      'status': invitation.status.name,
+      'invited_by_user_id': invitation.invitedByUserId,
+      'accepted_by_user_id': invitation.acceptedByUserId,
+    };
+
+AdultInvitation _adultInvitationFromJson(Map<String, Object?> json) =>
+    AdultInvitation(
+      metadata: _metadataFromJson(_object(json['metadata'])),
+      familyId: json['family_id'] as String,
+      email: json['email'] as String,
+      role: _byName(FamilyMemberRole.values,
+          json['role'] as String? ?? FamilyMemberRole.viewer.name),
+      status: _byName(AdultInvitationStatus.values,
+          json['status'] as String? ?? AdultInvitationStatus.pending.name),
+      invitedByUserId: json['invited_by_user_id'] as String?,
+      acceptedByUserId: json['accepted_by_user_id'] as String?,
+    );
+
 Map<String, Object?> _childProfileToJson(ChildProfile profile) => {
       'metadata': _metadataToJson(profile.metadata),
       'family_id': profile.familyId,
@@ -847,6 +1105,38 @@ Routine _routineWithStatus(Routine routine, EntityStatus status) => Routine(
       canRequestHelp: routine.canRequestHelp,
     );
 
+Routine _routineWithValues(Routine routine, {required List<String> stepIds}) =>
+    Routine(
+      metadata: EntityMetadata(
+        id: routine.metadata.id,
+        createdAt: routine.metadata.createdAt,
+        updatedAt: DateTime.now(),
+        ownerId: routine.metadata.ownerId,
+        status: routine.metadata.status,
+        accessRules: routine.metadata.accessRules,
+      ),
+      profileId: routine.profileId,
+      title: routine.title,
+      stepIds: stepIds,
+      weekdays: routine.weekdays,
+      scheduledHour: routine.scheduledHour,
+      scheduledMinute: routine.scheduledMinute,
+      estimatedDurationMinutes: routine.estimatedDurationMinutes,
+      leadReminderMinutes: routine.leadReminderMinutes,
+      repeatPolicy: routine.repeatPolicy,
+      responsibleAdultProfileId: routine.responsibleAdultProfileId,
+      contextLabel: routine.contextLabel,
+      minimumVersion: routine.minimumVersion,
+      benefitDescription: routine.benefitDescription,
+      maxReminderCount: routine.maxReminderCount,
+      reminderIntervalMinutes: routine.reminderIntervalMinutes,
+      vibrationEnabled: routine.vibrationEnabled,
+      soundEnabled: routine.soundEnabled,
+      silentNotification: routine.silentNotification,
+      canPostpone: routine.canPostpone,
+      canRequestHelp: routine.canRequestHelp,
+    );
+
 Map<String, Object?> _routineStepToJson(RoutineStep step) => {
       'metadata': _metadataToJson(step.metadata),
       'routine_id': step.routineId,
@@ -864,6 +1154,23 @@ RoutineStep _routineStepFromJson(Map<String, Object?> json) => RoutineStep(
       estimatedMinutes: json['estimated_minutes'] as int?,
       status: _byName(RoutineStepStatus.values,
           json['status'] as String? ?? RoutineStepStatus.pending.name),
+    );
+
+RoutineStep _routineStepWithStatus(RoutineStep step, EntityStatus status) =>
+    RoutineStep(
+      metadata: EntityMetadata(
+        id: step.metadata.id,
+        createdAt: step.metadata.createdAt,
+        updatedAt: DateTime.now(),
+        ownerId: step.metadata.ownerId,
+        status: status,
+        accessRules: step.metadata.accessRules,
+      ),
+      routineId: step.routineId,
+      title: step.title,
+      order: step.order,
+      estimatedMinutes: step.estimatedMinutes,
+      status: step.status,
     );
 
 Map<String, Object?> _routineSessionToJson(RoutineSession session) => {
@@ -901,6 +1208,34 @@ RoutineSession _routineSessionFromJson(Map<String, Object?> json) =>
           RoutinePauseReason.values, json['pause_reason'] as String?),
       helpRequested: json['help_requested'] as bool? ?? false,
       postponedUntil: _dateTimeOrNull(json['postponed_until']),
+    );
+
+Map<String, Object?> _routineOverrideToJson(RoutineOverride override) => {
+      'metadata': _metadataToJson(override.metadata),
+      'routine_id': override.routineId,
+      'profile_id': override.profileId,
+      'date': override.date.toIso8601String(),
+      'type': override.type.name,
+      'start_hour': override.startHour,
+      'start_minute': override.startMinute,
+      'is_paused': override.isPaused,
+      'note': override.note,
+      'created_by': override.createdBy,
+    };
+
+RoutineOverride _routineOverrideFromJson(Map<String, Object?> json) =>
+    RoutineOverride(
+      metadata: _metadataFromJson(_object(json['metadata'])),
+      routineId: json['routine_id'] as String,
+      profileId: json['profile_id'] as String,
+      date: DateTime.parse(json['date'] as String),
+      type: _byName(RoutineOverrideType.values,
+          json['type'] as String? ?? RoutineOverrideType.changeTime.name),
+      startHour: json['start_hour'] as int?,
+      startMinute: json['start_minute'] as int?,
+      isPaused: json['is_paused'] as bool? ?? false,
+      note: json['note'] as String?,
+      createdBy: json['created_by'] as String?,
     );
 
 Map<String, Object?> _habitToJson(Habit habit) => {
@@ -1109,6 +1444,9 @@ Map<String, int> _intMap(Object? value) {
 
 DateTime? _dateTimeOrNull(Object? value) =>
     value == null ? null : DateTime.parse(value as String);
+
+bool _sameDay(DateTime a, DateTime b) =>
+    a.year == b.year && a.month == b.month && a.day == b.day;
 
 T _byName<T extends Enum>(List<T> values, String name) => values.byName(name);
 

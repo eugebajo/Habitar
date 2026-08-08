@@ -9,12 +9,15 @@ abstract interface class LocalStore {
 class LocalStoreCollections {
   static const users = 'users';
   static const families = 'families';
+  static const familyMembers = 'family_members';
+  static const adultInvitations = 'adult_invitations';
   static const childProfiles = 'child_profiles';
   static const teenProfiles = 'teen_profiles';
   static const adultProfiles = 'adult_profiles';
   static const routines = 'routines';
   static const routineSteps = 'routine_steps';
   static const routineSessions = 'routine_sessions';
+  static const routineOverrides = 'routine_overrides';
   static const habits = 'habits';
   static const habitProgress = 'habit_progress';
   static const timeBankBenefits = 'time_bank_benefits';

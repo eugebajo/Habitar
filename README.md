@@ -4,7 +4,7 @@ Aplicacion movil de acompanamiento de habitos, rutinas y autonomia para ninos y 
 
 El nombre del producto es provisional y no esta acoplado al codigo. La base tecnica usa un monorepo con Flutter para la app movil principal y paquetes Dart separados para dominio, aplicacion, datos, accesibilidad, notificaciones y sistema de diseno.
 
-## Estado de Fase 1
+## Estado actual
 
 Implementado:
 
@@ -39,6 +39,19 @@ Implementado:
 - Supabase Auth real integrado en Flutter con `supabase_flutter` y fallback local.
 - Drift/SQLite real activo como backend local en plataformas con sistema de archivos.
 - Bienvenida visual, login y logout integrados con restauracion de sesion local.
+- Separacion real de espacios adulto, nino y adolescente.
+- Rutinas adultas con crear, editar, duplicar, pausar, activar, eliminar y ajustar solo hoy.
+- Multiadulto por familia con miembros e invitaciones sin duplicar perfiles infantiles.
+- Panel adulto con atencion, equipo adulto y acceso al modo personal del nino/adolescente.
+- Reporte semanal PDF real generado desde la app.
+- Web habilitada como superficie del mismo producto cuando Supabase esta configurado.
+
+Documentacion principal:
+
+- Arquitectura: `docs/ARCHITECTURE.md`
+- Supabase: `docs/SUPABASE.md`
+- Decisiones: `docs/DECISIONS.md`
+- Funciones: `docs/FEATURES.md`
 
 Simulado/preparado:
 

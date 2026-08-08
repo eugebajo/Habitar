@@ -312,12 +312,10 @@ class _AdultTeamCard extends ConsumerWidget {
         ),
       );
     }
-    return FutureBuilder<List<AdultProfile>>(
-      future: ref
-          .watch(adultProfileServiceProvider)
-          .adultProfilesForProfile(profileId),
+    return FutureBuilder<_AdultTeamData>(
+      future: _loadTeam(ref, familyId, profileId),
       builder: (context, snapshot) {
-        final adults = snapshot.data ?? const <AdultProfile>[];
+        final data = snapshot.data ?? const _AdultTeamData.empty();
         return HabitarCard(
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -328,23 +326,78 @@ class _AdultTeamCard extends ConsumerWidget {
               Expanded(
                   child: Text('Equipo adulto',
                       style: Theme.of(context).textTheme.titleMedium)),
-              TextButton.icon(
-                onPressed: () => _showAddAdultDialog(
-                    context: context,
-                    ref: ref,
-                    familyId: familyId,
-                    profileId: profileId),
-                icon: const Icon(Icons.add_rounded),
-                label: const Text('Agregar'),
-              ),
+              Wrap(spacing: 8, runSpacing: 8, children: [
+                TextButton.icon(
+                  onPressed: () => _showInviteAdultDialog(
+                      context: context, ref: ref, familyId: familyId),
+                  icon: const Icon(Icons.mail_outline_rounded),
+                  label: const Text('Invitar'),
+                ),
+                TextButton.icon(
+                  onPressed: () => _showAddAdultDialog(
+                      context: context,
+                      ref: ref,
+                      familyId: familyId,
+                      profileId: profileId),
+                  icon: const Icon(Icons.add_rounded),
+                  label: const Text('Acompañante'),
+                ),
+              ]),
             ]),
             const SizedBox(height: 8),
-            if (adults.isEmpty)
+            if (data.members.isEmpty && data.adults.isEmpty)
               const Text(
                   'Sumá madres, padres, cuidadores, docentes o profesionales vinculados a este perfil.',
                   style: TextStyle(color: HabitarColors.mutedInk))
-            else
-              for (final adult in adults)
+            else ...[
+              if (data.members.isNotEmpty) ...[
+                const Text('Acceso familiar',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        color: HabitarColors.deepGreen)),
+                const SizedBox(height: 6),
+                for (final member in data.members)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const CircleAvatar(
+                      backgroundColor: HabitarColors.surfaceMist,
+                      child: Icon(Icons.verified_user_outlined,
+                          color: HabitarColors.deepGreen),
+                    ),
+                    title: Text(member.displayName ??
+                        member.email ??
+                        'Adulto con acceso'),
+                    subtitle: Text(_familyMemberRoleLabel(member.role)),
+                  ),
+              ],
+              if (data.invitations.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                const Text('Invitaciones pendientes',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        color: HabitarColors.deepGreen)),
+                const SizedBox(height: 6),
+                for (final invitation in data.invitations)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const CircleAvatar(
+                      backgroundColor: HabitarColors.surfaceWarm,
+                      child: Icon(Icons.mark_email_unread_outlined,
+                          color: HabitarColors.deepGreen),
+                    ),
+                    title: Text(invitation.email),
+                    subtitle: Text(_familyMemberRoleLabel(invitation.role)),
+                  ),
+              ],
+              if (data.adults.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                const Text('Acompañantes de este perfil',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        color: HabitarColors.deepGreen)),
+                const SizedBox(height: 6),
+              ],
+              for (final adult in data.adults)
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: HabitarAvatar(
@@ -358,9 +411,92 @@ class _AdultTeamCard extends ConsumerWidget {
                       adult.email!
                   ].join(' - ')),
                 ),
+            ],
           ]),
         );
       },
+    );
+  }
+
+  Future<_AdultTeamData> _loadTeam(
+      WidgetRef ref, String familyId, String profileId) async {
+    final familyRepository = ref.read(familyRepositoryProvider);
+    final members = await familyRepository.membersForFamily(familyId);
+    final invitations = await familyRepository.invitationsForFamily(familyId);
+    final adults = await ref
+        .read(adultProfileServiceProvider)
+        .adultProfilesForProfile(profileId);
+    return _AdultTeamData(
+      members: members,
+      invitations: invitations
+          .where((item) => item.status == AdultInvitationStatus.pending)
+          .toList(growable: false),
+      adults: adults,
+    );
+  }
+
+  Future<void> _showInviteAdultDialog({
+    required BuildContext context,
+    required WidgetRef ref,
+    required String familyId,
+  }) async {
+    final emailController = TextEditingController();
+    var role = FamilyMemberRole.parent;
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Invitar adulto'),
+          content: SingleChildScrollView(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              TextField(
+                controller: emailController,
+                keyboardType: TextInputType.emailAddress,
+                decoration: const InputDecoration(labelText: 'Correo'),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<FamilyMemberRole>(
+                initialValue: role,
+                decoration: const InputDecoration(labelText: 'Rol'),
+                items: const [
+                  FamilyMemberRole.parent,
+                  FamilyMemberRole.caregiver,
+                  FamilyMemberRole.professional,
+                  FamilyMemberRole.viewer,
+                ]
+                    .map((value) => DropdownMenuItem(
+                        value: value,
+                        child: Text(_familyMemberRoleLabel(value))))
+                    .toList(growable: false),
+                onChanged: (value) {
+                  if (value != null) setDialogState(() => role = value);
+                },
+              ),
+            ]),
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Cancelar')),
+            FilledButton(
+              onPressed: () async {
+                final email = emailController.text.trim();
+                if (!email.contains('@')) return;
+                final user =
+                    await ref.read(authRepositoryProvider).currentUser();
+                await ref.read(familyRepositoryProvider).createAdultInvitation(
+                      familyId: familyId,
+                      email: email,
+                      role: role,
+                      invitedByUserId: user?.metadata.id ?? familyId,
+                    );
+                if (dialogContext.mounted) Navigator.pop(dialogContext);
+              },
+              child: const Text('Guardar'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -433,11 +569,38 @@ class _AdultTeamCard extends ConsumerWidget {
   }
 }
 
+class _AdultTeamData {
+  const _AdultTeamData({
+    required this.members,
+    required this.invitations,
+    required this.adults,
+  });
+
+  const _AdultTeamData.empty()
+      : members = const [],
+        invitations = const [],
+        adults = const [];
+
+  final List<FamilyMember> members;
+  final List<AdultInvitation> invitations;
+  final List<AdultProfile> adults;
+}
+
 String _adultKindLabel(AdultProfileKind kind) {
   return switch (kind) {
     AdultProfileKind.parent => 'Madre, padre o tutor',
     AdultProfileKind.caregiver => 'Cuidador',
     AdultProfileKind.professional => 'Profesional',
     AdultProfileKind.teacher => 'Docente',
+  };
+}
+
+String _familyMemberRoleLabel(FamilyMemberRole role) {
+  return switch (role) {
+    FamilyMemberRole.owner => 'Administradora',
+    FamilyMemberRole.parent => 'Madre, padre o tutor',
+    FamilyMemberRole.caregiver => 'Cuidador',
+    FamilyMemberRole.professional => 'Profesional',
+    FamilyMemberRole.viewer => 'Solo lectura',
   };
 }

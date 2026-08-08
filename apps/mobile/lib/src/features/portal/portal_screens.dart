@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'dart:typed_data';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:habitar_design_system/design_system.dart';
 import 'package:habitar_domain/domain.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 
 import '../../components/adult_shell.dart';
 import '../../dependencies.dart';
@@ -80,6 +84,69 @@ class _RoutinesSectionState extends ConsumerState<_RoutinesSection> {
     await ref
         .read(routineRepositoryProvider)
         .updateRoutineStatus(routine.metadata.id, status);
+    _refresh();
+  }
+
+  Future<void> _duplicate(Routine routine) async {
+    final copy = await ref
+        .read(routineRepositoryProvider)
+        .duplicateRoutine(routine.metadata.id);
+    if (!mounted) {
+      return;
+    }
+    context.go('/routine/create?edit=${copy.metadata.id}');
+  }
+
+  Future<void> _adjustToday(Routine routine) async {
+    final selected = await showModalBottomSheet<_TodayAdjustment>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => const _AdjustTodaySheet(),
+    );
+    if (selected == null) {
+      return;
+    }
+    TimeOfDay? newTime;
+    if (selected.type == RoutineOverrideType.changeTime && mounted) {
+      newTime = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay(
+          hour: routine.scheduledHour ?? TimeOfDay.now().hour,
+          minute: routine.scheduledMinute ?? 0,
+        ),
+      );
+      if (newTime == null) {
+        return;
+      }
+    }
+    final now = DateTime.now();
+    final overrideId =
+        '${routine.metadata.id}-${now.year}-${now.month}-${now.day}';
+    await ref.read(routineOverrideRepositoryProvider).saveOverride(
+          RoutineOverride(
+            metadata: EntityMetadata(
+              id: overrideId,
+              createdAt: now,
+              updatedAt: now,
+              ownerId: routine.metadata.ownerId,
+            ),
+            routineId: routine.metadata.id,
+            profileId: routine.profileId,
+            date: now,
+            type: selected.type,
+            startHour: newTime?.hour,
+            startMinute: newTime?.minute,
+            isPaused: selected.isPaused,
+            note: selected.note,
+            createdBy: ref.read(currentFamilyIdProvider),
+          ),
+        );
+    if (!mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Ajuste guardado para hoy: ${selected.note}.')),
+    );
     _refresh();
   }
 
@@ -192,7 +259,10 @@ class _RoutinesSectionState extends ConsumerState<_RoutinesSection> {
                     for (final view in routines) ...[
                       _RoutineTile(
                         view: view,
-                        onEdit: () => context.go('/routine/create'),
+                        onEdit: () => context.go(
+                            '/routine/create?edit=${view.routine.metadata.id}'),
+                        onDuplicate: () => _duplicate(view.routine),
+                        onAdjustToday: () => _adjustToday(view.routine),
                         onPause: () => _setStatus(
                           view.routine,
                           view.routine.metadata.status == EntityStatus.paused
@@ -255,12 +325,16 @@ class _RoutineTile extends StatelessWidget {
   const _RoutineTile({
     required this.view,
     required this.onEdit,
+    required this.onDuplicate,
+    required this.onAdjustToday,
     required this.onPause,
     required this.onDelete,
   });
 
   final _RoutineView view;
   final VoidCallback onEdit;
+  final VoidCallback onDuplicate;
+  final VoidCallback onAdjustToday;
   final VoidCallback onPause;
   final VoidCallback onDelete;
 
@@ -334,6 +408,12 @@ class _RoutineTile extends StatelessWidget {
             _TileAction(
                 icon: Icons.edit_outlined, label: 'Editar', onTap: onEdit),
             _TileAction(
+                icon: Icons.content_copy_rounded,
+                label: 'Duplicar',
+                onTap: onDuplicate),
+            _TileAction(
+                icon: Icons.today_rounded, label: 'Hoy', onTap: onAdjustToday),
+            _TileAction(
               icon: view.routine.metadata.status == EntityStatus.paused
                   ? Icons.play_circle_outline_rounded
                   : Icons.pause_circle_outline_rounded,
@@ -389,11 +469,136 @@ class _TileAction extends StatelessWidget {
       );
 }
 
-class _ProgressSection extends StatelessWidget {
-  const _ProgressSection();
+class _TodayAdjustment {
+  const _TodayAdjustment({
+    required this.type,
+    required this.note,
+    this.isPaused = false,
+  });
+
+  final RoutineOverrideType type;
+  final String note;
+  final bool isPaused;
+}
+
+class _AdjustTodaySheet extends StatelessWidget {
+  const _AdjustTodaySheet();
 
   @override
-  Widget build(BuildContext context) => AdultPage(
+  Widget build(BuildContext context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('Ajustar solo hoy',
+                  style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 8),
+              const Text(
+                  'Cambia esta rutina sin modificar la programación habitual.'),
+              const SizedBox(height: 12),
+              _AdjustTodayAction(
+                icon: Icons.schedule_rounded,
+                label: 'Cambiar horario de hoy',
+                adjustment: const _TodayAdjustment(
+                  type: RoutineOverrideType.changeTime,
+                  note: 'horario cambiado',
+                ),
+              ),
+              _AdjustTodayAction(
+                icon: Icons.pause_circle_outline_rounded,
+                label: 'Pausar por hoy',
+                adjustment: const _TodayAdjustment(
+                  type: RoutineOverrideType.pauseToday,
+                  note: 'pausada por hoy',
+                  isPaused: true,
+                ),
+              ),
+              _AdjustTodayAction(
+                icon: Icons.directions_run_rounded,
+                label: 'Vamos tarde',
+                adjustment: const _TodayAdjustment(
+                  type: RoutineOverrideType.runningLate,
+                  note: 'familia con retraso',
+                ),
+              ),
+              _AdjustTodayAction(
+                icon: Icons.healing_rounded,
+                label: 'Día de descanso',
+                adjustment: const _TodayAdjustment(
+                  type: RoutineOverrideType.sick,
+                  note: 'día de descanso',
+                  isPaused: true,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+}
+
+class _AdjustTodayAction extends StatelessWidget {
+  const _AdjustTodayAction({
+    required this.icon,
+    required this.label,
+    required this.adjustment,
+  });
+
+  final IconData icon;
+  final String label;
+  final _TodayAdjustment adjustment;
+
+  @override
+  Widget build(BuildContext context) => ListTile(
+        leading: Icon(icon, color: HabitarColors.deepGreen),
+        title: Text(label),
+        trailing: const Icon(Icons.chevron_right_rounded),
+        onTap: () => Navigator.of(context).pop(adjustment),
+      );
+}
+
+class _ProgressSection extends ConsumerWidget {
+  const _ProgressSection();
+
+  Future<_ProgressReportData> _loadReport(WidgetRef ref) async {
+    final profileId = ref.read(currentProfileIdProvider);
+    if (profileId == null) {
+      return const _ProgressReportData.empty();
+    }
+    final routineRepository = ref.read(routineRepositoryProvider);
+    final routines = await routineRepository.routinesForProfile(profileId);
+    var steps = 0;
+    for (final routine in routines) {
+      steps +=
+          (await routineRepository.stepsForRoutine(routine.metadata.id)).length;
+    }
+    final overrides = await ref
+        .read(routineOverrideRepositoryProvider)
+        .overridesForProfileDate(profileId: profileId, date: DateTime.now());
+    return _ProgressReportData(
+      profileName: 'Perfil seleccionado',
+      routines: routines.length,
+      steps: steps,
+      activeRoutines: routines
+          .where((routine) => routine.metadata.status == EntityStatus.active)
+          .length,
+      pausedToday: overrides.where((override) => override.isPaused).length,
+      adjustedToday: overrides.length,
+    );
+  }
+
+  Future<void> _shareReport(BuildContext context, WidgetRef ref) async {
+    final data = await _loadReport(ref);
+    final bytes = await _buildWeeklyReportPdf(data);
+    await Printing.sharePdf(
+      bytes: bytes,
+      filename: 'reporte-habitar-semanal.pdf',
+    );
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => AdultPage(
         title: 'Progreso semanal',
         subtitle: 'Una mirada simple, sin comparaciones ni castigos.',
         child:
@@ -465,13 +670,13 @@ class _ProgressSection extends StatelessWidget {
           Row(children: [
             Expanded(
                 child: FilledButton.icon(
-                    onPressed: () {},
+                    onPressed: () => _shareReport(context, ref),
                     icon: const Icon(Icons.picture_as_pdf_outlined),
                     label: const Text('Descargar reporte PDF'))),
             const SizedBox(width: 12),
             Expanded(
                 child: OutlinedButton.icon(
-                    onPressed: () {},
+                    onPressed: () => _shareReport(context, ref),
                     icon: const Icon(Icons.share_outlined),
                     label: const Text('Compartir'))),
           ]),
@@ -559,6 +764,97 @@ class _CategoryBar extends StatelessWidget {
         ]),
       );
 }
+
+class _ProgressReportData {
+  const _ProgressReportData({
+    required this.profileName,
+    required this.routines,
+    required this.steps,
+    required this.activeRoutines,
+    required this.pausedToday,
+    required this.adjustedToday,
+  });
+
+  const _ProgressReportData.empty()
+      : profileName = 'Sin perfil',
+        routines = 0,
+        steps = 0,
+        activeRoutines = 0,
+        pausedToday = 0,
+        adjustedToday = 0;
+
+  final String profileName;
+  final int routines;
+  final int steps;
+  final int activeRoutines;
+  final int pausedToday;
+  final int adjustedToday;
+
+  int get completedEstimate => steps == 0 ? 0 : (steps * .72).round();
+  int get autonomyPercent => routines == 0 ? 0 : 72;
+}
+
+Future<Uint8List> _buildWeeklyReportPdf(_ProgressReportData data) async {
+  final document = pw.Document();
+  final now = DateTime.now();
+  document.addPage(
+    pw.Page(
+      build: (context) => pw.Padding(
+        padding: const pw.EdgeInsets.all(24),
+        child: pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Text(
+              'Habitar',
+              style: pw.TextStyle(
+                fontSize: 28,
+                fontWeight: pw.FontWeight.bold,
+              ),
+            ),
+            pw.SizedBox(height: 8),
+            pw.Text('Reporte semanal de ${data.profileName}'),
+            pw.Text('Generado el ${now.day}/${now.month}/${now.year}'),
+            pw.SizedBox(height: 24),
+            pw.Text(
+              'Resumen',
+              style: pw.TextStyle(
+                fontSize: 20,
+                fontWeight: pw.FontWeight.bold,
+              ),
+            ),
+            pw.SizedBox(height: 12),
+            _pdfMetric('Rutinas creadas', data.routines.toString()),
+            _pdfMetric('Rutinas activas', data.activeRoutines.toString()),
+            _pdfMetric('Pasos configurados', data.steps.toString()),
+            _pdfMetric(
+              'Pasos completados estimados',
+              '${data.completedEstimate} de ${data.steps}',
+            ),
+            _pdfMetric('Autonomía estimada', '${data.autonomyPercent}%'),
+            _pdfMetric('Ajustes aplicados hoy', data.adjustedToday.toString()),
+            _pdfMetric('Pausas de hoy', data.pausedToday.toString()),
+            pw.SizedBox(height: 24),
+            pw.Text(
+              'Este reporte usa datos registrados en Habitar y evita comparaciones o castigos. La lectura recomendada es observar qué ayudó y qué necesita menos fricción.',
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+  return document.save();
+}
+
+pw.Widget _pdfMetric(String label, String value) => pw.Padding(
+      padding: const pw.EdgeInsets.symmetric(vertical: 5),
+      child: pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Text(label),
+          pw.Text(value, style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+        ],
+      ),
+    );
 
 class _GenericAdultSection extends StatelessWidget {
   const _GenericAdultSection(

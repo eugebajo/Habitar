@@ -34,6 +34,9 @@ Future<List<Override>> buildProductionOverrides() async {
         .overrideWithValue(LocalAdultProfileRepository(store)),
     routineSessionRepositoryProvider
         .overrideWithValue(LocalRoutineSessionRepository(store)),
+    routineOverrideRepositoryProvider.overrideWithValue(supabaseClient == null
+        ? LocalRoutineOverrideRepository(store)
+        : SupabaseRoutineOverrideRepository(supabaseClient)),
     habitRepositoryProvider.overrideWithValue(LocalHabitRepository(store)),
     habitProgressRepositoryProvider
         .overrideWithValue(LocalHabitProgressRepository(store)),

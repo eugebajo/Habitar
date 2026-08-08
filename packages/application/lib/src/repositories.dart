@@ -64,6 +64,22 @@ abstract interface class FamilyRepository {
       {required String ownerUserId, required String name});
 
   Future<Family?> currentFamily(String ownerUserId);
+
+  Future<List<FamilyMember>> membersForFamily(String familyId);
+
+  Future<AdultInvitation> createAdultInvitation({
+    required String familyId,
+    required String email,
+    required FamilyMemberRole role,
+    required String invitedByUserId,
+  });
+
+  Future<List<AdultInvitation>> invitationsForFamily(String familyId);
+
+  Future<FamilyMember> acceptInvitation({
+    required String invitationId,
+    required String userId,
+  });
 }
 
 abstract interface class AdultProfileRepository {
@@ -105,7 +121,16 @@ abstract interface class RoutineRepository {
 
   Future<List<RoutineStep>> stepsForRoutine(String routineId);
 
+  Future<Routine?> routineById(String routineId);
+
   Future<List<Routine>> routinesForProfile(String profileId);
+
+  Future<Routine> updateRoutine({
+    required Routine routine,
+    required List<String> stepTitles,
+  });
+
+  Future<Routine> duplicateRoutine(String routineId);
 
   Future<Routine> updateRoutineStatus(String routineId, EntityStatus status);
 }
@@ -116,6 +141,15 @@ abstract interface class RoutineSessionRepository {
   Future<RoutineSession?> activeSessionForProfile(String profileId);
 
   Future<RoutineSession?> byId(String sessionId);
+}
+
+abstract interface class RoutineOverrideRepository {
+  Future<RoutineOverride> saveOverride(RoutineOverride override);
+
+  Future<List<RoutineOverride>> overridesForProfileDate({
+    required String profileId,
+    required DateTime date,
+  });
 }
 
 abstract interface class HabitRepository {

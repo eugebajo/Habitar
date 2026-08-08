@@ -49,6 +49,8 @@ class InMemoryAuthRepository implements AuthRepository {
 
 class InMemoryFamilyRepository implements FamilyRepository {
   final Map<String, Family> _familiesByOwner = {};
+  final List<FamilyMember> _members = [];
+  final List<AdultInvitation> _invitations = [];
 
   @override
   Future<Family> createFamily(
@@ -61,12 +63,108 @@ class InMemoryFamilyRepository implements FamilyRepository {
       adultUserIds: [ownerUserId],
     );
     _familiesByOwner[ownerUserId] = family;
+    _members.add(FamilyMember(
+      metadata: EntityMetadata(
+          id: _uuid.v4(), createdAt: now, updatedAt: now, ownerId: ownerUserId),
+      familyId: family.metadata.id,
+      userId: ownerUserId,
+      role: FamilyMemberRole.owner,
+    ));
     return family;
   }
 
   @override
-  Future<Family?> currentFamily(String ownerUserId) async =>
-      _familiesByOwner[ownerUserId];
+  Future<Family?> currentFamily(String ownerUserId) async {
+    final direct = _familiesByOwner[ownerUserId];
+    if (direct != null) {
+      return direct;
+    }
+    final memberships =
+        _members.where((member) => member.userId == ownerUserId);
+    if (memberships.isEmpty) {
+      return null;
+    }
+    final familyId = memberships.first.familyId;
+    final matches = _familiesByOwner.values
+        .where((family) => family.metadata.id == familyId);
+    return matches.isEmpty ? null : matches.first;
+  }
+
+  @override
+  Future<List<FamilyMember>> membersForFamily(String familyId) async {
+    return _members
+        .where((member) => member.familyId == familyId)
+        .toList(growable: false);
+  }
+
+  @override
+  Future<AdultInvitation> createAdultInvitation({
+    required String familyId,
+    required String email,
+    required FamilyMemberRole role,
+    required String invitedByUserId,
+  }) async {
+    final now = DateTime.now();
+    final invitation = AdultInvitation(
+      metadata: EntityMetadata(
+          id: _uuid.v4(),
+          createdAt: now,
+          updatedAt: now,
+          ownerId: invitedByUserId),
+      familyId: familyId,
+      email: email.trim().toLowerCase(),
+      role: role,
+      status: AdultInvitationStatus.pending,
+      invitedByUserId: invitedByUserId,
+    );
+    _invitations.add(invitation);
+    return invitation;
+  }
+
+  @override
+  Future<List<AdultInvitation>> invitationsForFamily(String familyId) async {
+    return _invitations
+        .where((invitation) => invitation.familyId == familyId)
+        .toList(growable: false);
+  }
+
+  @override
+  Future<FamilyMember> acceptInvitation({
+    required String invitationId,
+    required String userId,
+  }) async {
+    final index = _invitations
+        .indexWhere((invitation) => invitation.metadata.id == invitationId);
+    if (index < 0) {
+      throw StateError('Invitation not found: $invitationId');
+    }
+    final invitation = _invitations[index];
+    final now = DateTime.now();
+    final member = FamilyMember(
+      metadata: EntityMetadata(
+          id: _uuid.v4(), createdAt: now, updatedAt: now, ownerId: userId),
+      familyId: invitation.familyId,
+      userId: userId,
+      role: invitation.role,
+      email: invitation.email,
+    );
+    _members.add(member);
+    _invitations[index] = AdultInvitation(
+      metadata: EntityMetadata(
+        id: invitation.metadata.id,
+        createdAt: invitation.metadata.createdAt,
+        updatedAt: now,
+        ownerId: invitation.metadata.ownerId,
+      ),
+      familyId: invitation.familyId,
+      email: invitation.email,
+      role: invitation.role,
+      status: AdultInvitationStatus.accepted,
+      invitedByUserId: invitation.invitedByUserId,
+      acceptedByUserId: userId,
+    );
+    return member;
+  }
 }
 
 class InMemoryProfileRepository implements ProfileRepository {
@@ -243,6 +341,102 @@ class InMemoryRoutineRepository implements RoutineRepository {
   }
 
   @override
+  Future<Routine?> routineById(String routineId) async {
+    final matches = _routines.where((routine) =>
+        routine.metadata.id == routineId &&
+        routine.metadata.status != EntityStatus.deleted);
+    return matches.isEmpty ? null : matches.first;
+  }
+
+  @override
+  Future<Routine> updateRoutine({
+    required Routine routine,
+    required List<String> stepTitles,
+  }) async {
+    if (stepTitles.length < 3) {
+      throw ArgumentError.value(
+          stepTitles.length, 'stepTitles', 'A routine needs at least 3 steps.');
+    }
+    final routineIndex =
+        _routines.indexWhere((item) => item.metadata.id == routine.metadata.id);
+    if (routineIndex < 0) {
+      throw StateError('Routine not found: ${routine.metadata.id}');
+    }
+    final existingSteps = await stepsForRoutine(routine.metadata.id);
+    final now = DateTime.now();
+    final stepIds = <String>[];
+    for (var index = 0; index < stepTitles.length; index += 1) {
+      final previous =
+          index < existingSteps.length ? existingSteps[index] : null;
+      final step = RoutineStep(
+        metadata: EntityMetadata(
+          id: previous?.metadata.id ?? _uuid.v4(),
+          createdAt: previous?.metadata.createdAt ?? now,
+          updatedAt: now,
+          ownerId: previous?.metadata.ownerId ?? routine.profileId,
+        ),
+        routineId: routine.metadata.id,
+        title: stepTitles[index],
+        order: index + 1,
+        estimatedMinutes: previous?.estimatedMinutes ?? 5,
+        status: previous?.status ?? RoutineStepStatus.pending,
+      );
+      stepIds.add(step.metadata.id);
+      final stepIndex =
+          _steps.indexWhere((item) => item.metadata.id == step.metadata.id);
+      if (stepIndex < 0) {
+        _steps.add(step);
+      } else {
+        _steps[stepIndex] = step;
+      }
+    }
+    for (var index = stepTitles.length;
+        index < existingSteps.length;
+        index += 1) {
+      final step = existingSteps[index];
+      final stepIndex =
+          _steps.indexWhere((item) => item.metadata.id == step.metadata.id);
+      if (stepIndex >= 0) {
+        _steps[stepIndex] = _routineStepWithStatus(step, EntityStatus.deleted);
+      }
+    }
+    final updated = _routineWithValues(routine, stepIds: stepIds);
+    _routines[routineIndex] = updated;
+    return updated;
+  }
+
+  @override
+  Future<Routine> duplicateRoutine(String routineId) async {
+    final routine = await routineById(routineId);
+    if (routine == null) {
+      throw StateError('Routine not found: $routineId');
+    }
+    final steps = await stepsForRoutine(routineId);
+    return createRoutine(
+      profileId: routine.profileId,
+      title: '${routine.title} — copia',
+      stepTitles: steps.map((step) => step.title).toList(growable: false),
+      weekdays: routine.weekdays,
+      scheduledHour: routine.scheduledHour,
+      scheduledMinute: routine.scheduledMinute,
+      estimatedDurationMinutes: routine.estimatedDurationMinutes,
+      leadReminderMinutes: routine.leadReminderMinutes,
+      repeatPolicy: routine.repeatPolicy,
+      responsibleAdultProfileId: routine.responsibleAdultProfileId,
+      contextLabel: routine.contextLabel,
+      minimumVersion: routine.minimumVersion,
+      benefitDescription: routine.benefitDescription,
+      maxReminderCount: routine.maxReminderCount,
+      reminderIntervalMinutes: routine.reminderIntervalMinutes,
+      vibrationEnabled: routine.vibrationEnabled,
+      soundEnabled: routine.soundEnabled,
+      silentNotification: routine.silentNotification,
+      canPostpone: routine.canPostpone,
+      canRequestHelp: routine.canRequestHelp,
+    );
+  }
+
+  @override
   Future<Routine> updateRoutineStatus(
       String routineId, EntityStatus status) async {
     final index =
@@ -298,6 +492,55 @@ Routine _routineWithStatus(Routine routine, EntityStatus status) => Routine(
       canRequestHelp: routine.canRequestHelp,
     );
 
+Routine _routineWithValues(Routine routine, {required List<String> stepIds}) =>
+    Routine(
+      metadata: EntityMetadata(
+        id: routine.metadata.id,
+        createdAt: routine.metadata.createdAt,
+        updatedAt: DateTime.now(),
+        ownerId: routine.metadata.ownerId,
+        status: routine.metadata.status,
+        accessRules: routine.metadata.accessRules,
+      ),
+      profileId: routine.profileId,
+      title: routine.title,
+      stepIds: stepIds,
+      weekdays: routine.weekdays,
+      scheduledHour: routine.scheduledHour,
+      scheduledMinute: routine.scheduledMinute,
+      estimatedDurationMinutes: routine.estimatedDurationMinutes,
+      leadReminderMinutes: routine.leadReminderMinutes,
+      repeatPolicy: routine.repeatPolicy,
+      responsibleAdultProfileId: routine.responsibleAdultProfileId,
+      contextLabel: routine.contextLabel,
+      minimumVersion: routine.minimumVersion,
+      benefitDescription: routine.benefitDescription,
+      maxReminderCount: routine.maxReminderCount,
+      reminderIntervalMinutes: routine.reminderIntervalMinutes,
+      vibrationEnabled: routine.vibrationEnabled,
+      soundEnabled: routine.soundEnabled,
+      silentNotification: routine.silentNotification,
+      canPostpone: routine.canPostpone,
+      canRequestHelp: routine.canRequestHelp,
+    );
+
+RoutineStep _routineStepWithStatus(RoutineStep step, EntityStatus status) =>
+    RoutineStep(
+      metadata: EntityMetadata(
+        id: step.metadata.id,
+        createdAt: step.metadata.createdAt,
+        updatedAt: DateTime.now(),
+        ownerId: step.metadata.ownerId,
+        status: status,
+        accessRules: step.metadata.accessRules,
+      ),
+      routineId: step.routineId,
+      title: step.title,
+      order: step.order,
+      estimatedMinutes: step.estimatedMinutes,
+      status: step.status,
+    );
+
 class InMemoryRoutineSessionRepository implements RoutineSessionRepository {
   final Map<String, RoutineSession> _sessions = {};
 
@@ -317,6 +560,34 @@ class InMemoryRoutineSessionRepository implements RoutineSessionRepository {
   @override
   Future<void> save(RoutineSession session) async {
     _sessions[session.id] = session;
+  }
+}
+
+class InMemoryRoutineOverrideRepository implements RoutineOverrideRepository {
+  final List<RoutineOverride> _overrides = [];
+
+  @override
+  Future<RoutineOverride> saveOverride(RoutineOverride override) async {
+    final index = _overrides.indexWhere((item) =>
+        item.routineId == override.routineId &&
+        _sameDay(item.date, override.date));
+    if (index < 0) {
+      _overrides.add(override);
+    } else {
+      _overrides[index] = override;
+    }
+    return override;
+  }
+
+  @override
+  Future<List<RoutineOverride>> overridesForProfileDate({
+    required String profileId,
+    required DateTime date,
+  }) async {
+    return _overrides
+        .where((override) =>
+            override.profileId == profileId && _sameDay(override.date, date))
+        .toList(growable: false);
   }
 }
 
@@ -571,3 +842,6 @@ class InMemorySyncQueueRepository implements SyncQueueRepository {
     return items;
   }
 }
+
+bool _sameDay(DateTime a, DateTime b) =>
+    a.year == b.year && a.month == b.month && a.day == b.day;
