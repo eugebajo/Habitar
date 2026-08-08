@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:habitar_design_system/design_system.dart';
+import 'package:habitar_domain/domain.dart';
 
 import '../../components/adult_shell.dart';
+import '../../dependencies.dart';
 
 class AdultSectionScreen extends StatelessWidget {
   const AdultSectionScreen({super.key, required this.kind});
@@ -38,67 +41,187 @@ class AdultSectionScreen extends StatelessWidget {
   }
 }
 
-class _RoutinesSection extends StatelessWidget {
+class _RoutinesSection extends ConsumerStatefulWidget {
   const _RoutinesSection();
 
   @override
-  Widget build(BuildContext context) => AdultPage(
-        title: 'Rutinas',
-        subtitle: 'Organizá el día de Tomi con rutinas claras y previsibles.',
-        action: FilledButton.icon(
-          onPressed: () => context.go('/routine/create'),
-          icon: const Icon(Icons.add_rounded),
-          label: const Text('Nueva rutina'),
-        ),
-        child: Column(
-          children: [
-            _ProfileSelector(onTap: () => context.go('/profiles')),
-            const SizedBox(height: 16),
-            const _RoutineTile(
-                icon: Icons.wb_sunny_outlined,
-                title: 'Mañana',
-                time: '07:00',
-                steps: '5 pasos',
-                status: 'Completada',
-                statusColor: HabitarColors.surfaceMist),
-            const SizedBox(height: 12),
-            const _RoutineTile(
-                icon: Icons.backpack_outlined,
-                title: 'Después de la escuela',
-                time: '16:30',
-                steps: '4 pasos',
-                status: 'Pendiente',
-                statusColor: HabitarColors.surfaceWarm),
-            const SizedBox(height: 12),
-            const _RoutineTile(
-                icon: Icons.directions_walk_rounded,
-                title: 'Prepararse para salir',
-                time: '18:30',
-                steps: '3 pasos',
-                status: 'Activa',
-                statusColor: HabitarColors.surfaceMist),
-            const SizedBox(height: 12),
-            const _RoutineTile(
-                icon: Icons.nightlight_round,
-                title: 'Noche',
-                time: '20:30',
-                steps: '4 pasos',
-                status: 'Programada',
-                statusColor: Color(0xFFEAF0F8)),
-            const SizedBox(height: 18),
-            const HabitarConversationCard(
-              title: 'Consejo de Habitar',
-              body:
-                  'La constancia crea seguridad. Repetir las rutinas todos los días ayuda a Tomi a sentirse más tranquilo.',
-              color: HabitarColors.surfaceMist,
-              leading: CircleAvatar(
-                  backgroundColor: Colors.white,
-                  child: Icon(Icons.favorite_border_rounded,
-                      color: HabitarColors.deepGreen)),
+  ConsumerState<_RoutinesSection> createState() => _RoutinesSectionState();
+}
+
+class _RoutinesSectionState extends ConsumerState<_RoutinesSection> {
+  late Future<List<_RoutineView>> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = _load();
+  }
+
+  Future<List<_RoutineView>> _load() async {
+    final profileId = ref.read(currentProfileIdProvider);
+    if (profileId == null) {
+      return const [];
+    }
+    final repository = ref.read(routineRepositoryProvider);
+    final routines = await repository.routinesForProfile(profileId);
+    final views = <_RoutineView>[];
+    for (final routine in routines) {
+      final steps = await repository.stepsForRoutine(routine.metadata.id);
+      views.add(_RoutineView(routine: routine, steps: steps));
+    }
+    return views;
+  }
+
+  void _refresh() {
+    setState(() => _future = _load());
+  }
+
+  Future<void> _setStatus(Routine routine, EntityStatus status) async {
+    await ref
+        .read(routineRepositoryProvider)
+        .updateRoutineStatus(routine.metadata.id, status);
+    _refresh();
+  }
+
+  Future<void> _confirmDelete(Routine routine) async {
+    final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Eliminar rutina'),
+            content: Text(
+              'La rutina "${routine.title}" dejará de aparecer para este perfil.',
             ),
-          ],
-        ),
-      );
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancelar'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('Eliminar'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+    if (!confirmed) {
+      return;
+    }
+    await _setStatus(routine, EntityStatus.deleted);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final profileId = ref.watch(currentProfileIdProvider);
+    return AdultPage(
+      title: 'Rutinas',
+      subtitle: 'Organizá el día familiar con rutinas claras y previsibles.',
+      action: FilledButton.icon(
+        onPressed: () => context.go('/routine/create'),
+        icon: const Icon(Icons.add_rounded),
+        label: const Text('Nueva rutina'),
+      ),
+      child: Column(
+        children: [
+          _ProfileSelector(onTap: () => context.go('/profiles')),
+          const SizedBox(height: 16),
+          if (profileId == null)
+            HabitarConversationCard(
+              title: 'Elegí un perfil',
+              body:
+                  'Primero seleccioná a qué niño o adolescente querés acompañar.',
+              color: HabitarColors.surfaceMist,
+              leading: const CircleAvatar(
+                backgroundColor: Colors.white,
+                child: Icon(Icons.person_search_rounded,
+                    color: HabitarColors.deepGreen),
+              ),
+              child: FilledButton(
+                onPressed: () => context.go('/profiles'),
+                child: const Text('Elegir perfil'),
+              ),
+            )
+          else
+            FutureBuilder<List<_RoutineView>>(
+              future: _future,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState != ConnectionState.done) {
+                  return const Padding(
+                    padding: EdgeInsets.all(24),
+                    child: CircularProgressIndicator(),
+                  );
+                }
+                if (snapshot.hasError) {
+                  return HabitarConversationCard(
+                    title: 'No pudimos cargar las rutinas',
+                    body:
+                        'Revisá la conexión e intentá nuevamente en un momento.',
+                    color: HabitarColors.surfaceWarm,
+                    leading: const CircleAvatar(
+                      backgroundColor: Colors.white,
+                      child: Icon(Icons.error_outline_rounded,
+                          color: HabitarColors.deepGreen),
+                    ),
+                    child: OutlinedButton(
+                      onPressed: _refresh,
+                      child: const Text('Reintentar'),
+                    ),
+                  );
+                }
+                final routines = snapshot.data ?? const [];
+                if (routines.isEmpty) {
+                  return HabitarConversationCard(
+                    title: 'Todavía no hay rutinas',
+                    body:
+                        'Creá una rutina con horario y pasos claros para que aparezca acá.',
+                    color: HabitarColors.surfaceMist,
+                    leading: const CircleAvatar(
+                      backgroundColor: Colors.white,
+                      child: Icon(Icons.add_task_rounded,
+                          color: HabitarColors.deepGreen),
+                    ),
+                    child: FilledButton.icon(
+                      onPressed: () => context.go('/routine/create'),
+                      icon: const Icon(Icons.add_rounded),
+                      label: const Text('Nueva rutina'),
+                    ),
+                  );
+                }
+                return Column(
+                  children: [
+                    for (final view in routines) ...[
+                      _RoutineTile(
+                        view: view,
+                        onEdit: () => context.go('/routine/create'),
+                        onPause: () => _setStatus(
+                          view.routine,
+                          view.routine.metadata.status == EntityStatus.paused
+                              ? EntityStatus.active
+                              : EntityStatus.paused,
+                        ),
+                        onDelete: () => _confirmDelete(view.routine),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+                  ],
+                );
+              },
+            ),
+          const SizedBox(height: 18),
+          const HabitarConversationCard(
+            title: 'Consejo de Habitar',
+            body:
+                'La constancia crea seguridad. Repetir las rutinas todos los días ayuda a sentir más calma.',
+            color: HabitarColors.surfaceMist,
+            leading: CircleAvatar(
+                backgroundColor: Colors.white,
+                child: Icon(Icons.favorite_border_rounded,
+                    color: HabitarColors.deepGreen)),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _ProfileSelector extends StatelessWidget {
@@ -122,20 +245,56 @@ class _ProfileSelector extends StatelessWidget {
       );
 }
 
+class _RoutineView {
+  const _RoutineView({required this.routine, required this.steps});
+  final Routine routine;
+  final List<RoutineStep> steps;
+}
+
 class _RoutineTile extends StatelessWidget {
-  const _RoutineTile(
-      {required this.icon,
-      required this.title,
-      required this.time,
-      required this.steps,
-      required this.status,
-      required this.statusColor});
-  final IconData icon;
-  final String title;
-  final String time;
-  final String steps;
-  final String status;
-  final Color statusColor;
+  const _RoutineTile({
+    required this.view,
+    required this.onEdit,
+    required this.onPause,
+    required this.onDelete,
+  });
+
+  final _RoutineView view;
+  final VoidCallback onEdit;
+  final VoidCallback onPause;
+  final VoidCallback onDelete;
+
+  IconData get _icon {
+    final title = view.routine.title.toLowerCase();
+    if (title.contains('noche') || title.contains('dorm')) {
+      return Icons.nightlight_round;
+    }
+    if (title.contains('escuela') || title.contains('mochila')) {
+      return Icons.backpack_outlined;
+    }
+    if (title.contains('mañana') || title.contains('despert')) {
+      return Icons.wb_sunny_outlined;
+    }
+    return Icons.route_rounded;
+  }
+
+  String get _time => view.routine.scheduledTimeLabel ?? 'Sin horario';
+
+  String get _status {
+    return switch (view.routine.metadata.status) {
+      EntityStatus.paused => 'Pausada',
+      EntityStatus.archived => 'Archivada',
+      _ => view.routine.hasSchedule ? 'Programada' : 'Activa',
+    };
+  }
+
+  Color get _statusColor {
+    return switch (view.routine.metadata.status) {
+      EntityStatus.paused => HabitarColors.surfaceWarm,
+      EntityStatus.archived => const Color(0xFFEAF0F8),
+      _ => HabitarColors.surfaceMist,
+    };
+  }
 
   @override
   Widget build(BuildContext context) => HabitarCard(
@@ -147,36 +306,48 @@ class _RoutineTile extends StatelessWidget {
               decoration: BoxDecoration(
                   color: HabitarColors.surfaceWarm,
                   borderRadius: BorderRadius.circular(18)),
-              child: Icon(icon, color: HabitarColors.deepGreen, size: 34),
+              child: Icon(_icon, color: HabitarColors.deepGreen, size: 34),
             ),
             const SizedBox(width: 16),
             Expanded(
                 child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                  Text(title, style: Theme.of(context).textTheme.titleLarge),
+                  Text(view.routine.title,
+                      style: Theme.of(context).textTheme.titleLarge),
                   const SizedBox(height: 6),
                   Wrap(spacing: 12, children: [
-                    _MiniMeta(icon: Icons.schedule_rounded, label: time),
+                    _MiniMeta(icon: Icons.schedule_rounded, label: _time),
                     _MiniMeta(
-                        icon: Icons.format_list_bulleted_rounded, label: steps),
+                      icon: Icons.format_list_bulleted_rounded,
+                      label: '${view.steps.length} pasos',
+                    ),
                   ]),
                 ])),
             HabitarPill(
-                label: status,
+                label: _status,
                 icon: Icons.check_circle_rounded,
-                color: statusColor),
+                color: _statusColor),
           ]),
           const Divider(height: 28, color: HabitarColors.line),
-          Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: const [
-                _TileAction(icon: Icons.edit_outlined, label: 'Editar'),
-                _TileAction(
-                    icon: Icons.content_copy_rounded, label: 'Duplicar'),
-                _TileAction(
-                    icon: Icons.pause_circle_outline_rounded, label: 'Pausar'),
-              ]),
+          Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
+            _TileAction(
+                icon: Icons.edit_outlined, label: 'Editar', onTap: onEdit),
+            _TileAction(
+              icon: view.routine.metadata.status == EntityStatus.paused
+                  ? Icons.play_circle_outline_rounded
+                  : Icons.pause_circle_outline_rounded,
+              label: view.routine.metadata.status == EntityStatus.paused
+                  ? 'Activar'
+                  : 'Pausar',
+              onTap: onPause,
+            ),
+            _TileAction(
+              icon: Icons.delete_outline_rounded,
+              label: 'Eliminar',
+              onTap: onDelete,
+            ),
+          ]),
         ]),
       );
 }
@@ -195,12 +366,27 @@ class _MiniMeta extends StatelessWidget {
 }
 
 class _TileAction extends StatelessWidget {
-  const _TileAction({required this.icon, required this.label});
+  const _TileAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
   final IconData icon;
   final String label;
+  final VoidCallback onTap;
   @override
-  Widget build(BuildContext context) => Row(
-      children: [Icon(icon, size: 20), const SizedBox(width: 6), Text(label)]);
+  Widget build(BuildContext context) => InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          child: Row(children: [
+            Icon(icon, size: 20),
+            const SizedBox(width: 6),
+            Text(label),
+          ]),
+        ),
+      );
 }
 
 class _ProgressSection extends StatelessWidget {

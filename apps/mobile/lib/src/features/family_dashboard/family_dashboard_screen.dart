@@ -62,7 +62,7 @@ class FamilyDashboardScreen extends ConsumerWidget {
                     PopupMenuItem(
                         value: 'settings', child: Text('Configuración')),
                     PopupMenuItem(
-                        value: 'logout', child: Text('Cerrar ses?ón')),
+                        value: 'logout', child: Text('Cerrar sesión')),
                   ],
                 ),
               ],
@@ -252,6 +252,8 @@ class FamilyDashboardScreen extends ConsumerWidget {
     await ref.read(sessionServiceProvider).signOut();
     ref.read(currentFamilyIdProvider.notifier).state = null;
     ref.read(currentProfileIdProvider.notifier).state = null;
+    ref.read(currentProfileKindProvider.notifier).state = null;
+    ref.read(currentRoutineSessionIdProvider.notifier).state = null;
     ref.invalidate(appRestoreProvider);
     if (context.mounted) context.go('/onboarding');
   }

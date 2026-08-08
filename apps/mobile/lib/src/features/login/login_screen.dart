@@ -15,8 +15,8 @@ class LoginScreen extends ConsumerStatefulWidget {
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController(text: 'adulto@example.com');
-  final _passwordController = TextEditingController(text: 'Cambiar123');
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
   var _isSubmitting = false;
   String? _error;
 
@@ -182,8 +182,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   String _loginErrorMessage(Object error) {
     final message = error.toString().toLowerCase();
     if (message.contains('not found') || message.contains('family')) {
-      return 'Iniciamos ses?ón, pero tuvimos un problema al cargar tu espacio familiar. Intentá nuevamente.';
+      return 'Iniciamos sesión, pero tuvimos un problema al cargar tu espacio familiar. Intentá nuevamente.';
     }
-    return 'No pudimos iniciar ses?ón. Revisá tu correo y contraseña.';
+    return 'No pudimos iniciar sesión. Revisá tu correo y contraseña.';
   }
 }

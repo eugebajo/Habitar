@@ -17,10 +17,10 @@ class AdultRegistrationScreen extends ConsumerStatefulWidget {
 class _AdultRegistrationScreenState
     extends ConsumerState<AdultRegistrationScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController(text: 'Adulto cuidador');
-  final _emailController = TextEditingController(text: 'adulto@example.com');
-  final _passwordController = TextEditingController(text: 'Cambiar123');
-  final _familyController = TextEditingController(text: 'Mi familia');
+  final _nameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _familyController = TextEditingController();
   var _isSubmitting = false;
   String? _error;
 

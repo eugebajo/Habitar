@@ -106,6 +106,8 @@ abstract interface class RoutineRepository {
   Future<List<RoutineStep>> stepsForRoutine(String routineId);
 
   Future<List<Routine>> routinesForProfile(String profileId);
+
+  Future<Routine> updateRoutineStatus(String routineId, EntityStatus status);
 }
 
 abstract interface class RoutineSessionRepository {

@@ -12,16 +12,24 @@ Future<List<Override>> buildProductionOverrides() async {
   final store = BrowserLocalStore('habitar');
   final supabaseConfig = SupabaseConfig.maybeFromEnvironment();
 
-  final authRepository = supabaseConfig == null
+  final supabaseClient =
+      supabaseConfig == null ? null : await _initializeSupabase(supabaseConfig);
+  final authRepository = supabaseClient == null
       ? LocalAuthRepository(store)
-      : await _buildSupabaseAuthRepository(supabaseConfig);
+      : SupabaseAuthRepository(FlutterSupabaseAuthGateway(supabaseClient));
 
   return [
     localStoreProvider.overrideWithValue(store),
     authRepositoryProvider.overrideWithValue(authRepository),
-    familyRepositoryProvider.overrideWithValue(LocalFamilyRepository(store)),
-    profileRepositoryProvider.overrideWithValue(LocalProfileRepository(store)),
-    routineRepositoryProvider.overrideWithValue(LocalRoutineRepository(store)),
+    familyRepositoryProvider.overrideWithValue(supabaseClient == null
+        ? LocalFamilyRepository(store)
+        : SupabaseFamilyRepository(supabaseClient)),
+    profileRepositoryProvider.overrideWithValue(supabaseClient == null
+        ? LocalProfileRepository(store)
+        : SupabaseProfileRepository(supabaseClient)),
+    routineRepositoryProvider.overrideWithValue(supabaseClient == null
+        ? LocalRoutineRepository(store)
+        : SupabaseRoutineRepository(supabaseClient)),
     adultProfileRepositoryProvider
         .overrideWithValue(LocalAdultProfileRepository(store)),
     routineSessionRepositoryProvider
@@ -44,11 +52,9 @@ Future<List<Override>> buildProductionOverrides() async {
   ];
 }
 
-Future<SupabaseAuthRepository> _buildSupabaseAuthRepository(
-    SupabaseConfig config) async {
+Future<SupabaseClient> _initializeSupabase(SupabaseConfig config) async {
   await Supabase.initialize(url: config.url, publishableKey: config.anonKey);
-  return SupabaseAuthRepository(
-      FlutterSupabaseAuthGateway(Supabase.instance.client));
+  return Supabase.instance.client;
 }
 
 class BrowserLocalStore implements LocalStore {

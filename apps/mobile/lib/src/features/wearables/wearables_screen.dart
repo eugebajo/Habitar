@@ -275,7 +275,7 @@ class _CapabilityCard extends StatelessWidget {
     return HabitarConversationCard(
       title: 'Módulos nativos preparados',
       body:
-          'Acciones rápidas: ${capabilities.quickActions.map((action) => action.name).join(', ')}. H?ptica: ${capabilities.supportsHaptics ? 'sí' : 'no'}.',
+          'Acciones rápidas: ${capabilities.quickActions.map((action) => action.name).join(', ')}. Háptica: ${capabilities.supportsHaptics ? 'sí' : 'no'}.',
       color: HabitarColors.card,
     );
   }

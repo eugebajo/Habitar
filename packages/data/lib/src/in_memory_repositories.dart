@@ -236,17 +236,67 @@ class InMemoryRoutineRepository implements RoutineRepository {
   @override
   Future<List<Routine>> routinesForProfile(String profileId) async {
     return _routines
-        .where((routine) => routine.profileId == profileId)
+        .where((routine) =>
+            routine.profileId == profileId &&
+            routine.metadata.status != EntityStatus.deleted)
         .toList(growable: false);
   }
 
   @override
+  Future<Routine> updateRoutineStatus(
+      String routineId, EntityStatus status) async {
+    final index =
+        _routines.indexWhere((routine) => routine.metadata.id == routineId);
+    if (index < 0) {
+      throw StateError('Routine not found: $routineId');
+    }
+    final updated = _routineWithStatus(_routines[index], status);
+    _routines[index] = updated;
+    return updated;
+  }
+
+  @override
   Future<List<RoutineStep>> stepsForRoutine(String routineId) async {
-    final steps = _steps.where((step) => step.routineId == routineId).toList();
+    final steps = _steps
+        .where((step) =>
+            step.routineId == routineId &&
+            step.metadata.status != EntityStatus.deleted)
+        .toList();
     steps.sort((a, b) => a.order.compareTo(b.order));
     return steps;
   }
 }
+
+Routine _routineWithStatus(Routine routine, EntityStatus status) => Routine(
+      metadata: EntityMetadata(
+        id: routine.metadata.id,
+        createdAt: routine.metadata.createdAt,
+        updatedAt: DateTime.now(),
+        ownerId: routine.metadata.ownerId,
+        status: status,
+        accessRules: routine.metadata.accessRules,
+      ),
+      profileId: routine.profileId,
+      title: routine.title,
+      stepIds: routine.stepIds,
+      weekdays: routine.weekdays,
+      scheduledHour: routine.scheduledHour,
+      scheduledMinute: routine.scheduledMinute,
+      estimatedDurationMinutes: routine.estimatedDurationMinutes,
+      leadReminderMinutes: routine.leadReminderMinutes,
+      repeatPolicy: routine.repeatPolicy,
+      responsibleAdultProfileId: routine.responsibleAdultProfileId,
+      contextLabel: routine.contextLabel,
+      minimumVersion: routine.minimumVersion,
+      benefitDescription: routine.benefitDescription,
+      maxReminderCount: routine.maxReminderCount,
+      reminderIntervalMinutes: routine.reminderIntervalMinutes,
+      vibrationEnabled: routine.vibrationEnabled,
+      soundEnabled: routine.soundEnabled,
+      silentNotification: routine.silentNotification,
+      canPostpone: routine.canPostpone,
+      canRequestHelp: routine.canRequestHelp,
+    );
 
 class InMemoryRoutineSessionRepository implements RoutineSessionRepository {
   final Map<String, RoutineSession> _sessions = {};

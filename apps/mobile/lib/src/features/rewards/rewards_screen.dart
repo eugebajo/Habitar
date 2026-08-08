@@ -87,7 +87,7 @@ class _RewardsScreenState extends ConsumerState<RewardsScreen> {
                         icon: Icons.celebration_outlined,
                         title: 'Aún no hay beneficios',
                         message:
-                            'Podés acreditar minutos por empezar, pedir ayuda o completar una vers?ón posible.',
+                            'Podés acreditar minutos por empezar, pedir ayuda o completar una versión posible.',
                       )
                     else
                       for (final benefit in summary.benefits)
@@ -114,7 +114,7 @@ class _RewardsScreenState extends ConsumerState<RewardsScreen> {
   }
 
   Future<void> _grant(String profileId, int minutes,
-      {String action = 'vers?ón mínima'}) async {
+      {String action = 'versión mínima'}) async {
     final key =
         'manual-$profileId-$action-${DateTime.now().toIso8601String().substring(0, 10)}';
     await ref.read(timeBankServiceProvider).grantTime(

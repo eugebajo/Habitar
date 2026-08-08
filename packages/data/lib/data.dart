@@ -8,3 +8,4 @@ export 'src/local_store.dart';
 export 'src/persistence_migration.dart';
 export 'src/supabase_config.dart';
 export 'src/supabase_auth_repository.dart';
+export 'src/supabase_repositories.dart';

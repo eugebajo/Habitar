@@ -41,7 +41,7 @@ class FlutterSupabaseAuthGateway implements SupabaseAuthGateway {
     );
     final user = response.user;
     if (user == null) {
-      throw StateError('No pudimos iniciar sesi?n.');
+      throw StateError('No pudimos iniciar sesión.');
     }
     return _mapUser(user);
   }
