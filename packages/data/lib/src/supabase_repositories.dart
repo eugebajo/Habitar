@@ -91,31 +91,12 @@ class SupabaseFamilyRepository implements FamilyRepository {
   Future<FamilyMember> acceptInvitation({
     required String invitationId,
     required String userId,
+    required String userEmail,
   }) async {
-    final invitationRow = await client
-        .from('adult_invitations')
-        .select()
-        .eq('id', invitationId)
-        .maybeSingle();
-    if (invitationRow == null) {
-      throw StateError('Invitation not found: $invitationId');
-    }
-    final invitation = _adultInvitationFromRow(invitationRow);
-    final memberRow = await client
-        .from('family_members')
-        .insert({
-          'family_id': invitation.familyId,
-          'user_id': userId,
-          'role': invitation.role.name,
-        })
-        .select()
-        .single();
-    await client.from('adult_invitations').update({
-      'status': AdultInvitationStatus.accepted.name,
-      'accepted_by_user_id': userId,
-      'updated_at': DateTime.now().toUtc().toIso8601String(),
-    }).eq('id', invitationId);
-    return _familyMemberFromRow(memberRow);
+    final row = await client.rpc('accept_family_invitation', params: {
+      'target_invitation_id': invitationId,
+    }) as Map<String, dynamic>;
+    return _familyMemberFromRow(row);
   }
 }
 
@@ -529,6 +510,7 @@ AdultInvitation _adultInvitationFromRow(Map<String, dynamic> row) {
     email: row['email'] as String,
     role: _familyMemberRole(row['role'] as String?),
     status: _adultInvitationStatus(row['status'] as String?),
+    expiresAt: DateTime.parse(row['expires_at'] as String),
     invitedByUserId: row['invited_by_user_id'] as String?,
     acceptedByUserId: row['accepted_by_user_id'] as String?,
   );

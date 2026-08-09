@@ -18,6 +18,7 @@
 - Adult team card with profile companions.
 - Family member and invitation contracts.
 - Supabase-backed family members and adult invitations.
+- Secure family invitation acceptance through Supabase RPC.
 - Weekly PDF report generation and sharing.
 - Web build support.
 
@@ -27,6 +28,7 @@
 - Rewards/time-bank entities exist, but reward UX remains MVP.
 - Wearable UI and contracts exist, but native Wear OS/watchOS bridges are not shipped.
 - Notifications are modeled and signaled, but native push/local notification polish remains pending.
+- Invitation email delivery is not implemented; the app must describe this as an invitation being created, not as an email sent.
 
 ## Pending after internal test
 
@@ -34,5 +36,5 @@
 - Store production release after closed testing.
 - Stronger analytics and crash reporting.
 - Full professional role permissions.
-- Real invitation acceptance flow from email/deep link.
+- Polished invitation acceptance from email/deep link.
 - More complete progress history and trend charts.

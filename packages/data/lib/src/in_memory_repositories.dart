@@ -104,6 +104,16 @@ class InMemoryFamilyRepository implements FamilyRepository {
     required FamilyMemberRole role,
     required String invitedByUserId,
   }) async {
+    if (role == FamilyMemberRole.owner) {
+      throw StateError('Owner role cannot be invited.');
+    }
+    final inviter = _members.where((member) =>
+        member.familyId == familyId && member.userId == invitedByUserId);
+    if (inviter.isEmpty ||
+        !const {FamilyMemberRole.owner, FamilyMemberRole.parent}
+            .contains(inviter.first.role)) {
+      throw StateError('User cannot create family invitations.');
+    }
     final now = DateTime.now();
     final invitation = AdultInvitation(
       metadata: EntityMetadata(
@@ -115,6 +125,7 @@ class InMemoryFamilyRepository implements FamilyRepository {
       email: email.trim().toLowerCase(),
       role: role,
       status: AdultInvitationStatus.pending,
+      expiresAt: now.add(const Duration(days: 14)),
       invitedByUserId: invitedByUserId,
     );
     _invitations.add(invitation);
@@ -132,6 +143,7 @@ class InMemoryFamilyRepository implements FamilyRepository {
   Future<FamilyMember> acceptInvitation({
     required String invitationId,
     required String userId,
+    required String userEmail,
   }) async {
     final index = _invitations
         .indexWhere((invitation) => invitation.metadata.id == invitationId);
@@ -139,7 +151,23 @@ class InMemoryFamilyRepository implements FamilyRepository {
       throw StateError('Invitation not found: $invitationId');
     }
     final invitation = _invitations[index];
+    final normalizedEmail = userEmail.trim().toLowerCase();
+    if (invitation.email != normalizedEmail) {
+      throw StateError('Invitation does not belong to $normalizedEmail.');
+    }
     final now = DateTime.now();
+    final existingMembers = _members.where((member) =>
+        member.familyId == invitation.familyId && member.userId == userId);
+    if (existingMembers.isNotEmpty) {
+      _invitations[index] = _acceptedInvitation(invitation, userId, now);
+      return existingMembers.first;
+    }
+    if (invitation.expiresAt.isBefore(now)) {
+      throw StateError('Invitation has expired.');
+    }
+    if (invitation.status != AdultInvitationStatus.pending) {
+      throw StateError('Invitation is not pending.');
+    }
     final member = FamilyMember(
       metadata: EntityMetadata(
           id: _uuid.v4(), createdAt: now, updatedAt: now, ownerId: userId),
@@ -149,7 +177,16 @@ class InMemoryFamilyRepository implements FamilyRepository {
       email: invitation.email,
     );
     _members.add(member);
-    _invitations[index] = AdultInvitation(
+    _invitations[index] = _acceptedInvitation(invitation, userId, now);
+    return member;
+  }
+
+  AdultInvitation _acceptedInvitation(
+    AdultInvitation invitation,
+    String userId,
+    DateTime now,
+  ) {
+    return AdultInvitation(
       metadata: EntityMetadata(
         id: invitation.metadata.id,
         createdAt: invitation.metadata.createdAt,
@@ -160,10 +197,10 @@ class InMemoryFamilyRepository implements FamilyRepository {
       email: invitation.email,
       role: invitation.role,
       status: AdultInvitationStatus.accepted,
+      expiresAt: invitation.expiresAt,
       invitedByUserId: invitation.invitedByUserId,
       acceptedByUserId: userId,
     );
-    return member;
   }
 }
 

@@ -269,4 +269,245 @@ void main() {
     await repository.markPushed(item.id);
     expect(await repository.pending(), isEmpty);
   });
+
+  test('accepts parent, caregiver and viewer family invitations', () async {
+    final directory =
+        await Directory.systemTemp.createTemp('habitar_local_store_test_');
+    addTearDown(() => directory.delete(recursive: true));
+    final store = FileLocalStore(File('${directory.path}/habitar.json'));
+    final auth = LocalAuthRepository(store);
+    final families = LocalFamilyRepository(store);
+
+    final owner = await auth.registerAdult(
+      displayName: 'Owner',
+      email: 'owner@example.com',
+      password: 'local',
+    );
+    final family = await families.createFamily(
+      ownerUserId: owner.metadata.id,
+      name: 'Casa',
+    );
+
+    for (final role in [
+      FamilyMemberRole.parent,
+      FamilyMemberRole.caregiver,
+      FamilyMemberRole.viewer,
+    ]) {
+      final invitee = await auth.registerAdult(
+        displayName: role.name,
+        email: '${role.name}@example.com',
+        password: 'local',
+      );
+      final invitation = await families.createAdultInvitation(
+        familyId: family.metadata.id,
+        email: invitee.email,
+        role: role,
+        invitedByUserId: owner.metadata.id,
+      );
+
+      final member = await families.acceptInvitation(
+        invitationId: invitation.metadata.id,
+        userId: invitee.metadata.id,
+        userEmail: invitee.email,
+      );
+
+      expect(member.familyId, family.metadata.id);
+      expect(member.userId, invitee.metadata.id);
+      expect(member.role, role);
+    }
+
+    final members = await families.membersForFamily(family.metadata.id);
+    expect(members, hasLength(4));
+  });
+
+  test('rejects invitations for a different email', () async {
+    final directory =
+        await Directory.systemTemp.createTemp('habitar_local_store_test_');
+    addTearDown(() => directory.delete(recursive: true));
+    final store = FileLocalStore(File('${directory.path}/habitar.json'));
+    final auth = LocalAuthRepository(store);
+    final families = LocalFamilyRepository(store);
+
+    final owner = await auth.registerAdult(
+      displayName: 'Owner',
+      email: 'owner@example.com',
+      password: 'local',
+    );
+    final family = await families.createFamily(
+      ownerUserId: owner.metadata.id,
+      name: 'Casa',
+    );
+    final invitation = await families.createAdultInvitation(
+      familyId: family.metadata.id,
+      email: 'invited@example.com',
+      role: FamilyMemberRole.parent,
+      invitedByUserId: owner.metadata.id,
+    );
+    final other = await auth.registerAdult(
+      displayName: 'Other',
+      email: 'other@example.com',
+      password: 'local',
+    );
+
+    expect(
+      () => families.acceptInvitation(
+        invitationId: invitation.metadata.id,
+        userId: other.metadata.id,
+        userEmail: other.email,
+      ),
+      throwsStateError,
+    );
+  });
+
+  test('rejects expired invitations', () async {
+    final directory =
+        await Directory.systemTemp.createTemp('habitar_local_store_test_');
+    addTearDown(() => directory.delete(recursive: true));
+    final store = FileLocalStore(File('${directory.path}/habitar.json'));
+    final auth = LocalAuthRepository(store);
+    final families = LocalFamilyRepository(store);
+
+    final owner = await auth.registerAdult(
+      displayName: 'Owner',
+      email: 'owner@example.com',
+      password: 'local',
+    );
+    final family = await families.createFamily(
+      ownerUserId: owner.metadata.id,
+      name: 'Casa',
+    );
+    final invited = await auth.registerAdult(
+      displayName: 'Invited',
+      email: 'invited@example.com',
+      password: 'local',
+    );
+    final invitation = await families.createAdultInvitation(
+      familyId: family.metadata.id,
+      email: invited.email,
+      role: FamilyMemberRole.caregiver,
+      invitedByUserId: owner.metadata.id,
+    );
+    final record = await store.get(
+      LocalStoreCollections.adultInvitations,
+      invitation.metadata.id,
+    );
+    await store.put(LocalStoreCollections.adultInvitations,
+        invitation.metadata.id, {
+      ...record!,
+      'expires_at': DateTime.utc(2020, 1, 1).toIso8601String(),
+    });
+
+    expect(
+      () => families.acceptInvitation(
+        invitationId: invitation.metadata.id,
+        userId: invited.metadata.id,
+        userEmail: invited.email,
+      ),
+      throwsStateError,
+    );
+  });
+
+  test('does not duplicate an accepted invitation or existing member', () async {
+    final directory =
+        await Directory.systemTemp.createTemp('habitar_local_store_test_');
+    addTearDown(() => directory.delete(recursive: true));
+    final store = FileLocalStore(File('${directory.path}/habitar.json'));
+    final auth = LocalAuthRepository(store);
+    final families = LocalFamilyRepository(store);
+
+    final owner = await auth.registerAdult(
+      displayName: 'Owner',
+      email: 'owner@example.com',
+      password: 'local',
+    );
+    final family = await families.createFamily(
+      ownerUserId: owner.metadata.id,
+      name: 'Casa',
+    );
+    final parent = await auth.registerAdult(
+      displayName: 'Parent',
+      email: 'parent@example.com',
+      password: 'local',
+    );
+    final invitation = await families.createAdultInvitation(
+      familyId: family.metadata.id,
+      email: parent.email,
+      role: FamilyMemberRole.parent,
+      invitedByUserId: owner.metadata.id,
+    );
+
+    final first = await families.acceptInvitation(
+      invitationId: invitation.metadata.id,
+      userId: parent.metadata.id,
+      userEmail: parent.email,
+    );
+    final second = await families.acceptInvitation(
+      invitationId: invitation.metadata.id,
+      userId: parent.metadata.id,
+      userEmail: parent.email,
+    );
+
+    expect(second.metadata.id, first.metadata.id);
+    expect(await families.membersForFamily(family.metadata.id), hasLength(2));
+
+    final ownerInvitation = await families.createAdultInvitation(
+      familyId: family.metadata.id,
+      email: owner.email,
+      role: FamilyMemberRole.caregiver,
+      invitedByUserId: owner.metadata.id,
+    );
+    final ownerMember = await families.acceptInvitation(
+      invitationId: ownerInvitation.metadata.id,
+      userId: owner.metadata.id,
+      userEmail: owner.email,
+    );
+
+    expect(ownerMember.role, FamilyMemberRole.owner);
+    expect(await families.membersForFamily(family.metadata.id), hasLength(2));
+  });
+
+  test('rejects viewer administrative actions', () async {
+    final directory =
+        await Directory.systemTemp.createTemp('habitar_local_store_test_');
+    addTearDown(() => directory.delete(recursive: true));
+    final store = FileLocalStore(File('${directory.path}/habitar.json'));
+    final auth = LocalAuthRepository(store);
+    final families = LocalFamilyRepository(store);
+
+    final owner = await auth.registerAdult(
+      displayName: 'Owner',
+      email: 'owner@example.com',
+      password: 'local',
+    );
+    final family = await families.createFamily(
+      ownerUserId: owner.metadata.id,
+      name: 'Casa',
+    );
+    final viewer = await auth.registerAdult(
+      displayName: 'Viewer',
+      email: 'viewer@example.com',
+      password: 'local',
+    );
+    final viewerInvitation = await families.createAdultInvitation(
+      familyId: family.metadata.id,
+      email: viewer.email,
+      role: FamilyMemberRole.viewer,
+      invitedByUserId: owner.metadata.id,
+    );
+    await families.acceptInvitation(
+      invitationId: viewerInvitation.metadata.id,
+      userId: viewer.metadata.id,
+      userEmail: viewer.email,
+    );
+
+    expect(
+      () => families.createAdultInvitation(
+        familyId: family.metadata.id,
+        email: 'another@example.com',
+        role: FamilyMemberRole.caregiver,
+        invitedByUserId: viewer.metadata.id,
+      ),
+      throwsStateError,
+    );
+  });
 }

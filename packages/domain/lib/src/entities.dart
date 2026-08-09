@@ -120,6 +120,7 @@ class AdultInvitation extends AppEntity {
     required this.email,
     required this.role,
     required this.status,
+    required this.expiresAt,
     this.invitedByUserId,
     this.acceptedByUserId,
   });
@@ -128,6 +129,7 @@ class AdultInvitation extends AppEntity {
   final String email;
   final FamilyMemberRole role;
   final AdultInvitationStatus status;
+  final DateTime expiresAt;
   final String? invitedByUserId;
   final String? acceptedByUserId;
 }

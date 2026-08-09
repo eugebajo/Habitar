@@ -15,4 +15,10 @@ The app must keep children and teens in separated experiences. Adults create and
 
 Data access is always routed through application repository contracts. UI screens must not call Supabase directly.
 
+Family sharing is modeled as `adult user -> family_members -> family -> child profile`. Several adults can belong to the same family and see the same child profile without duplication. Roles are enforced in the database through RLS and repository-level validation for local stores.
+
+Adult invitation acceptance is intentionally server-side. Supabase uses the `accept_family_invitation` RPC so the authenticated email, target invitation, member creation and invitation status update are validated in one transaction.
+
+Routine "adjust only today" is stored as `routine_overrides`; it does not mutate the recurring routine. Overrides are scoped to the profile family and manageable only by authorized adult roles.
+
 Release rule: before generating a new AAB, run `flutter analyze`, `flutter test`, web build and Android appbundle build from the repository root.

@@ -79,6 +79,7 @@ abstract interface class FamilyRepository {
   Future<FamilyMember> acceptInvitation({
     required String invitationId,
     required String userId,
+    required String userEmail,
   });
 }
 

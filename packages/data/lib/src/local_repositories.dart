@@ -134,6 +134,16 @@ class LocalFamilyRepository implements FamilyRepository {
     required FamilyMemberRole role,
     required String invitedByUserId,
   }) async {
+    if (role == FamilyMemberRole.owner) {
+      throw StateError('Owner role cannot be invited.');
+    }
+    final inviter = (await membersForFamily(familyId))
+        .where((member) => member.userId == invitedByUserId);
+    if (inviter.isEmpty ||
+        !const {FamilyMemberRole.owner, FamilyMemberRole.parent}
+            .contains(inviter.first.role)) {
+      throw StateError('User cannot create family invitations.');
+    }
     final now = DateTime.now();
     final invitation = AdultInvitation(
       metadata: EntityMetadata(
@@ -145,6 +155,7 @@ class LocalFamilyRepository implements FamilyRepository {
       email: email.trim().toLowerCase(),
       role: role,
       status: AdultInvitationStatus.pending,
+      expiresAt: now.add(const Duration(days: 14)),
       invitedByUserId: invitedByUserId,
     );
     await store.put(LocalStoreCollections.adultInvitations,
@@ -165,6 +176,7 @@ class LocalFamilyRepository implements FamilyRepository {
   Future<FamilyMember> acceptInvitation({
     required String invitationId,
     required String userId,
+    required String userEmail,
   }) async {
     final record =
         await store.get(LocalStoreCollections.adultInvitations, invitationId);
@@ -172,7 +184,30 @@ class LocalFamilyRepository implements FamilyRepository {
       throw StateError('Invitation not found: $invitationId');
     }
     final invitation = _adultInvitationFromJson(record);
+    final normalizedEmail = userEmail.trim().toLowerCase();
+    if (invitation.email != normalizedEmail) {
+      throw StateError('Invitation does not belong to $normalizedEmail.');
+    }
     final now = DateTime.now();
+    final existingMembers = (await membersForFamily(invitation.familyId))
+        .where((member) => member.userId == userId);
+    if (existingMembers.isNotEmpty) {
+      await store.put(
+          LocalStoreCollections.adultInvitations,
+          invitationId,
+          _adultInvitationToJson(_acceptedInvitation(
+            invitation,
+            userId,
+            now,
+          )));
+      return existingMembers.first;
+    }
+    if (invitation.expiresAt.isBefore(now)) {
+      throw StateError('Invitation has expired.');
+    }
+    if (invitation.status != AdultInvitationStatus.pending) {
+      throw StateError('Invitation is not pending.');
+    }
     final member = FamilyMember(
       metadata: EntityMetadata(
           id: _uuid.v4(), createdAt: now, updatedAt: now, ownerId: userId),
@@ -183,7 +218,18 @@ class LocalFamilyRepository implements FamilyRepository {
     );
     await store.put(LocalStoreCollections.familyMembers, member.metadata.id,
         _familyMemberToJson(member));
-    final accepted = AdultInvitation(
+    final accepted = _acceptedInvitation(invitation, userId, now);
+    await store.put(LocalStoreCollections.adultInvitations, invitationId,
+        _adultInvitationToJson(accepted));
+    return member;
+  }
+
+  AdultInvitation _acceptedInvitation(
+    AdultInvitation invitation,
+    String userId,
+    DateTime now,
+  ) {
+    return AdultInvitation(
       metadata: EntityMetadata(
         id: invitation.metadata.id,
         createdAt: invitation.metadata.createdAt,
@@ -194,12 +240,10 @@ class LocalFamilyRepository implements FamilyRepository {
       email: invitation.email,
       role: invitation.role,
       status: AdultInvitationStatus.accepted,
+      expiresAt: invitation.expiresAt,
       invitedByUserId: invitation.invitedByUserId,
       acceptedByUserId: userId,
     );
-    await store.put(LocalStoreCollections.adultInvitations, invitationId,
-        _adultInvitationToJson(accepted));
-    return member;
   }
 }
 
@@ -955,6 +999,7 @@ Map<String, Object?> _adultInvitationToJson(AdultInvitation invitation) => {
       'email': invitation.email,
       'role': invitation.role.name,
       'status': invitation.status.name,
+      'expires_at': invitation.expiresAt.toIso8601String(),
       'invited_by_user_id': invitation.invitedByUserId,
       'accepted_by_user_id': invitation.acceptedByUserId,
     };
@@ -968,6 +1013,8 @@ AdultInvitation _adultInvitationFromJson(Map<String, Object?> json) =>
           json['role'] as String? ?? FamilyMemberRole.viewer.name),
       status: _byName(AdultInvitationStatus.values,
           json['status'] as String? ?? AdultInvitationStatus.pending.name),
+      expiresAt: DateTime.parse(json['expires_at'] as String? ??
+          DateTime.now().add(const Duration(days: 14)).toIso8601String()),
       invitedByUserId: json['invited_by_user_id'] as String?,
       acceptedByUserId: json['accepted_by_user_id'] as String?,
     );
