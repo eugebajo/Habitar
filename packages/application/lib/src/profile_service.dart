@@ -1,5 +1,6 @@
 import 'package:habitar_domain/domain.dart';
 import 'package:habitar_habit_engine/habit_engine.dart';
+import 'package:habitar_routine_engine/routine_engine.dart';
 
 import 'repositories.dart';
 
@@ -77,9 +78,18 @@ class ProfileService {
     required ProfileKind kind,
   }) async {
     final routines = await routineRepository.routinesForProfile(profileId);
-    final activeSession =
+    final latestSession =
         await sessionRepository.activeSessionForProfile(profileId);
+    final now = DateTime.now();
+    final activeSession =
+        latestSession != null && _sameDay(latestSession.startedAt, now)
+            ? latestSession
+            : null;
     final habits = await habitRepository.habitsForProfile(profileId);
+    final firstRoutine = routines.isEmpty ? null : routines.first;
+    final firstRoutineSteps = firstRoutine == null
+        ? const <RoutineStep>[]
+        : await routineRepository.stepsForRoutine(firstRoutine.metadata.id);
     var habitCompletions = 0;
     var habitsWithoutProgress = 0;
     String? firstHabitTask;
@@ -99,16 +109,18 @@ class ProfileService {
       }
     }
 
+    final sessionCompleted =
+        activeSession?.status == RoutineSessionStatus.completed;
     final completedRoutineSteps = activeSession?.completedStepIds.length ?? 0;
     final skippedRoutineSteps = activeSession?.skippedStepIds.length ?? 0;
     final activeRoutinePending = activeSession == null
-        ? 0
+        ? firstRoutineSteps.length
         : activeSession.steps.length -
             completedRoutineSteps -
             skippedRoutineSteps;
     final pendingTasks = activeRoutinePending + habitsWithoutProgress;
     final totalTrackable = activeSession == null
-        ? habits.length
+        ? firstRoutineSteps.length + habits.length
         : activeSession.steps.length + habits.length;
     final completedGoals = completedRoutineSteps + habitCompletions;
     final progressFraction = totalTrackable == 0
@@ -125,8 +137,14 @@ class ProfileService {
       completedGoals: completedGoals,
       pendingTasks: pendingTasks,
       progressFraction: progressFraction,
-      activeRoutineTitle: activeSession?.routine.title,
-      nextTaskTitle: activeSession?.activeStep?.title ?? firstHabitTask,
+      activeRoutineTitle: activeSession?.routine.title ?? firstRoutine?.title,
+      nextTaskTitle: sessionCompleted
+          ? null
+          : activeSession?.activeStep?.title ??
+              (firstRoutineSteps.isEmpty
+                  ? null
+                  : firstRoutineSteps.first.title) ??
+              firstHabitTask,
       message: _messageFor(
         completedGoals: completedGoals,
         pendingTasks: pendingTasks,
@@ -151,6 +169,12 @@ class ProfileService {
     }
     return 'Hay tareas listas para avanzar de a un paso.';
   }
+}
+
+bool _sameDay(DateTime first, DateTime second) {
+  return first.year == second.year &&
+      first.month == second.month &&
+      first.day == second.day;
 }
 
 class ProfileProgressSummary {

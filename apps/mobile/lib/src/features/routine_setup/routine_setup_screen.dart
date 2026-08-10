@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:habitar_design_system/design_system.dart';
@@ -472,12 +473,21 @@ class _RoutineSetupScreenState extends ConsumerState<RoutineSetupScreen> {
     try {
       if (_isEditing) {
         final routine = _routineFromForm(_editingRoutine!);
-        await repository.updateRoutine(
+        final saved = await repository.updateRoutine(
           routine: routine,
           stepTitles: _stepTitles(),
         );
+        final savedSteps = await repository.stepsForRoutine(saved.metadata.id);
+        if (kDebugMode) {
+          debugPrint(
+            'ROUTINE CREATED: routine_id=${saved.metadata.id} profile_id=${saved.profileId} title=${saved.title}',
+          );
+          debugPrint(
+            'ROUTINE STEPS CREATED: count=${savedSteps.length} ids=${savedSteps.map((step) => step.metadata.id).join(',')} routine_id=${saved.metadata.id}',
+          );
+        }
       } else {
-        await repository.createRoutine(
+        final saved = await repository.createRoutine(
           profileId: profileId,
           title: _titleController.text.trim(),
           stepTitles: _stepTitles(),
@@ -499,6 +509,15 @@ class _RoutineSetupScreenState extends ConsumerState<RoutineSetupScreen> {
           canPostpone: _canPostpone,
           canRequestHelp: _canRequestHelp,
         );
+        final savedSteps = await repository.stepsForRoutine(saved.metadata.id);
+        if (kDebugMode) {
+          debugPrint(
+            'ROUTINE CREATED: routine_id=${saved.metadata.id} profile_id=${saved.profileId} title=${saved.title}',
+          );
+          debugPrint(
+            'ROUTINE STEPS CREATED: count=${savedSteps.length} ids=${savedSteps.map((step) => step.metadata.id).join(',')} routine_id=${saved.metadata.id}',
+          );
+        }
       }
       if (mounted) {
         context.go('/routines');

@@ -16,6 +16,22 @@ abstract interface class SupabaseAuthGateway {
   Future<void> signOut();
 
   Future<SupabaseAuthUser?> currentUser();
+
+  Future<void> resetPasswordForEmail({
+    required String email,
+    required Uri redirectTo,
+  });
+
+  Future<void> updatePassword({required String password});
+}
+
+class EmailConfirmationRequiredException implements Exception {
+  const EmailConfirmationRequiredException(this.email);
+
+  final String email;
+
+  @override
+  String toString() => 'EmailConfirmationRequiredException($email)';
 }
 
 class SupabaseAuthUser {
@@ -69,6 +85,22 @@ class SupabaseAuthRepository implements AuthRepository {
   @override
   Future<void> signOut() {
     return gateway.signOut();
+  }
+
+  @override
+  Future<void> requestPasswordReset({
+    required String email,
+    required Uri redirectTo,
+  }) {
+    return gateway.resetPasswordForEmail(
+      email: email,
+      redirectTo: redirectTo,
+    );
+  }
+
+  @override
+  Future<void> updatePassword({required String password}) {
+    return gateway.updatePassword(password: password);
   }
 
   User _mapUser(SupabaseAuthUser user) {

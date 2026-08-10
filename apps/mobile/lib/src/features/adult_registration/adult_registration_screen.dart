@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:habitar_application/application.dart';
+import 'package:habitar_data/data.dart';
 import 'package:habitar_design_system/design_system.dart';
 
 import '../../dependencies.dart';
@@ -47,7 +48,7 @@ class _AdultRegistrationScreenState
           ),
           HabitarCompanionLayout(
             eyebrow: 'Primer paso',
-            title: 'Contame quién sostiene este espacio.',
+            title: 'Contame quien sostiene este espacio.',
             body:
                 'No necesitamos todo ahora. Solo lo suficiente para cuidar a tu familia con calma.',
             child: HabitarCard(
@@ -59,7 +60,7 @@ class _AdultRegistrationScreenState
                     TextFormField(
                       controller: _nameController,
                       decoration: const InputDecoration(
-                        labelText: '¿Cómo te llamás?',
+                        labelText: 'Como te llamas?',
                         prefixIcon: Icon(Icons.person_outline_rounded),
                       ),
                       validator: _required,
@@ -68,7 +69,7 @@ class _AdultRegistrationScreenState
                     TextFormField(
                       controller: _familyController,
                       decoration: const InputDecoration(
-                        labelText: '¿Cómo llamamos a tu familia?',
+                        labelText: 'Como llamamos a tu familia?',
                         prefixIcon: Icon(Icons.home_outlined),
                       ),
                       validator: _required,
@@ -87,7 +88,7 @@ class _AdultRegistrationScreenState
                     TextFormField(
                       controller: _passwordController,
                       decoration: const InputDecoration(
-                        labelText: 'Contraseña tranquila',
+                        labelText: 'Contrasena tranquila',
                         prefixIcon: Icon(Icons.lock_outline_rounded),
                       ),
                       obscureText: true,
@@ -96,7 +97,7 @@ class _AdultRegistrationScreenState
                     if (_error != null) ...[
                       const SizedBox(height: HabitarSpacing.md),
                       HabitarConversationCard(
-                        title: 'No pudimos crear el espacio todavía',
+                        title: _errorTitle(_error!),
                         body: _error!,
                         color: HabitarColors.surfaceWarm,
                       ),
@@ -137,7 +138,7 @@ class _AdultRegistrationScreenState
   }
 
   String? _required(String? value) {
-    if (value == null || value.trim().isEmpty) return 'Completá este dato';
+    if (value == null || value.trim().isEmpty) return 'Completa este dato';
     return null;
   }
 
@@ -159,6 +160,9 @@ class _AdultRegistrationScreenState
       ref.read(currentFamilyIdProvider.notifier).state =
           result.family.metadata.id;
       if (mounted) context.go('/profile');
+    } on EmailConfirmationRequiredException catch (error) {
+      await _savePendingBootstrap(error.email);
+      if (mounted) setState(() => _error = _registrationErrorMessage(error));
     } catch (error) {
       if (mounted) setState(() => _error = _registrationErrorMessage(error));
     } finally {
@@ -167,18 +171,45 @@ class _AdultRegistrationScreenState
   }
 
   String _registrationErrorMessage(Object error) {
+    if (error is EmailConfirmationRequiredException) {
+      return 'Te enviamos un enlace a ${error.email} para confirmar tu cuenta. Despues de confirmarla, volve a Habitar e inicia sesion para continuar.';
+    }
     final message = error.toString().toLowerCase();
     if (message.contains('already') ||
         message.contains('registered') ||
         message.contains('exists')) {
-      return 'Ese correo parece estar registrado. Tocá "Ya tengo mi espacio" e intentá entrar con la misma contraseña.';
+      return 'Ese correo parece estar registrado. Toca "Ya tengo mi espacio" e intenta entrar con la misma contrasena.';
     }
     if (message.contains('password')) {
-      return 'La contraseña no cumple los requisitos. Probá con una contraseña más larga, con letras y números.';
+      return 'La contrasena no cumple los requisitos. Proba con una contrasena mas larga, con letras y numeros.';
     }
     if (message.contains('confirm') || message.contains('email')) {
-      return 'Ese correo necesita confirmación. Revisá tu email e intentá entrar nuevamente.';
+      return 'Ese correo necesita confirmacion. Revisa tu email e intenta entrar nuevamente.';
     }
-    return 'No pudimos crear el espacio todavía. Revisá los datos e intentá nuevamente.';
+    return 'Revisa los datos e intenta nuevamente.';
+  }
+
+  String _errorTitle(String message) {
+    if (message.startsWith('Te enviamos un enlace')) {
+      return 'Revisa tu correo';
+    }
+    return 'No pudimos crear el espacio todavia';
+  }
+
+  Future<void> _savePendingBootstrap(String email) async {
+    final store = ref.read(localStoreProvider);
+    if (store == null) return;
+    final normalizedEmail = email.trim().toLowerCase();
+    await store.put(
+      LocalStoreCollections.pendingFamilyBootstrap,
+      normalizedEmail,
+      {
+        'email': normalizedEmail,
+        'display_name': _nameController.text.trim(),
+        'family_name': _familyController.text.trim(),
+        'created_at': DateTime.now().toUtc().toIso8601String(),
+        'completed': false,
+      },
+    );
   }
 }

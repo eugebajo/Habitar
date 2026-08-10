@@ -54,6 +54,10 @@ final sessionServiceProvider = Provider<SessionService>((ref) {
   return SessionService(ref.watch(authRepositoryProvider));
 });
 
+final passwordRecoveryServiceProvider = Provider<PasswordRecoveryService>((ref) {
+  return PasswordRecoveryService(ref.watch(authRepositoryProvider));
+});
+
 final adultProfileServiceProvider = Provider<AdultProfileService>((ref) {
   return AdultProfileService(
     repository: ref.watch(adultProfileRepositoryProvider),
@@ -79,6 +83,7 @@ final routineServiceProvider = Provider<RoutineService>((ref) {
   return RoutineService(
     routineRepository: ref.watch(routineRepositoryProvider),
     sessionRepository: ref.watch(routineSessionRepositoryProvider),
+    supportRepository: ref.watch(supportRequestRepositoryProvider),
   );
 });
 

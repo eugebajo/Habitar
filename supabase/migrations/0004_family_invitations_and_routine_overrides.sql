@@ -272,7 +272,7 @@ create or replace function public.accept_family_invitation(
 returns jsonb
 language plpgsql
 security definer
-set search_path = public, auth
+set search_path = ''
 as $$
 declare
   current_user_id uuid;
@@ -302,6 +302,10 @@ begin
   end if;
 
   if invitation_row.status <> 'pending' then
+    if invitation_row.status <> 'accepted' then
+      raise exception 'INVITATION_NOT_PENDING';
+    end if;
+
     select *
     into member_row
     from public.family_members
@@ -310,7 +314,11 @@ begin
     limit 1;
 
     if found then
-      return to_jsonb(member_row);
+      return jsonb_build_object(
+        'status', 'accepted',
+        'invitation_id', invitation_row.id,
+        'member', to_jsonb(member_row)
+      );
     end if;
 
     raise exception 'INVITATION_NOT_PENDING';
@@ -321,7 +329,12 @@ begin
     set status = 'expired',
         updated_at = now()
     where id = invitation_row.id;
-    raise exception 'INVITATION_EXPIRED';
+
+    return jsonb_build_object(
+      'status', 'expired',
+      'invitation_id', invitation_row.id,
+      'member', null
+    );
   end if;
 
   insert into public.family_members (family_id, user_id, role)
@@ -345,9 +358,78 @@ begin
       updated_at = now()
   where id = invitation_row.id;
 
-  return to_jsonb(member_row);
+  return jsonb_build_object(
+    'status', 'accepted',
+    'invitation_id', invitation_row.id,
+    'member', to_jsonb(member_row)
+  );
 end;
 $$;
 
+revoke all on function public.accept_family_invitation(uuid)
+  from public;
+
 grant execute on function public.accept_family_invitation(uuid)
+  to authenticated;
+
+create or replace function public.revoke_family_invitation(
+  target_invitation_id uuid
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  current_user_id uuid;
+  invitation_row public.adult_invitations%rowtype;
+begin
+  current_user_id := auth.uid();
+
+  if current_user_id is null then
+    raise exception 'AUTH_REQUIRED';
+  end if;
+
+  select *
+  into invitation_row
+  from public.adult_invitations
+  where id = target_invitation_id
+  for update;
+
+  if not found then
+    raise exception 'INVITATION_NOT_FOUND';
+  end if;
+
+  if not exists (
+    select 1
+    from public.family_members
+    where family_members.family_id = invitation_row.family_id
+    and family_members.user_id = current_user_id
+    and family_members.role in ('owner', 'parent')
+  ) then
+    raise exception 'INVITATION_REVOKE_FORBIDDEN';
+  end if;
+
+  if invitation_row.status <> 'pending' then
+    raise exception 'INVITATION_NOT_PENDING';
+  end if;
+
+  update public.adult_invitations
+  set status = 'revoked',
+      updated_at = now()
+  where id = invitation_row.id
+  returning *
+  into invitation_row;
+
+  return jsonb_build_object(
+    'status', 'revoked',
+    'invitation_id', invitation_row.id
+  );
+end;
+$$;
+
+revoke all on function public.revoke_family_invitation(uuid)
+  from public;
+
+grant execute on function public.revoke_family_invitation(uuid)
   to authenticated;

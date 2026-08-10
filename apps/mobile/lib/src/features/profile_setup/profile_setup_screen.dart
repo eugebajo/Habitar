@@ -16,8 +16,8 @@ class ProfileSetupScreen extends ConsumerStatefulWidget {
 
 class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController(text: 'Perfil demo');
-  final _ageController = TextEditingController(text: '9');
+  final _nameController = TextEditingController();
+  final _ageController = TextEditingController();
   ProfileKind _kind = ProfileKind.child;
 
   @override
@@ -76,8 +76,8 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                   const SizedBox(height: HabitarSpacing.md),
                   TextFormField(
                     controller: _ageController,
-                    decoration: const InputDecoration(
-                        labelText: '¿Cuántos años tiene?'),
+                    decoration:
+                        const InputDecoration(labelText: '¿Cuántos años tiene?'),
                     keyboardType: TextInputType.number,
                     validator: _ageValidator,
                   ),
@@ -97,7 +97,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
 
   String? _required(String? value) {
     if (value == null || value.trim().isEmpty) {
-      return 'Completa este dato';
+      return 'Completá este dato';
     }
     return null;
   }

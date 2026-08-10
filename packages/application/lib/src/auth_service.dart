@@ -52,3 +52,23 @@ class SessionService {
 
   Future<void> signOut() => authRepository.signOut();
 }
+
+class PasswordRecoveryService {
+  const PasswordRecoveryService(this.authRepository);
+
+  final AuthRepository authRepository;
+
+  Future<void> requestReset({
+    required String email,
+    required Uri redirectTo,
+  }) {
+    return authRepository.requestPasswordReset(
+      email: email,
+      redirectTo: redirectTo,
+    );
+  }
+
+  Future<void> updatePassword({required String password}) {
+    return authRepository.updatePassword(password: password);
+  }
+}

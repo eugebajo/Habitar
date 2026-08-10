@@ -38,6 +38,9 @@ if (-not $SkipTests) {
 
 Push-Location apps/mobile
 try {
+    if (-not $env:SUPABASE_URL -or -not $env:SUPABASE_ANON_KEY) {
+        throw "Release AAB requires SUPABASE_URL and SUPABASE_ANON_KEY environment variables."
+    }
     $buildArgs = @("build", "appbundle")
     if ($env:SUPABASE_URL) {
         $buildArgs += "--dart-define=SUPABASE_URL=$env:SUPABASE_URL"

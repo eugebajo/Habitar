@@ -5,11 +5,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:habitar_design_system/design_system.dart';
 import 'package:habitar_domain/domain.dart';
+import 'package:habitar_routine_engine/routine_engine.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
 import '../../components/adult_shell.dart';
 import '../../dependencies.dart';
+import '../../selected_profile.dart';
 
 class AdultSectionScreen extends StatelessWidget {
   const AdultSectionScreen({super.key, required this.kind});
@@ -294,24 +296,30 @@ class _RoutinesSectionState extends ConsumerState<_RoutinesSection> {
   }
 }
 
-class _ProfileSelector extends StatelessWidget {
+class _ProfileSelector extends ConsumerWidget {
   const _ProfileSelector({required this.onTap});
   final VoidCallback onTap;
   @override
-  Widget build(BuildContext context) => HabitarCard(
-        padding: const EdgeInsets.all(12),
-        onTap: onTap,
-        child: const Row(children: [
-          HabitarAvatar(label: 'Tomi', size: 50),
-          SizedBox(width: 12),
-          Expanded(
-              child: Text('Tomi',
-                  style: TextStyle(
-                      fontWeight: FontWeight.w900,
-                      color: HabitarColors.deepGreen,
-                      fontSize: 18))),
-          Icon(Icons.keyboard_arrow_down_rounded),
-        ]),
+  Widget build(BuildContext context, WidgetRef ref) => FutureBuilder(
+        future: loadSelectedProfile(ref),
+        builder: (context, snapshot) {
+          final name = snapshot.data?.displayName ?? 'Elegir perfil';
+          return HabitarCard(
+            padding: const EdgeInsets.all(12),
+            onTap: onTap,
+            child: Row(children: [
+              HabitarAvatar(label: name, size: 50),
+              const SizedBox(width: 12),
+              Expanded(
+                  child: Text(name,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w900,
+                          color: HabitarColors.deepGreen,
+                          fontSize: 18))),
+              const Icon(Icons.keyboard_arrow_down_rounded),
+            ]),
+          );
+        },
       );
 }
 
@@ -496,7 +504,7 @@ class _AdjustTodaySheet extends StatelessWidget {
                   style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 8),
               const Text(
-                  'Cambia esta rutina sin modificar la programación habitual.'),
+                  'Cambiá esta rutina sin modificar la programación habitual.'),
               const SizedBox(height: 12),
               _AdjustTodayAction(
                 icon: Icons.schedule_rounded,
@@ -562,24 +570,28 @@ class _ProgressSection extends ConsumerWidget {
   const _ProgressSection();
 
   Future<_ProgressReportData> _loadReport(WidgetRef ref) async {
-    final profileId = ref.read(currentProfileIdProvider);
-    if (profileId == null) {
+    final profile = await loadSelectedProfile(ref);
+    if (profile == null) {
       return const _ProgressReportData.empty();
     }
     final routineRepository = ref.read(routineRepositoryProvider);
-    final routines = await routineRepository.routinesForProfile(profileId);
+    final routines = await routineRepository.routinesForProfile(profile.id);
     var steps = 0;
     for (final routine in routines) {
       steps +=
           (await routineRepository.stepsForRoutine(routine.metadata.id)).length;
     }
+    final session = await ref
+        .read(routineSessionRepositoryProvider)
+        .activeSessionForProfile(profile.id);
     final overrides = await ref
         .read(routineOverrideRepositoryProvider)
-        .overridesForProfileDate(profileId: profileId, date: DateTime.now());
+        .overridesForProfileDate(profileId: profile.id, date: DateTime.now());
     return _ProgressReportData(
-      profileName: 'Perfil seleccionado',
+      profileName: profile.displayName,
       routines: routines.length,
       steps: steps,
+      completedSteps: session?.completedStepIds.length ?? 0,
       activeRoutines: routines
           .where((routine) => routine.metadata.status == EntityStatus.active)
           .length,
@@ -601,107 +613,137 @@ class _ProgressSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) => AdultPage(
         title: 'Progreso semanal',
         subtitle: 'Una mirada simple, sin comparaciones ni castigos.',
-        child:
-            Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          HabitarCard(
-            child:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(children: [
-                const Icon(Icons.bar_chart_rounded,
-                    color: HabitarColors.primaryGreen),
-                const SizedBox(width: 10),
-                Text('Resumen semanal',
-                    style: Theme.of(context).textTheme.titleLarge)
-              ]),
-              const SizedBox(height: 22),
-              Row(children: [
-                const ProgressRing(value: .82, size: 142),
-                const SizedBox(width: 22),
-                Expanded(
-                    child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                      Text('82% completado\nesta semana',
-                          style: Theme.of(context).textTheme.headlineSmall),
-                      const SizedBox(height: 8),
-                      const Text('49 de 60 pasos completados'),
-                      const SizedBox(height: 14),
-                      const _LegendDot(
-                          color: HabitarColors.primaryGreen,
-                          label: 'Completado (49)'),
-                      const SizedBox(height: 8),
-                      const _LegendDot(
-                          color: Color(0xFFEADDC8), label: 'Pendiente (11)'),
-                    ])),
-              ]),
-            ]),
-          ),
-          const SizedBox(height: 16),
-          GridView.count(
-            crossAxisCount: MediaQuery.sizeOf(context).width > 700 ? 3 : 1,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            childAspectRatio:
-                MediaQuery.sizeOf(context).width > 700 ? 1.05 : 2.6,
-            children: const [
-              _ProgressStat(
-                  icon: Icons.check_circle_outline,
-                  value: '18',
-                  label: 'Rutinas\ncompletadas',
-                  note: 'esta semana'),
-              _ProgressStat(
-                  icon: Icons.eco_rounded,
-                  value: '7',
-                  label: 'Hábitos\nen marcha',
-                  note: 'siguiendo su ritmo'),
-              _ProgressStat(
-                  icon: Icons.star_rounded,
-                  value: '¡Muy bien!',
-                  label: 'Logro reciente',
-                  note: '7 días seguidos ordenando su cuarto'),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Text('Reporte y logros',
-              style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 12),
-          Row(children: [
-            Expanded(
-                child: FilledButton.icon(
-                    onPressed: () => _shareReport(context, ref),
-                    icon: const Icon(Icons.picture_as_pdf_outlined),
-                    label: const Text('Descargar reporte PDF'))),
-            const SizedBox(width: 12),
-            Expanded(
-                child: OutlinedButton.icon(
-                    onPressed: () => _shareReport(context, ref),
-                    icon: const Icon(Icons.share_outlined),
-                    label: const Text('Compartir'))),
-          ]),
-          const SizedBox(height: 16),
-          HabitarCard(
-            child:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(children: [
-                Expanded(
-                    child: Text('Reporte semanal de Tomi',
-                        style: Theme.of(context).textTheme.titleLarge)),
-                const Text('Generado hoy',
-                    style: TextStyle(color: HabitarColors.mutedInk))
-              ]),
-              const SizedBox(height: 16),
-              const _CategoryBar(label: 'Rutinas', value: .9),
-              const _CategoryBar(label: 'Organización', value: .8),
-              const _CategoryBar(label: 'Autonomía', value: .75),
-              const _CategoryBar(label: 'Tiempo libre', value: .6),
-            ]),
-          ),
-        ]),
+        child: FutureBuilder<_ProgressReportData>(
+          future: _loadReport(ref),
+          key: ValueKey(ref.watch(currentProfileIdProvider)),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState != ConnectionState.done) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            final data = snapshot.data ?? const _ProgressReportData.empty();
+            final completed = data.completedSteps;
+            final pending = (data.steps - completed).clamp(0, data.steps);
+            final progress = data.progressFraction;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                HabitarCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(children: [
+                        const Icon(Icons.bar_chart_rounded,
+                            color: HabitarColors.primaryGreen),
+                        const SizedBox(width: 10),
+                        Text('Resumen semanal',
+                            style: Theme.of(context).textTheme.titleLarge),
+                      ]),
+                      const SizedBox(height: 22),
+                      Row(children: [
+                        ProgressRing(value: progress, size: 142),
+                        const SizedBox(width: 22),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                data.steps == 0
+                                    ? 'Sin progreso registrado'
+                                    : '${(progress * 100).round()}% completado\nesta semana',
+                                style:
+                                    Theme.of(context).textTheme.headlineSmall,
+                              ),
+                              const SizedBox(height: 8),
+                              Text('$completed de ${data.steps} pasos completados'),
+                              const SizedBox(height: 14),
+                              _LegendDot(
+                                color: HabitarColors.primaryGreen,
+                                label: 'Completado ($completed)',
+                              ),
+                              const SizedBox(height: 8),
+                              _LegendDot(
+                                color: const Color(0xFFEADDC8),
+                                label: 'Pendiente ($pending)',
+                              ),
+                            ],
+                          ),
+                        ),
+                      ]),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                GridView.count(
+                  crossAxisCount: MediaQuery.sizeOf(context).width > 700 ? 3 : 1,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  childAspectRatio:
+                      MediaQuery.sizeOf(context).width > 700 ? 1.05 : 2.6,
+                  children: [
+                    _ProgressStat(
+                        icon: Icons.check_circle_outline,
+                        value: completed.toString(),
+                        label: 'Pasos\ncompletados',
+                        note: 'datos reales'),
+                    _ProgressStat(
+                        icon: Icons.eco_rounded,
+                        value: data.activeRoutines.toString(),
+                        label: 'Rutinas\nen marcha',
+                        note: '${data.routines} creadas'),
+                    _ProgressStat(
+                        icon: Icons.today_rounded,
+                        value: data.adjustedToday.toString(),
+                        label: 'Ajustes de hoy',
+                        note: '${data.pausedToday} pausas'),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Text('Reporte y logros',
+                    style: Theme.of(context).textTheme.titleLarge),
+                const SizedBox(height: 12),
+                Row(children: [
+                  Expanded(
+                      child: FilledButton.icon(
+                          onPressed: () => _shareReport(context, ref),
+                          icon: const Icon(Icons.picture_as_pdf_outlined),
+                          label: const Text('Descargar reporte PDF'))),
+                  const SizedBox(width: 12),
+                  Expanded(
+                      child: OutlinedButton.icon(
+                          onPressed: () => _shareReport(context, ref),
+                          icon: const Icon(Icons.share_outlined),
+                          label: const Text('Compartir'))),
+                ]),
+                const SizedBox(height: 16),
+                HabitarCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(children: [
+                        Expanded(
+                            child: Text(
+                                'Reporte semanal de ${data.profileName}',
+                                style:
+                                    Theme.of(context).textTheme.titleLarge)),
+                        const Text('Generado hoy',
+                            style: TextStyle(color: HabitarColors.mutedInk)),
+                      ]),
+                      const SizedBox(height: 16),
+                      _CategoryBar(label: 'Rutinas', value: progress),
+                      _CategoryBar(
+                          label: 'Ajustes hoy',
+                          value: data.adjustmentFraction),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
       );
 }
-
 class _LegendDot extends StatelessWidget {
   const _LegendDot({required this.color, required this.label});
   final Color color;
@@ -770,6 +812,7 @@ class _ProgressReportData {
     required this.profileName,
     required this.routines,
     required this.steps,
+    required this.completedSteps,
     required this.activeRoutines,
     required this.pausedToday,
     required this.adjustedToday,
@@ -779,6 +822,7 @@ class _ProgressReportData {
       : profileName = 'Sin perfil',
         routines = 0,
         steps = 0,
+        completedSteps = 0,
         activeRoutines = 0,
         pausedToday = 0,
         adjustedToday = 0;
@@ -786,19 +830,27 @@ class _ProgressReportData {
   final String profileName;
   final int routines;
   final int steps;
+  final int completedSteps;
   final int activeRoutines;
   final int pausedToday;
   final int adjustedToday;
 
-  int get completedEstimate => steps == 0 ? 0 : (steps * .72).round();
-  int get autonomyPercent => routines == 0 ? 0 : 72;
+  double get progressFraction => steps == 0 ? 0 : completedSteps / steps;
+  double get adjustmentFraction =>
+      routines == 0 ? 0 : (adjustedToday / routines).clamp(0, 1).toDouble();
 }
 
 Future<Uint8List> _buildWeeklyReportPdf(_ProgressReportData data) async {
   final document = pw.Document();
+  final regularFont = await PdfGoogleFonts.robotoRegular();
+  final boldFont = await PdfGoogleFonts.robotoBold();
   final now = DateTime.now();
   document.addPage(
     pw.Page(
+      theme: pw.ThemeData.withFont(
+        base: regularFont,
+        bold: boldFont,
+      ),
       build: (context) => pw.Padding(
         padding: const pw.EdgeInsets.all(24),
         child: pw.Column(
@@ -827,15 +879,14 @@ Future<Uint8List> _buildWeeklyReportPdf(_ProgressReportData data) async {
             _pdfMetric('Rutinas activas', data.activeRoutines.toString()),
             _pdfMetric('Pasos configurados', data.steps.toString()),
             _pdfMetric(
-              'Pasos completados estimados',
-              '${data.completedEstimate} de ${data.steps}',
+              'Pasos completados',
+              '${data.completedSteps} de ${data.steps}',
             ),
-            _pdfMetric('Autonomía estimada', '${data.autonomyPercent}%'),
             _pdfMetric('Ajustes aplicados hoy', data.adjustedToday.toString()),
             _pdfMetric('Pausas de hoy', data.pausedToday.toString()),
             pw.SizedBox(height: 24),
             pw.Text(
-              'Este reporte usa datos registrados en Habitar y evita comparaciones o castigos. La lectura recomendada es observar qué ayudó y qué necesita menos fricción.',
+              'Este reporte usa datos registrados en Habitar y evita comparaciones o castigos. La lectura recomendada es observar que ayudo y que necesita menos friccion.',
             ),
           ],
         ),
@@ -888,11 +939,11 @@ class _GenericAdultSection extends StatelessWidget {
             const _Stat(
                 icon: Icons.check_circle_outline,
                 label: 'Completados esta semana',
-                value: '8 pasos'),
+                value: 'Sin registros'),
             const _Stat(
                 icon: Icons.favorite_outline,
                 label: 'Logro reciente',
-                value: 'Pidió ayuda'),
+                value: 'Sin eventos'),
           ],
         ),
       );
@@ -924,60 +975,180 @@ class _Stat extends StatelessWidget {
       );
 }
 
-class ChildHomeScreen extends StatelessWidget {
+class ChildHomeScreen extends ConsumerWidget {
   const ChildHomeScreen({super.key});
+
+  Future<_ChildHomeData> _load(WidgetRef ref) async {
+    final profile = await loadSelectedProfile(ref);
+    if (profile == null) {
+      return const _ChildHomeData.empty();
+    }
+    final routines =
+        await ref.read(routineRepositoryProvider).routinesForProfile(profile.id);
+    final routine = routines.isEmpty ? null : routines.first;
+    final steps = routine == null
+        ? const <RoutineStep>[]
+        : await ref
+            .read(routineRepositoryProvider)
+            .stepsForRoutine(routine.metadata.id);
+    final session =
+        await ref.read(routineSessionRepositoryProvider).activeSessionForProfile(
+              profile.id,
+            );
+    return _ChildHomeData(
+      profile: profile,
+      routine: routine,
+      steps: steps,
+      latestSession: session,
+    );
+  }
+
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context, WidgetRef ref) => Scaffold(
         body: HabitarPage(
           maxWidth: 620,
           padding: const EdgeInsets.fromLTRB(22, 22, 22, 18),
           children: [
             const Center(child: HabitarLogo(size: 64)),
             const SizedBox(height: 20),
-            Text('Hola, Tomi',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.displaySmall),
-            Text('Viernes por la tarde',
-                textAlign: TextAlign.center,
-                style: Theme.of(context)
-                    .textTheme
-                    .titleMedium
-                    ?.copyWith(color: HabitarColors.primaryGreen)),
-            const SizedBox(height: 24),
-            _ChildPriorityCard(
-                color: HabitarColors.surfaceMist,
-                art: 'bag',
-                label: 'Ahora',
-                title: 'Prepararnos\npara salir',
-                body: 'Tres pasos claros, uno a la vez.',
-                action: 'Empezar',
-                onTap: () => context.go('/routine/player')),
-            const SizedBox(height: 12),
-            _ChildPriorityCard(
-                color: HabitarColors.card,
-                art: 'home',
-                label: 'Después',
-                title: 'Tiempo libre',
-                body: '',
-                action: 'Ver',
-                onTap: () => context.go('/child/achievements')),
-            const SizedBox(height: 12),
-            _ChildPriorityCard(
-                color: HabitarColors.surfaceMist,
-                art: 'heart',
-                label: 'Pedir ayuda',
-                title: 'No tengo que\nhacerlo solo',
-                body: '',
-                action: 'Ayuda',
-                onTap: () => context.go('/child/emotions')),
+            FutureBuilder<_ChildHomeData>(
+              future: _load(ref),
+              key: ValueKey(ref.watch(currentProfileIdProvider)),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState != ConnectionState.done) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                final data = snapshot.data ?? const _ChildHomeData.empty();
+                final name = data.profile?.displayName ?? 'tu espacio';
+                final firstStep =
+                    data.steps.isEmpty ? null : data.steps.first.title;
+                final completedToday = data.completedToday;
+                return Column(
+                  children: [
+                    Text('Hola, $name',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.displaySmall),
+                    Text('Tu día, a tu ritmo',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleMedium
+                            ?.copyWith(color: HabitarColors.primaryGreen)),
+                    const SizedBox(height: 24),
+                    _ChildPriorityCard(
+                        color: HabitarColors.surfaceMist,
+                        art: 'bag',
+                        label: 'Ahora',
+                        title: completedToday
+                            ? 'Rutina terminada\npor hoy'
+                            : data.routine?.title ?? 'Sin rutina\npreparada',
+                        body: completedToday
+                            ? 'Terminaste tus pasos de hoy. Cada paso cuenta.'
+                            : firstStep == null
+                            ? 'Un adulto puede preparar tus pasos.'
+                            : 'Primer paso: $firstStep',
+                        action: completedToday
+                            ? 'Volver'
+                            : data.routine == null
+                                ? 'Volver'
+                                : 'Empezar',
+                        onTap: completedToday || data.routine == null
+                            ? () => context.go('/profiles')
+                            : () => _startRoutine(
+                                  context,
+                                  ref,
+                                  data.routine!,
+                                  data.steps,
+                                )),
+                    const SizedBox(height: 12),
+                    _ChildPriorityCard(
+                        color: HabitarColors.surfaceMist,
+                        art: 'heart',
+                        label: 'Pedir ayuda',
+                        title: 'No tengo que\nhacerlo solo',
+                        body: '',
+                        action: 'Ayuda',
+                        onTap: () => context.go('/child/emotions')),
+                  ],
+                );
+              },
+            ),
             const SizedBox(height: 18),
             FilledButton.icon(
-                onPressed: () => showAdultPin(context),
+                onPressed: () => context.go('/login'),
                 icon: const Icon(Icons.groups_rounded),
                 label: const Text('Espacio adulto')),
           ],
         ),
       );
+}
+
+class _ChildHomeData {
+  const _ChildHomeData({
+    required this.profile,
+    required this.routine,
+    required this.steps,
+    required this.latestSession,
+  });
+
+  const _ChildHomeData.empty()
+      : profile = null,
+        routine = null,
+        steps = const [],
+        latestSession = null;
+
+  final SelectedHabitarProfile? profile;
+  final Routine? routine;
+  final List<RoutineStep> steps;
+  final RoutineSession? latestSession;
+
+  bool get completedToday =>
+      latestSession?.status == RoutineSessionStatus.completed &&
+      _sameDay(latestSession!.startedAt, DateTime.now());
+}
+
+bool _sameDay(DateTime first, DateTime second) {
+  return first.year == second.year &&
+      first.month == second.month &&
+      first.day == second.day;
+}
+
+Future<void> _startRoutine(
+  BuildContext context,
+  WidgetRef ref,
+  Routine routine,
+  List<RoutineStep> steps,
+) async {
+  final latestSession = await ref
+      .read(routineSessionRepositoryProvider)
+      .activeSessionForProfile(routine.profileId);
+  if (latestSession?.status == RoutineSessionStatus.completed &&
+      _sameDay(latestSession!.startedAt, DateTime.now())) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Esta rutina ya terminó por hoy.')),
+      );
+    }
+    return;
+  }
+
+  if (steps.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Esta rutina todavía no tiene pasos preparados.'),
+      ),
+    );
+    return;
+  }
+
+  final session = await ref.read(routineServiceProvider).startExistingRoutine(
+        routine,
+        steps: steps,
+      );
+  ref.read(currentRoutineSessionIdProvider.notifier).state = session.id;
+  if (context.mounted) {
+    context.go('/routine/player');
+  }
 }
 
 class _ChildPriorityCard extends StatelessWidget {
@@ -1034,45 +1205,55 @@ class _ChildPriorityCard extends StatelessWidget {
       );
 }
 
-class TeenHomeScreen extends StatelessWidget {
+class TeenHomeScreen extends ConsumerWidget {
   const TeenHomeScreen({super.key});
+
   @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('Mi espacio'), actions: [
-          IconButton(
-              tooltip: 'Privacidad',
-              onPressed: () => context.go('/teen/privacy'),
-              icon: const Icon(Icons.shield_outlined))
-        ]),
-        body: HabitarPage(children: [
-          Text('Buenas tardes, Alex',
-              style: Theme.of(context).textTheme.headlineSmall),
-          const SizedBox(height: 6),
-          const Text('Tu día, a tu ritmo.',
-              style: TextStyle(color: HabitarColors.mutedInk)),
-          const SizedBox(height: 24),
-          const _TeenTile(
-              icon: Icons.flag_outlined,
-              title: 'Objetivo de hoy',
-              value: 'Preparar la mochila'),
-          const _TeenTile(
-              icon: Icons.task_alt_rounded,
-              title: 'Hábitos activos',
-              value: '2 de 3 completados'),
-          const _TeenTile(
-              icon: Icons.insights_rounded,
-              title: 'Mi progreso',
-              value: '4 días esta semana'),
-          const SizedBox(height: 16),
-          FilledButton.icon(
-              onPressed: () => context.go('/teen/reflection'),
-              icon: const Icon(Icons.edit_note_rounded),
-              label: const Text('Reflexión diaria')),
-          TextButton(
-              onPressed: () => showAdultPin(context),
-              child: const Text('Entrar al espacio adulto')),
-        ]),
-      );
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selectedProfile = loadSelectedProfile(ref);
+    return Scaffold(
+      appBar: AppBar(title: const Text('Mi espacio'), actions: [
+        IconButton(
+            tooltip: 'Privacidad',
+            onPressed: () => context.go('/teen/privacy'),
+            icon: const Icon(Icons.shield_outlined))
+      ]),
+      body: FutureBuilder(
+        future: selectedProfile,
+        builder: (context, snapshot) {
+          final profileName = snapshot.data?.displayName ?? 'tu espacio';
+          return HabitarPage(children: [
+            Text('Buenas tardes, $profileName',
+                style: Theme.of(context).textTheme.headlineSmall),
+            const SizedBox(height: 6),
+            const Text('Tu día, a tu ritmo.',
+                style: TextStyle(color: HabitarColors.mutedInk)),
+            const SizedBox(height: 24),
+            const _TeenTile(
+                icon: Icons.flag_outlined,
+                title: 'Objetivo de hoy',
+                value: 'Sin objetivo cargado'),
+            const _TeenTile(
+                icon: Icons.task_alt_rounded,
+                title: 'Hábitos activos',
+                value: 'Sin hábitos cargados'),
+            const _TeenTile(
+                icon: Icons.insights_rounded,
+                title: 'Mi progreso',
+                value: 'Sin progreso registrado'),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+                onPressed: () => context.go('/teen/reflection'),
+                icon: const Icon(Icons.edit_note_rounded),
+                label: const Text('Reflexión diaria')),
+            TextButton(
+                onPressed: () => context.go('/login'),
+                child: const Text('Entrar al espacio adulto')),
+          ]);
+        },
+      ),
+    );
+  }
 }
 
 class _TeenTile extends StatelessWidget {
@@ -1130,8 +1311,8 @@ class AdultPinScreen extends StatelessWidget {
                   'Las rutinas, hábitos y cambios familiares quedan protegidos.'),
           const SizedBox(height: 16),
           FilledButton(
-              onPressed: () => showAdultPin(context),
-              child: const Text('Verificar acceso')),
+              onPressed: () => context.go('/login'),
+              child: const Text('Entrar como adulto')),
         ]),
       );
 }

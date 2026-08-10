@@ -18,6 +18,24 @@ void main() {
     expect(gateway.lastPassword, 'secret');
   });
 
+  test('surfaces email confirmation requirement without a session', () async {
+    final gateway =
+        _FakeSupabaseAuthGateway(requireEmailConfirmation: true);
+    final repository = SupabaseAuthRepository(gateway);
+
+    await expectLater(
+      repository.registerAdult(
+        displayName: 'Adulto',
+        email: 'adulto@example.com',
+        password: 'secret',
+      ),
+      throwsA(isA<EmailConfirmationRequiredException>()),
+    );
+
+    expect(gateway.lastPassword, 'secret');
+    expect(await repository.currentUser(), isNull);
+  });
+
   test('maps current Supabase user when available', () async {
     final gateway = _FakeSupabaseAuthGateway();
     final repository = SupabaseAuthRepository(gateway);
@@ -50,11 +68,40 @@ void main() {
 
     expect(await repository.currentUser(), isNull);
   });
+
+  test('requests password reset through Supabase gateway', () async {
+    final gateway = _FakeSupabaseAuthGateway();
+    final repository = SupabaseAuthRepository(gateway);
+    final redirectTo = Uri.parse('https://habitarpy.com/app/#/reset-password');
+
+    await repository.requestPasswordReset(
+      email: 'adulto@example.com',
+      redirectTo: redirectTo,
+    );
+
+    expect(gateway.lastResetEmail, 'adulto@example.com');
+    expect(gateway.lastResetRedirectTo, redirectTo);
+  });
+
+  test('updates password through Supabase gateway', () async {
+    final gateway = _FakeSupabaseAuthGateway();
+    final repository = SupabaseAuthRepository(gateway);
+
+    await repository.updatePassword(password: 'new-secret');
+
+    expect(gateway.lastUpdatedPassword, 'new-secret');
+  });
 }
 
 class _FakeSupabaseAuthGateway implements SupabaseAuthGateway {
+  _FakeSupabaseAuthGateway({this.requireEmailConfirmation = false});
+
+  final bool requireEmailConfirmation;
   SupabaseAuthUser? _current;
   String? lastPassword;
+  String? lastResetEmail;
+  Uri? lastResetRedirectTo;
+  String? lastUpdatedPassword;
 
   @override
   Future<SupabaseAuthUser?> currentUser() async => _current;
@@ -66,6 +113,9 @@ class _FakeSupabaseAuthGateway implements SupabaseAuthGateway {
     required String displayName,
   }) async {
     lastPassword = password;
+    if (requireEmailConfirmation) {
+      throw EmailConfirmationRequiredException(email);
+    }
     _current = SupabaseAuthUser(
       id: 'supabase-user-1',
       email: email,
@@ -93,5 +143,19 @@ class _FakeSupabaseAuthGateway implements SupabaseAuthGateway {
   @override
   Future<void> signOut() async {
     _current = null;
+  }
+
+  @override
+  Future<void> resetPasswordForEmail({
+    required String email,
+    required Uri redirectTo,
+  }) async {
+    lastResetEmail = email;
+    lastResetRedirectTo = redirectTo;
+  }
+
+  @override
+  Future<void> updatePassword({required String password}) async {
+    lastUpdatedPassword = password;
   }
 }

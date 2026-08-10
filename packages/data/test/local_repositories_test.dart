@@ -126,6 +126,70 @@ void main() {
     expect(restoredEntries.single.completedMinimumVersion, isTrue);
   });
 
+  test('creating a routine persists and reloads all routine steps in order',
+      () async {
+    final directory =
+        await Directory.systemTemp.createTemp('habitar_routine_steps_test_');
+    addTearDown(() => directory.delete(recursive: true));
+    final store = FileLocalStore(File('${directory.path}/habitar.json'));
+    final repository = LocalRoutineRepository(store);
+
+    final routine = await repository.createRoutine(
+      profileId: 'child-profile',
+      title: 'Prepararse para la escuela',
+      stepTitles: [
+        'Aseo',
+        'Vestirse',
+        'Preparar mochila',
+      ],
+    );
+    final firstLoad = await repository.stepsForRoutine(routine.metadata.id);
+    final restoredRepository = LocalRoutineRepository(store);
+    final secondLoad =
+        await restoredRepository.stepsForRoutine(routine.metadata.id);
+
+    expect((await repository.routinesForProfile('child-profile')).length, 1);
+    expect(firstLoad.map((step) => step.title), [
+      'Aseo',
+      'Vestirse',
+      'Preparar mochila',
+    ]);
+    expect(secondLoad.map((step) => step.routineId).toSet(),
+        {routine.metadata.id});
+    expect(secondLoad.map((step) => step.order), [1, 2, 3]);
+  });
+
+  test('routine and steps stay isolated between child and teen profiles',
+      () async {
+    final directory =
+        await Directory.systemTemp.createTemp('habitar_routine_scope_test_');
+    addTearDown(() => directory.delete(recursive: true));
+    final repository =
+        LocalRoutineRepository(FileLocalStore(File('${directory.path}/h.json')));
+
+    final childRoutine = await repository.createRoutine(
+      profileId: 'nico-child',
+      title: 'Prepararse para la escuela',
+      stepTitles: ['Aseo', 'Vestirse', 'Mochila'],
+    );
+    final teenRoutine = await repository.createRoutine(
+      profileId: 'nico-teen',
+      title: 'Estudio',
+      stepTitles: ['Abrir cuaderno', 'Leer consigna', 'Resolver'],
+    );
+
+    final childRoutines = await repository.routinesForProfile('nico-child');
+    final teenRoutines = await repository.routinesForProfile('nico-teen');
+    final childSteps =
+        await repository.stepsForRoutine(childRoutine.metadata.id);
+
+    expect(childRoutines.map((routine) => routine.metadata.id),
+        [childRoutine.metadata.id]);
+    expect(teenRoutines.map((routine) => routine.metadata.id),
+        [teenRoutine.metadata.id]);
+    expect(childSteps.map((step) => step.title), ['Aseo', 'Vestirse', 'Mochila']);
+  });
+
   test('persists notifications, wellbeing, story progress and wearables',
       () async {
     final directory =
@@ -349,8 +413,8 @@ void main() {
       password: 'local',
     );
 
-    expect(
-      () => families.acceptInvitation(
+    await expectLater(
+      families.acceptInvitation(
         invitationId: invitation.metadata.id,
         userId: other.metadata.id,
         userEmail: other.email,
@@ -397,14 +461,18 @@ void main() {
       'expires_at': DateTime.utc(2020, 1, 1).toIso8601String(),
     });
 
-    expect(
-      () => families.acceptInvitation(
+    await expectLater(
+      families.acceptInvitation(
         invitationId: invitation.metadata.id,
         userId: invited.metadata.id,
         userEmail: invited.email,
       ),
       throwsStateError,
     );
+
+    final invitations = await families.invitationsForFamily(family.metadata.id);
+    expect(invitations.single.status, AdultInvitationStatus.expired);
+    expect(await families.membersForFamily(family.metadata.id), hasLength(1));
   });
 
   test('does not duplicate an accepted invitation or existing member', () async {
@@ -500,8 +568,8 @@ void main() {
       userEmail: viewer.email,
     );
 
-    expect(
-      () => families.createAdultInvitation(
+    await expectLater(
+      families.createAdultInvitation(
         familyId: family.metadata.id,
         email: 'another@example.com',
         role: FamilyMemberRole.caregiver,

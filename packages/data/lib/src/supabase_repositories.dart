@@ -1,5 +1,6 @@
 import 'package:habitar_application/application.dart';
 import 'package:habitar_domain/domain.dart';
+import 'package:habitar_routine_engine/routine_engine.dart';
 import 'package:supabase/supabase.dart';
 
 class SupabaseFamilyRepository implements FamilyRepository {
@@ -12,22 +13,22 @@ class SupabaseFamilyRepository implements FamilyRepository {
     required String ownerUserId,
     required String name,
   }) async {
-    final familyRow = await client
-        .from('families')
-        .insert({
-          'owner': ownerUserId,
-          'name': name,
-          'access_rules': <Object?>[],
-        })
-        .select()
-        .single();
-    final family = _familyFromRow(familyRow);
-    await client.from('family_members').insert({
-      'family_id': family.metadata.id,
-      'user_id': ownerUserId,
-      'role': 'owner',
-    });
-    return family;
+    final currentUserId = _currentUserId(client);
+    if (ownerUserId != currentUserId) {
+      throw StateError('Cannot bootstrap a family for another user.');
+    }
+    try {
+      _debugLog('INITIAL FAMILY RPC: START');
+      final familyRow = await client.rpc('create_initial_family', params: {
+        'family_name': name,
+      }) as Map<String, dynamic>;
+      _debugLog('INITIAL FAMILY RPC: OK');
+      return _familyFromRow(familyRow);
+    } on PostgrestException catch (error) {
+      _debugLog('INITIAL FAMILY RPC: ERROR');
+      _logPostgrestError(error);
+      rethrow;
+    }
   }
 
   @override
@@ -63,18 +64,36 @@ class SupabaseFamilyRepository implements FamilyRepository {
     required FamilyMemberRole role,
     required String invitedByUserId,
   }) async {
-    final row = await client
-        .from('adult_invitations')
-        .insert({
-          'family_id': familyId,
-          'email': email.trim().toLowerCase(),
-          'role': role.name,
-          'status': AdultInvitationStatus.pending.name,
-          'invited_by_user_id': invitedByUserId,
-        })
-        .select()
-        .single();
-    return _adultInvitationFromRow(row);
+    final currentUserId = _currentUserId(client);
+    if (invitedByUserId != currentUserId) {
+      throw StateError('Cannot create an invitation for another adult user.');
+    }
+    final normalizedEmail = email.trim().toLowerCase();
+    try {
+      _debugLog('INVITATION CREATE:');
+      _debugLog('family_id: $familyId');
+      _debugLog('email: $normalizedEmail');
+      _debugLog('role: ${role.name}');
+      final row = await client
+          .from('adult_invitations')
+          .insert({
+            'family_id': familyId,
+            'email': normalizedEmail,
+            'role': role.name,
+            'status': AdultInvitationStatus.pending.name,
+            'invited_by_user_id': currentUserId,
+          })
+          .select()
+          .single();
+      final invitation = _adultInvitationFromRow(row);
+      _debugLog('INVITATION RESULT: OK');
+      _debugLog('id: ${invitation.metadata.id}');
+      return invitation;
+    } on PostgrestException catch (error) {
+      _debugLog('INVITATION RESULT: ERROR');
+      _logPostgrestError(error);
+      rethrow;
+    }
   }
 
   @override
@@ -88,6 +107,38 @@ class SupabaseFamilyRepository implements FamilyRepository {
   }
 
   @override
+  Future<List<PendingFamilyInvitation>> pendingInvitationsForEmail(
+      String authenticatedEmail) async {
+    final currentEmail = client.auth.currentUser?.email?.trim().toLowerCase();
+    _debugLog('PENDING INVITATIONS RPC: START');
+    _debugLog('authenticated email: ${authenticatedEmail.trim().toLowerCase()}');
+    _debugLog('auth current email: $currentEmail');
+    if (currentEmail == null ||
+        currentEmail.isEmpty ||
+        currentEmail != authenticatedEmail.trim().toLowerCase()) {
+      _debugLog('PENDING INVITATIONS RPC: RESULT COUNT: 0');
+      return const [];
+    }
+    try {
+      final rows = await client.rpc(
+        'pending_family_invitations_for_current_user',
+      ) as List<dynamic>;
+      _debugLog('PENDING INVITATIONS RPC: RESULT COUNT: ${rows.length}');
+      return rows.map((row) {
+        final data = (row as Map).cast<String, dynamic>();
+        return PendingFamilyInvitation(
+          familyName: data['family_name'] as String? ?? 'Familia',
+          invitation: _adultInvitationFromRow(data),
+        );
+      }).toList(growable: false);
+    } on PostgrestException catch (error) {
+      _debugLog('PENDING INVITATIONS RPC: ERROR');
+      _logPostgrestError(error);
+      rethrow;
+    }
+  }
+
+  @override
   Future<FamilyMember> acceptInvitation({
     required String invitationId,
     required String userId,
@@ -96,7 +147,14 @@ class SupabaseFamilyRepository implements FamilyRepository {
     final row = await client.rpc('accept_family_invitation', params: {
       'target_invitation_id': invitationId,
     }) as Map<String, dynamic>;
-    return _familyMemberFromRow(row);
+    final status = row['status'] as String?;
+    if (status == 'expired') {
+      throw StateError('Invitation has expired.');
+    }
+    if (status != 'accepted') {
+      throw StateError('Invitation could not be accepted.');
+    }
+    return _familyMemberFromRow(row['member'] as Map<String, dynamic>);
   }
 }
 
@@ -476,12 +534,171 @@ class SupabaseRoutineOverrideRepository implements RoutineOverrideRepository {
   }
 }
 
+class SupabaseRoutineSessionRepository implements RoutineSessionRepository {
+  const SupabaseRoutineSessionRepository(this.client);
+
+  final SupabaseClient client;
+
+  @override
+  Future<RoutineSession?> activeSessionForProfile(String profileId) async {
+    final routineRows = await client
+        .from('routines')
+        .select('id')
+        .eq('profile_id', profileId)
+        .neq('status', 'deleted');
+    final routineIds = routineRows
+        .map((row) => row['id'] as String)
+        .toList(growable: false);
+    if (routineIds.isEmpty) {
+      return null;
+    }
+    final rows = await client
+        .from('routine_sessions')
+        .select()
+        .inFilter('routine_id', routineIds)
+        .order('updated_at', ascending: false)
+        .limit(1);
+    if (rows.isEmpty) {
+      return null;
+    }
+    return _sessionFromRow(rows.first);
+  }
+
+  @override
+  Future<RoutineSession?> byId(String sessionId) async {
+    final row = await client
+        .from('routine_sessions')
+        .select()
+        .eq('id', sessionId)
+        .maybeSingle();
+    return row == null ? null : _sessionFromRow(row);
+  }
+
+  @override
+  Future<void> save(RoutineSession session) async {
+    await client.from('routine_sessions').upsert({
+      'id': session.id,
+      'owner': _currentUserId(client),
+      'routine_id': session.routine.metadata.id,
+      'status': EntityStatus.active.name,
+      'access_rules': <Object?>[],
+      'active_step_index': session.activeStepIndex,
+      'session_status': session.status.name,
+      'completed_step_ids': session.completedStepIds,
+      'skipped_step_ids': session.skippedStepIds,
+      'extra_minutes_by_step_id': session.extraMinutesByStepId,
+      'pause_reason': session.pauseReason?.name,
+      'help_requested': session.helpRequested,
+      'postponed_until': session.postponedUntil?.toUtc().toIso8601String(),
+      'updated_at': DateTime.now().toUtc().toIso8601String(),
+    });
+  }
+
+  Future<RoutineSession> _sessionFromRow(Map<String, dynamic> row) async {
+    final routineId = row['routine_id'] as String;
+    final routine = await SupabaseRoutineRepository(client).routineById(routineId);
+    if (routine == null) {
+      throw StateError('Routine not found for session: $routineId');
+    }
+    final steps = await SupabaseRoutineRepository(client).stepsForRoutine(routineId);
+    return RoutineSession(
+      id: row['id'] as String,
+      routine: routine,
+      steps: steps,
+      activeStepIndex: row['active_step_index'] as int? ?? 0,
+      startedAt: DateTime.parse(row['created_at'] as String),
+      updatedAt: DateTime.parse(
+        (row['updated_at'] ?? row['created_at']) as String,
+      ),
+      status: RoutineSessionStatus.values.byName(
+        row['session_status'] as String? ?? RoutineSessionStatus.running.name,
+      ),
+      completedStepIds: _stringList(row['completed_step_ids']),
+      skippedStepIds: _stringList(row['skipped_step_ids']),
+      extraMinutesByStepId: _intMap(row['extra_minutes_by_step_id']),
+      pauseReason: _nullableRoutinePauseReason(row['pause_reason'] as String?),
+      helpRequested: row['help_requested'] as bool? ?? false,
+      postponedUntil: row['postponed_until'] == null
+          ? null
+          : DateTime.parse(row['postponed_until'] as String),
+    );
+  }
+}
+
+class SupabaseSupportRequestRepository implements SupportRequestRepository {
+  const SupabaseSupportRequestRepository(this.client);
+
+  final SupabaseClient client;
+
+  @override
+  Future<List<SupportRequest>> requestsForProfile(String profileId) async {
+    final rows = await client
+        .from('support_requests')
+        .select()
+        .eq('profile_id', profileId)
+        .neq('status', 'deleted')
+        .order('created_at', ascending: false);
+    return rows.map(_supportRequestFromRow).toList(growable: false);
+  }
+
+  @override
+  Future<SupportRequest> save(SupportRequest request) async {
+    final row = await client
+        .from('support_requests')
+        .upsert({
+          'id': request.metadata.id,
+          'owner': _currentUserId(client),
+          'profile_id': request.profileId,
+          'kind': request.kind,
+          'note': request.note,
+          'status': request.metadata.status.name,
+          'access_rules': <Object?>[],
+          'updated_at': DateTime.now().toUtc().toIso8601String(),
+        })
+        .select()
+        .single();
+    return _supportRequestFromRow(row);
+  }
+}
+
 String _currentUserId(SupabaseClient client) {
   final userId = client.auth.currentUser?.id;
   if (userId == null) {
     throw StateError('No hay una sesión adulta activa.');
   }
   return userId;
+}
+
+SupportRequest _supportRequestFromRow(Map<String, dynamic> row) {
+  return SupportRequest(
+    metadata: _metadataFromRow(row),
+    profileId: row['profile_id'] as String,
+    kind: row['kind'] as String,
+    note: row['note'] as String?,
+  );
+}
+
+void _debugLog(String message) {
+  assert(() {
+    // Development-only diagnostics. Do not log passwords, tokens or secrets.
+    // ignore: avoid_print
+    print(message);
+    return true;
+  }());
+}
+
+void _logPostgrestError(PostgrestException error) {
+  assert(() {
+    // ignore: avoid_print
+    print('PostgREST code: ${error.code}');
+    // ignore: avoid_print
+    print('PostgREST message: ${error.message}');
+    // ignore: avoid_print
+    print('PostgREST details: ${error.details}');
+    // ignore: avoid_print
+    print('PostgREST hint: ${error.hint}');
+    return true;
+  }());
 }
 
 Family _familyFromRow(Map<String, dynamic> row) {
@@ -655,4 +872,27 @@ String _dateOnly(DateTime date) => '${date.year.toString().padLeft(4, '0')}-'
 
 List<int> _intList(Object? value) {
   return (value as List? ?? const []).map((item) => item as int).toList();
+}
+
+List<String> _stringList(Object? value) {
+  return (value as List? ?? const [])
+      .map((item) => item.toString())
+      .toList(growable: false);
+}
+
+Map<String, int> _intMap(Object? value) {
+  if (value is Map) {
+    return value.map(
+      (key, item) => MapEntry(key.toString(), (item as num).toInt()),
+    );
+  }
+  return const {};
+}
+
+RoutinePauseReason? _nullableRoutinePauseReason(String? value) {
+  return switch (value) {
+    'sensory' => RoutinePauseReason.sensory,
+    'interruption' => RoutinePauseReason.interruption,
+    _ => null,
+  };
 }

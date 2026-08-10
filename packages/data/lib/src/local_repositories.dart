@@ -65,6 +65,15 @@ class LocalAuthRepository implements AuthRepository {
   Future<void> signOut() async {
     await store.put(LocalStoreCollections.authState, _currentUserKey, {});
   }
+
+  @override
+  Future<void> requestPasswordReset({
+    required String email,
+    required Uri redirectTo,
+  }) async {}
+
+  @override
+  Future<void> updatePassword({required String password}) async {}
 }
 
 class LocalFamilyRepository implements FamilyRepository {
@@ -173,6 +182,35 @@ class LocalFamilyRepository implements FamilyRepository {
   }
 
   @override
+  Future<List<PendingFamilyInvitation>> pendingInvitationsForEmail(
+      String authenticatedEmail) async {
+    final email = authenticatedEmail.trim().toLowerCase();
+    final now = DateTime.now();
+    final invitationRecords =
+        await store.list(LocalStoreCollections.adultInvitations);
+    final familyRecords = await store.list(LocalStoreCollections.families);
+    final familiesById = {
+      for (final record in familyRecords)
+        if (_metadataId(record) != null) _metadataId(record)!: record,
+    };
+    final invitations = invitationRecords.map(_adultInvitationFromJson).where(
+      (invitation) {
+        return invitation.status == AdultInvitationStatus.pending &&
+            invitation.expiresAt.isAfter(now) &&
+            invitation.email.trim().toLowerCase() == email;
+      },
+    );
+    return [
+      for (final invitation in invitations)
+        PendingFamilyInvitation(
+          invitation: invitation,
+          familyName: (familiesById[invitation.familyId]?['name'] as String?) ??
+              'Familia',
+        ),
+    ];
+  }
+
+  @override
   Future<FamilyMember> acceptInvitation({
     required String invitationId,
     required String userId,
@@ -203,6 +241,23 @@ class LocalFamilyRepository implements FamilyRepository {
       return existingMembers.first;
     }
     if (invitation.expiresAt.isBefore(now)) {
+      final expired = AdultInvitation(
+        metadata: EntityMetadata(
+          id: invitation.metadata.id,
+          createdAt: invitation.metadata.createdAt,
+          updatedAt: now,
+          ownerId: invitation.metadata.ownerId,
+        ),
+        familyId: invitation.familyId,
+        email: invitation.email,
+        role: invitation.role,
+        status: AdultInvitationStatus.expired,
+        expiresAt: invitation.expiresAt,
+        invitedByUserId: invitation.invitedByUserId,
+        acceptedByUserId: invitation.acceptedByUserId,
+      );
+      await store.put(LocalStoreCollections.adultInvitations, invitationId,
+          _adultInvitationToJson(expired));
       throw StateError('Invitation has expired.');
     }
     if (invitation.status != AdultInvitationStatus.pending) {
@@ -559,8 +614,7 @@ class LocalRoutineSessionRepository implements RoutineSessionRepository {
   Future<RoutineSession?> activeSessionForProfile(String profileId) async {
     final records = await store.list(LocalStoreCollections.routineSessions);
     final sessions = records.map(_routineSessionFromJson).where((session) {
-      return session.routine.profileId == profileId &&
-          session.status != RoutineSessionStatus.completed;
+      return session.routine.profileId == profileId;
     }).toList();
     sessions.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
     return sessions.isEmpty ? null : sessions.first;
@@ -1470,6 +1524,14 @@ SyncQueueItem _syncQueueItemFromJson(Map<String, Object?> json) =>
 
 Map<String, Object?> _object(Object? value) =>
     (value as Map).cast<String, Object?>();
+
+String? _metadataId(Map<String, Object?> record) {
+  final metadata = record['metadata'];
+  if (metadata is Map) {
+    return metadata['id'] as String?;
+  }
+  return null;
+}
 
 List<Map<String, Object?>> _objectList(Object? value) {
   return (value as List? ?? const [])

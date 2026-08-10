@@ -4,6 +4,7 @@ import 'package:habitar_design_system/design_system.dart';
 import 'package:habitar_wearable_bridge/wearable_bridge.dart';
 
 import '../../dependencies.dart';
+import '../../selected_profile.dart';
 
 class WearablesScreen extends ConsumerStatefulWidget {
   const WearablesScreen({super.key});
@@ -26,125 +27,135 @@ class _WearablesScreenState extends ConsumerState<WearablesScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Dispositivos')),
-      body: HabitarPage(
-        maxWidth: 720,
-        children: [
-          Row(children: [
-            Expanded(
-                child: Text('Dispositivos',
-                    style: Theme.of(context).textTheme.displaySmall)),
-            const HabitarPill(label: 'Tomi', icon: Icons.face_rounded),
-          ]),
-          const SizedBox(height: 18),
-          HabitarCard(
-            color: HabitarColors.surfaceMist,
-            child: Row(children: [
-              Expanded(
-                  child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                    Text('Conectá los avisos\nde Tomi',
-                        style: Theme.of(context).textTheme.headlineSmall),
-                    const SizedBox(height: 10),
-                    const Text(
-                        'Recibí recordatorios y rutinas en los dispositivos que acompañan su día.'),
-                  ])),
-              const SizedBox(
-                  width: 140,
-                  height: 150,
-                  child: HabitarSoftIllustration(label: 'watch')),
-            ]),
-          ),
-          const SizedBox(height: 18),
-          _DeviceCard(
-              title: 'Teléfono de Tomi',
-              status: 'Conectado',
-              icon: Icons.smartphone_rounded,
-              connected: true,
-              children: [
-                _SwitchRow(
-                    label: 'Vibración',
-                    value: _vibration,
-                    onChanged: (value) => setState(() => _vibration = value)),
-                _SwitchRow(
-                    label: 'Sonido',
-                    value: _sound,
-                    onChanged: (value) => setState(() => _sound = value)),
+      body: FutureBuilder(
+        future: loadSelectedProfile(ref),
+        builder: (context, snapshot) {
+          final profileName = snapshot.data?.displayName ?? 'Elegir perfil';
+          return HabitarPage(
+            maxWidth: 720,
+            children: [
+              Row(children: [
+                Expanded(
+                    child: Text('Dispositivos',
+                        style: Theme.of(context).textTheme.displaySmall)),
+                HabitarPill(label: profileName, icon: Icons.face_rounded),
               ]),
-          const SizedBox(height: 12),
-          _DeviceCard(
-              title: 'Smartwatch',
-              status: 'No conectado',
-              icon: Icons.watch_rounded,
-              connected: false,
-              trailing: OutlinedButton(
-                  onPressed: () {}, child: const Text('Conectar dispositivo'))),
-          const SizedBox(height: 12),
-          const _DeviceCard(
-              title: 'Teléfono del adulto',
-              status: 'Conectado',
-              icon: Icons.phone_android_rounded,
-              connected: true),
-          const SizedBox(height: 22),
-          Text('Recordatorios', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 10),
-          HabitarCard(
-            child: Column(children: [
-              _SwitchTile(
-                  icon: Icons.notifications_active_outlined,
-                  label: 'Enviar al smartwatch',
-                  value: _watch,
-                  onChanged: (value) => setState(() => _watch = value)),
-              _SwitchTile(
-                  icon: Icons.vibration_rounded,
-                  label: 'Vibración suave',
-                  value: _vibration,
-                  onChanged: (value) => setState(() => _vibration = value)),
-              _SwitchTile(
-                  icon: Icons.volume_down_outlined,
-                  label: 'Sonido breve',
-                  value: _sound,
-                  onChanged: (value) => setState(() => _sound = value)),
-            ]),
-          ),
-          const SizedBox(height: 14),
-          SegmentedButton<WearablePlatform>(
-            segments: const [
-              ButtonSegment(
-                  value: WearablePlatform.watchOS, label: Text('watchOS')),
-              ButtonSegment(
-                  value: WearablePlatform.wearOS, label: Text('Wear OS')),
+              const SizedBox(height: 18),
+              HabitarCard(
+                color: HabitarColors.surfaceMist,
+                child: Row(children: [
+                  Expanded(
+                      child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                        Text('Conectá los avisos\nde $profileName',
+                            style: Theme.of(context).textTheme.headlineSmall),
+                        const SizedBox(height: 10),
+                        const Text(
+                            'Recibí recordatorios y rutinas en los dispositivos que acompañan su día.'),
+                      ])),
+                  const SizedBox(
+                      width: 140,
+                      height: 150,
+                      child: HabitarSoftIllustration(label: 'watch')),
+                ]),
+              ),
+              const SizedBox(height: 18),
+              _DeviceCard(
+                  title: 'Teléfono de $profileName',
+                  status: 'Conectado',
+                  icon: Icons.smartphone_rounded,
+                  connected: true,
+                  children: [
+                    _SwitchRow(
+                        label: 'Vibración',
+                        value: _vibration,
+                        onChanged: (value) =>
+                            setState(() => _vibration = value)),
+                    _SwitchRow(
+                        label: 'Sonido',
+                        value: _sound,
+                        onChanged: (value) => setState(() => _sound = value)),
+                  ]),
+              const SizedBox(height: 12),
+              _DeviceCard(
+                  title: 'Smartwatch',
+                  status: 'No conectado',
+                  icon: Icons.watch_rounded,
+                  connected: false,
+                  trailing: OutlinedButton(
+                      onPressed: () {},
+                      child: const Text('Conectar dispositivo'))),
+              const SizedBox(height: 12),
+              const _DeviceCard(
+                  title: 'Teléfono del adulto',
+                  status: 'Conectado',
+                  icon: Icons.phone_android_rounded,
+                  connected: true),
+              const SizedBox(height: 22),
+              Text('Recordatorios',
+                  style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 10),
+              HabitarCard(
+                child: Column(children: [
+                  _SwitchTile(
+                      icon: Icons.notifications_active_outlined,
+                      label: 'Enviar al smartwatch',
+                      value: _watch,
+                      onChanged: (value) => setState(() => _watch = value)),
+                  _SwitchTile(
+                      icon: Icons.vibration_rounded,
+                      label: 'Vibración suave',
+                      value: _vibration,
+                      onChanged: (value) =>
+                          setState(() => _vibration = value)),
+                  _SwitchTile(
+                      icon: Icons.volume_down_outlined,
+                      label: 'Sonido breve',
+                      value: _sound,
+                      onChanged: (value) => setState(() => _sound = value)),
+                ]),
+              ),
+              const SizedBox(height: 14),
+              SegmentedButton<WearablePlatform>(
+                segments: const [
+                  ButtonSegment(
+                      value: WearablePlatform.watchOS, label: Text('watchOS')),
+                  ButtonSegment(
+                      value: WearablePlatform.wearOS, label: Text('Wear OS')),
+                ],
+                selected: {selectedPlatform},
+                onSelectionChanged: (selection) => ref
+                    .read(selectedWearablePlatformProvider.notifier)
+                    .state = selection.first,
+              ),
+              const SizedBox(height: 14),
+              HabitarConversationCard(
+                title: 'Compatibilidad',
+                body:
+                    'Los avisos en smartwatch dependen de la compatibilidad del dispositivo y de su configuración.',
+                color: HabitarColors.surfaceMist,
+                leading: const CircleAvatar(
+                    backgroundColor: Colors.white,
+                    child: Icon(Icons.info_outline_rounded,
+                        color: HabitarColors.deepGreen)),
+              ),
+              _CapabilityCard(capabilities: capabilities),
+              const SizedBox(height: 14),
+              FilledButton.icon(
+                  onPressed: () => _publish(selectedPlatform),
+                  icon: const Icon(Icons.notifications_active_outlined),
+                  label: const Text('Probar recordatorio')),
+              if (_message != null) ...[
+                const SizedBox(height: HabitarSpacing.md),
+                HabitarConversationCard(
+                    title: 'Último aviso',
+                    body: _message!,
+                    color: HabitarColors.surfaceWarm),
+              ],
             ],
-            selected: {selectedPlatform},
-            onSelectionChanged: (selection) => ref
-                .read(selectedWearablePlatformProvider.notifier)
-                .state = selection.first,
-          ),
-          const SizedBox(height: 14),
-          HabitarConversationCard(
-            title: 'Compatibilidad',
-            body:
-                'Los avisos en smartwatch dependen de la compatibilidad del dispositivo y de su configuración.',
-            color: HabitarColors.surfaceMist,
-            leading: const CircleAvatar(
-                backgroundColor: Colors.white,
-                child: Icon(Icons.info_outline_rounded,
-                    color: HabitarColors.deepGreen)),
-          ),
-          _CapabilityCard(capabilities: capabilities),
-          const SizedBox(height: 14),
-          FilledButton.icon(
-              onPressed: () => _publish(selectedPlatform),
-              icon: const Icon(Icons.notifications_active_outlined),
-              label: const Text('Probar recordatorio')),
-          if (_message != null) ...[
-            const SizedBox(height: HabitarSpacing.md),
-            HabitarConversationCard(
-                title: 'Último aviso',
-                body: _message!,
-                color: HabitarColors.surfaceWarm),
-          ],
-        ],
+          );
+        },
       ),
     );
   }

@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:habitar_data/data.dart';
 import 'package:path_provider/path_provider.dart';
@@ -13,6 +14,11 @@ Future<List<Override>> buildProductionOverrides() async {
   final store = await DriftLocalStore.open(
       File('${directory.path}${Platform.pathSeparator}habitar.sqlite'));
   final supabaseConfig = SupabaseConfig.maybeFromEnvironment();
+  if (kReleaseMode && supabaseConfig == null) {
+    throw StateError(
+      'Release builds require SUPABASE_URL and SUPABASE_ANON_KEY dart-defines.',
+    );
+  }
 
   final supabaseClient =
       supabaseConfig == null ? null : await _initializeSupabase(supabaseConfig);
@@ -34,8 +40,9 @@ Future<List<Override>> buildProductionOverrides() async {
         : SupabaseRoutineRepository(supabaseClient)),
     adultProfileRepositoryProvider
         .overrideWithValue(LocalAdultProfileRepository(store)),
-    routineSessionRepositoryProvider
-        .overrideWithValue(LocalRoutineSessionRepository(store)),
+    routineSessionRepositoryProvider.overrideWithValue(supabaseClient == null
+        ? LocalRoutineSessionRepository(store)
+        : SupabaseRoutineSessionRepository(supabaseClient)),
     routineOverrideRepositoryProvider.overrideWithValue(supabaseClient == null
         ? LocalRoutineOverrideRepository(store)
         : SupabaseRoutineOverrideRepository(supabaseClient)),
@@ -46,8 +53,9 @@ Future<List<Override>> buildProductionOverrides() async {
         .overrideWithValue(LocalNotificationPreferenceRepository(store)),
     emotionCheckInRepositoryProvider
         .overrideWithValue(LocalEmotionCheckInRepository(store)),
-    supportRequestRepositoryProvider
-        .overrideWithValue(LocalSupportRequestRepository(store)),
+    supportRequestRepositoryProvider.overrideWithValue(supabaseClient == null
+        ? LocalSupportRequestRepository(store)
+        : SupabaseSupportRequestRepository(supabaseClient)),
     storyProgressRepositoryProvider
         .overrideWithValue(LocalStoryProgressRepository(store)),
     wearableGatewayRepositoryProvider

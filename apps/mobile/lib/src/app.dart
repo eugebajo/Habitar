@@ -7,6 +7,8 @@ import 'features/family_dashboard/family_dashboard_screen.dart';
 import 'features/habit_setup/habit_setup_screen.dart';
 import 'features/legal/legal_screen.dart';
 import 'features/login/login_screen.dart';
+import 'features/login/pending_invitation_screen.dart';
+import 'features/login/password_recovery_screen.dart';
 import 'features/notification_settings/notification_settings_screen.dart';
 import 'features/onboarding/onboarding_screen.dart';
 import 'features/profiles/profiles_screen.dart';
@@ -42,21 +44,22 @@ final appRouter = GoRouter(
             )),
     GoRoute(
         path: '/recover',
-        builder: (context, state) => const SimpleModeScreen(
-            title: 'Recuperar contraseña',
-            message:
-                'Escribí a soporte@habitarpy.com desde el correo de tu cuenta.')),
+        builder: (context, state) => const PasswordRecoveryScreen()),
+    GoRoute(
+        path: '/reset-password',
+        builder: (context, state) => const ResetPasswordScreen()),
     GoRoute(
         path: '/register',
         builder: (context, state) => const AdultRegistrationScreen()),
+    GoRoute(
+        path: '/invitation',
+        builder: (context, state) => const PendingInvitationScreen()),
     GoRoute(
         path: '/profile',
         builder: (context, state) => const ProfileSetupScreen()),
     GoRoute(
         path: '/profiles', builder: (context, state) => const ProfilesScreen()),
-    GoRoute(
-        path: '/adult-pin',
-        builder: (context, state) => const AdultPinScreen()),
+    GoRoute(path: '/adult-pin', redirect: (context, state) => '/login'),
     GoRoute(
         path: '/dashboard',
         builder: (context, state) => const FamilyDashboardScreen()),
@@ -192,11 +195,13 @@ class _AppBackGuard extends StatelessWidget {
 
   String? _safeBackTarget(String location) {
     if (_isExitRoot(location)) return null;
-    if (location == '/login' ||
-        location == '/register' ||
-        location == '/recover') {
+    if (location == '/recover' || location == '/reset-password') {
+      return '/login';
+    }
+    if (location == '/login' || location == '/register') {
       return '/onboarding';
     }
+    if (location == '/invitation') return '/onboarding';
     if (location == '/profile' || location == '/profiles') return '/dashboard';
     if (location == '/routine/create' || location == '/habits') {
       return '/routines';

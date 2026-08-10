@@ -5,7 +5,13 @@ import 'package:habitar_domain/domain.dart';
 
 import 'dependencies.dart';
 
-enum AppRestoreDestination { onboarding, register, profileSetup, dashboard }
+enum AppRestoreDestination {
+  onboarding,
+  register,
+  invitation,
+  profileSetup,
+  dashboard,
+}
 
 class AppRestoreResult {
   const AppRestoreResult({
@@ -14,6 +20,7 @@ class AppRestoreResult {
     this.profileId,
     this.profileKind,
     this.activeSessionId,
+    this.pendingInvitation,
   });
 
   final AppRestoreDestination destination;
@@ -21,6 +28,7 @@ class AppRestoreResult {
   final String? profileId;
   final ProfileKind? profileKind;
   final String? activeSessionId;
+  final PendingFamilyInvitation? pendingInvitation;
 }
 
 class AppRestoreService {
@@ -30,6 +38,7 @@ class AppRestoreService {
     required this.profileRepository,
     required this.sessionRepository,
     this.localStore,
+    this.allowLocalFamilyRecovery = true,
   });
 
   final AuthRepository authRepository;
@@ -37,26 +46,47 @@ class AppRestoreService {
   final ProfileRepository profileRepository;
   final RoutineSessionRepository sessionRepository;
   final LocalStore? localStore;
+  final bool allowLocalFamilyRecovery;
 
   Future<AppRestoreResult> restore() async {
     final user = await authRepository.currentUser();
     if (user == null) {
+      _debugLog('RESTORE:');
+      _debugLog('membership found: NO');
+      _debugLog('pending invitations count: 0');
+      _debugLog('destination: onboarding');
       return const AppRestoreResult(
           destination: AppRestoreDestination.onboarding);
     }
 
+    _debugLog('RESTORE:');
     final family = await _familyForUser(user);
     if (family == null) {
+      final invitations =
+          await familyRepository.pendingInvitationsForEmail(user.email);
+      _debugLog('membership found: NO');
+      _debugLog('pending invitations count: ${invitations.length}');
+      if (invitations.isNotEmpty) {
+        _debugLog('destination: invitation');
+        return AppRestoreResult(
+          destination: AppRestoreDestination.invitation,
+          pendingInvitation: invitations.first,
+        );
+      }
+      _debugLog('destination: register');
       return const AppRestoreResult(
           destination: AppRestoreDestination.register);
     }
 
+    _debugLog('membership found: YES');
     final childProfiles =
         await profileRepository.childProfiles(family.metadata.id);
     if (childProfiles.isNotEmpty) {
       final profile = childProfiles.first;
       final session =
           await sessionRepository.activeSessionForProfile(profile.metadata.id);
+      _debugLog('pending invitations count: 0');
+      _debugLog('destination: dashboard');
       return AppRestoreResult(
         destination: AppRestoreDestination.dashboard,
         familyId: family.metadata.id,
@@ -72,6 +102,8 @@ class AppRestoreService {
       final profile = teenProfiles.first;
       final session =
           await sessionRepository.activeSessionForProfile(profile.metadata.id);
+      _debugLog('pending invitations count: 0');
+      _debugLog('destination: dashboard');
       return AppRestoreResult(
         destination: AppRestoreDestination.dashboard,
         familyId: family.metadata.id,
@@ -81,6 +113,8 @@ class AppRestoreService {
       );
     }
 
+    _debugLog('pending invitations count: 0');
+    _debugLog('destination: profileSetup');
     return AppRestoreResult(
         destination: AppRestoreDestination.profileSetup,
         familyId: family.metadata.id);
@@ -91,7 +125,49 @@ class AppRestoreService {
     if (directFamily != null) {
       return directFamily;
     }
+    final bootstrappedFamily = await _completePendingBootstrap(user);
+    if (bootstrappedFamily != null) {
+      return bootstrappedFamily;
+    }
+    if (!allowLocalFamilyRecovery) {
+      return null;
+    }
     return _recoverFamilyLinkedToSameEmail(user);
+  }
+
+  Future<Family?> _completePendingBootstrap(User user) async {
+    final store = localStore;
+    if (store == null) {
+      return null;
+    }
+
+    final normalizedEmail = user.email.trim().toLowerCase();
+    final pending = await store.get(
+      LocalStoreCollections.pendingFamilyBootstrap,
+      normalizedEmail,
+    );
+    if (pending == null || pending['completed'] == true) {
+      return null;
+    }
+
+    final familyName = (pending['family_name'] as String? ?? '').trim();
+    if (familyName.isEmpty) {
+      return null;
+    }
+
+    final family = await familyRepository.createFamily(
+      ownerUserId: user.metadata.id,
+      name: familyName,
+    );
+    final updated = Map<String, Object?>.from(pending);
+    updated['completed'] = true;
+    updated['completed_at'] = DateTime.now().toUtc().toIso8601String();
+    await store.put(
+      LocalStoreCollections.pendingFamilyBootstrap,
+      normalizedEmail,
+      updated,
+    );
+    return family;
   }
 
   Future<Family?> _recoverFamilyLinkedToSameEmail(User user) async {
@@ -168,12 +244,14 @@ class AppRestoreService {
 }
 
 final appRestoreServiceProvider = Provider<AppRestoreService>((ref) {
+  final familyRepository = ref.watch(familyRepositoryProvider);
   return AppRestoreService(
     authRepository: ref.watch(authRepositoryProvider),
-    familyRepository: ref.watch(familyRepositoryProvider),
+    familyRepository: familyRepository,
     profileRepository: ref.watch(profileRepositoryProvider),
     sessionRepository: ref.watch(routineSessionRepositoryProvider),
     localStore: ref.watch(localStoreProvider),
+    allowLocalFamilyRecovery: familyRepository is! SupabaseFamilyRepository,
   );
 });
 
@@ -186,3 +264,12 @@ final appRestoreProvider = FutureProvider<AppRestoreResult>((ref) async {
       result.activeSessionId;
   return result;
 });
+
+void _debugLog(String message) {
+  assert(() {
+    // Development-only diagnostics. Do not log passwords, tokens or secrets.
+    // ignore: avoid_print
+    print(message);
+    return true;
+  }());
+}

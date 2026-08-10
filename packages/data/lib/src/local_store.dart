@@ -28,5 +28,6 @@ class LocalStoreCollections {
   static const wearableSnapshots = 'wearable_snapshots';
   static const wearableCommands = 'wearable_commands';
   static const authState = 'auth_state';
+  static const pendingFamilyBootstrap = 'pending_family_bootstrap';
   static const syncQueue = 'sync_queue';
 }

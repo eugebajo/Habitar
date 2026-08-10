@@ -38,3 +38,11 @@
 - Full professional role permissions.
 - Polished invitation acceptance from email/deep link.
 - More complete progress history and trend charts.
+
+## Known Internal-Test Limitations
+
+- Custom SMTP is not configured.
+- Password recovery email delivery is not production-ready.
+- Family invitation email delivery is not implemented.
+- Multiadult invitation acceptance requires final end-to-end validation.
+- Native smartwatch integration is not implemented.

@@ -104,7 +104,7 @@ class _ProfilesScreenState extends ConsumerState<ProfilesScreen> {
                 ),
                 const SizedBox(height: HabitarSpacing.xl),
                 OutlinedButton(
-                  onPressed: () => context.go('/adult-pin'),
+                  onPressed: () => context.go('/login'),
                   child: const Text('Entrar como adulto'),
                 ),
               ],
@@ -189,7 +189,9 @@ class _ProfileTile extends StatelessWidget {
               Text(
                 hasNext
                     ? 'Ahora: ${summary.nextTaskTitle}'
-                    : 'Hoy no hay pasos asignados.',
+                    : summary.completedGoals > 0 && summary.pendingTasks == 0
+                        ? 'Rutina completada por hoy.'
+                        : 'Hoy no hay pasos asignados.',
               ),
               const SizedBox(height: HabitarSpacing.sm),
               Text(

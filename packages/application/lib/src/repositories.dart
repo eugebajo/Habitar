@@ -41,6 +41,23 @@ abstract interface class AuthRepository {
   Future<User?> currentUser();
 
   Future<void> signOut();
+
+  Future<void> requestPasswordReset({
+    required String email,
+    required Uri redirectTo,
+  });
+
+  Future<void> updatePassword({required String password});
+}
+
+class PendingFamilyInvitation {
+  const PendingFamilyInvitation({
+    required this.invitation,
+    required this.familyName,
+  });
+
+  final AdultInvitation invitation;
+  final String familyName;
 }
 
 abstract interface class ProfileRepository {
@@ -75,6 +92,9 @@ abstract interface class FamilyRepository {
   });
 
   Future<List<AdultInvitation>> invitationsForFamily(String familyId);
+
+  Future<List<PendingFamilyInvitation>> pendingInvitationsForEmail(
+      String authenticatedEmail);
 
   Future<FamilyMember> acceptInvitation({
     required String invitationId,

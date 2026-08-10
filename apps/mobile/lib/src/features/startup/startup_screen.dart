@@ -15,9 +15,11 @@ class StartupScreen extends ConsumerWidget {
         final location = switch (result.destination) {
           AppRestoreDestination.onboarding => '/onboarding',
           AppRestoreDestination.register => '/register',
+          AppRestoreDestination.invitation => '/invitation',
           AppRestoreDestination.profileSetup => '/profile',
           AppRestoreDestination.dashboard => '/dashboard',
         };
+        _debugLog('ROUTER DESTINATION: $location');
         context.go(location);
       });
     });
@@ -58,4 +60,13 @@ class StartupScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+void _debugLog(String message) {
+  assert(() {
+    // Development-only diagnostics. Do not log passwords, tokens or secrets.
+    // ignore: avoid_print
+    print(message);
+    return true;
+  }());
 }

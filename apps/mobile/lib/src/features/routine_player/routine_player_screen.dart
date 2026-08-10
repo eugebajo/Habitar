@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:habitar_application/application.dart';
 import 'package:habitar_design_system/design_system.dart';
+import 'package:habitar_domain/domain.dart';
 import 'package:habitar_routine_engine/routine_engine.dart';
 
 import '../../dependencies.dart';
@@ -36,6 +37,8 @@ class _RoutinePlayerScreenState extends ConsumerState<RoutinePlayerScreen> {
                 ? const _EmptyRoutine()
                 : _RoutineBody(
                     session: session,
+                    isTeen:
+                        ref.watch(currentProfileKindProvider) == ProfileKind.teen,
                     onDone: () =>
                         _update((service) => service.completeStep(session)),
                     onMoreTime: () =>
@@ -83,6 +86,7 @@ class _RoutinePlayerScreenState extends ConsumerState<RoutinePlayerScreen> {
 class _RoutineBody extends StatelessWidget {
   const _RoutineBody(
       {required this.session,
+      required this.isTeen,
       required this.onDone,
       required this.onMoreTime,
       required this.onPause,
@@ -92,6 +96,7 @@ class _RoutineBody extends StatelessWidget {
       required this.onSkip});
 
   final RoutineSession session;
+  final bool isTeen;
   final VoidCallback onDone;
   final VoidCallback onMoreTime;
   final VoidCallback onPause;
@@ -112,6 +117,48 @@ class _RoutineBody extends StatelessWidget {
         .clamp(1, totalSteps == 0 ? 1 : totalSteps);
     final progress = session.progressFraction.clamp(0, 1).toDouble();
     final estimatedStepMinutes = activeStep?.estimatedMinutes;
+
+    if (isComplete) {
+      return HabitarPage(
+        maxWidth: 620,
+        padding: const EdgeInsets.fromLTRB(22, 16, 22, 18),
+        children: [
+          const Center(child: HabitarWordmark(compact: true)),
+          const SizedBox(height: 48),
+          HabitarCard(
+            borderColor: HabitarColors.primaryGreen.withValues(alpha: .35),
+            child: Column(
+              children: [
+                const SizedBox(
+                  width: 150,
+                  height: 130,
+                  child: HabitarSoftIllustration(label: 'heart'),
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  isTeen ? 'Listo por hoy' : '¡Lo hiciste!',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.displaySmall,
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  isTeen
+                      ? 'Terminaste esta rutina.'
+                      : 'Terminaste tus pasos de hoy. Cada paso cuenta.',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+          FilledButton(
+            onPressed: () => context.go(isTeen ? '/teen' : '/child'),
+            child: const Text('Volver a mi espacio'),
+          ),
+        ],
+      );
+    }
 
     return HabitarPage(
       maxWidth: 620,

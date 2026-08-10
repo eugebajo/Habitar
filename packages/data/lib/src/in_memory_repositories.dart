@@ -45,6 +45,15 @@ class InMemoryAuthRepository implements AuthRepository {
   Future<void> signOut() async {
     _current = null;
   }
+
+  @override
+  Future<void> requestPasswordReset({
+    required String email,
+    required Uri redirectTo,
+  }) async {}
+
+  @override
+  Future<void> updatePassword({required String password}) async {}
 }
 
 class InMemoryFamilyRepository implements FamilyRepository {
@@ -140,6 +149,39 @@ class InMemoryFamilyRepository implements FamilyRepository {
   }
 
   @override
+  Future<List<PendingFamilyInvitation>> pendingInvitationsForEmail(
+      String authenticatedEmail) async {
+    final email = authenticatedEmail.trim().toLowerCase();
+    final now = DateTime.now();
+    final invitations = _invitations.where((invitation) {
+      return invitation.status == AdultInvitationStatus.pending &&
+          invitation.expiresAt.isAfter(now) &&
+          invitation.email.trim().toLowerCase() == email;
+    });
+    return [
+      for (final invitation in invitations)
+        PendingFamilyInvitation(
+          invitation: invitation,
+          familyName: _familiesByOwner.values
+                  .firstWhere(
+                    (family) => family.metadata.id == invitation.familyId,
+                    orElse: () => Family(
+                      metadata: EntityMetadata(
+                        id: invitation.familyId,
+                        createdAt: now,
+                        updatedAt: now,
+                        ownerId: invitation.invitedByUserId ?? invitation.familyId,
+                      ),
+                      name: 'Familia',
+                      adultUserIds: const [],
+                    ),
+                  )
+                  .name,
+        ),
+    ];
+  }
+
+  @override
   Future<FamilyMember> acceptInvitation({
     required String invitationId,
     required String userId,
@@ -163,6 +205,21 @@ class InMemoryFamilyRepository implements FamilyRepository {
       return existingMembers.first;
     }
     if (invitation.expiresAt.isBefore(now)) {
+      _invitations[index] = AdultInvitation(
+        metadata: EntityMetadata(
+          id: invitation.metadata.id,
+          createdAt: invitation.metadata.createdAt,
+          updatedAt: now,
+          ownerId: invitation.metadata.ownerId,
+        ),
+        familyId: invitation.familyId,
+        email: invitation.email,
+        role: invitation.role,
+        status: AdultInvitationStatus.expired,
+        expiresAt: invitation.expiresAt,
+        invitedByUserId: invitation.invitedByUserId,
+        acceptedByUserId: invitation.acceptedByUserId,
+      );
       throw StateError('Invitation has expired.');
     }
     if (invitation.status != AdultInvitationStatus.pending) {
@@ -584,8 +641,7 @@ class InMemoryRoutineSessionRepository implements RoutineSessionRepository {
   @override
   Future<RoutineSession?> activeSessionForProfile(String profileId) async {
     final sessions = _sessions.values.where((session) {
-      return session.routine.profileId == profileId &&
-          session.status != RoutineSessionStatus.completed;
+      return session.routine.profileId == profileId;
     }).toList();
     sessions.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
     return sessions.isEmpty ? null : sessions.first;
