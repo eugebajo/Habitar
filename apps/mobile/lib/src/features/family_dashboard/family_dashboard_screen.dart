@@ -162,7 +162,9 @@ Future<int> _totalStepsFor(
 int _completedSteps(List<RoutineSession> sessions) => sessions.fold<int>(
       0,
       (total, session) =>
-          total + session.completedStepIds.length + session.skippedStepIds.length,
+          total +
+          session.completedStepIds.length +
+          session.skippedStepIds.length,
     );
 
 class _DashboardHeader extends ConsumerWidget {

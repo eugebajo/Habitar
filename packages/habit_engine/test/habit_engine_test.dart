@@ -4,7 +4,9 @@ import 'package:test/test.dart';
 
 void main() {
   group('HabitEngine', () {
-    test('requires adult override when child profile would exceed two new habits', () {
+    test(
+        'requires adult override when child profile would exceed two new habits',
+        () {
       final engine = HabitEngine();
       final plan = engine.evaluateActivation(
         habit: _habit('3'),
@@ -21,8 +23,18 @@ void main() {
       final summary = engine.summarizeWeek(
         habitId: '1',
         entries: [
-          HabitProgressEntry(habitId: '1', recordedAt: DateTime(2026), completedMinimumVersion: true, helpLevel: 1, ease: 4),
-          HabitProgressEntry(habitId: '1', recordedAt: DateTime(2026, 1, 2), completedMinimumVersion: true, helpLevel: 2, ease: 3),
+          HabitProgressEntry(
+              habitId: '1',
+              recordedAt: DateTime(2026),
+              completedMinimumVersion: true,
+              helpLevel: 1,
+              ease: 4),
+          HabitProgressEntry(
+              habitId: '1',
+              recordedAt: DateTime(2026, 1, 2),
+              completedMinimumVersion: true,
+              helpLevel: 2,
+              ease: 3),
         ],
       );
 
@@ -35,7 +47,8 @@ void main() {
 Habit _habit(String id) {
   final now = DateTime(2026);
   return Habit(
-    metadata: EntityMetadata(id: id, createdAt: now, updatedAt: now, ownerId: 'profile-1'),
+    metadata: EntityMetadata(
+        id: id, createdAt: now, updatedAt: now, ownerId: 'profile-1'),
     profileId: 'profile-1',
     title: 'Habito $id',
     status: HabitStatus.newHabit,

@@ -452,10 +452,12 @@ class _RoutineTile extends StatelessWidget {
                     ),
                   ]),
                 ])),
-            HabitarPill(
-                label: _status,
-                icon: Icons.check_circle_rounded,
-                color: _statusColor),
+            Flexible(
+              child: HabitarPill(
+                  label: _status,
+                  icon: Icons.check_circle_rounded,
+                  color: _statusColor),
+            ),
           ]),
           const Divider(height: 28, color: HabitarColors.line),
           Wrap(alignment: WrapAlignment.spaceAround, spacing: 8, children: [
@@ -495,7 +497,7 @@ class _MiniMeta extends StatelessWidget {
       Row(mainAxisSize: MainAxisSize.min, children: [
         Icon(icon, size: 18, color: HabitarColors.mutedInk),
         const SizedBox(width: 5),
-        Text(label)
+        Flexible(child: Text(label, overflow: TextOverflow.ellipsis))
       ]);
 }
 
@@ -1365,8 +1367,7 @@ Future<void> _startRoutine(
     return;
   }
   if (latestSession != null && _isOpenRoutineSession(latestSession)) {
-    ref.read(currentRoutineSessionIdProvider.notifier).state =
-        latestSession.id;
+    ref.read(currentRoutineSessionIdProvider.notifier).state = latestSession.id;
     if (context.mounted) {
       context.go('/routine/player');
     }

@@ -164,8 +164,8 @@ void main() {
     final directory =
         await Directory.systemTemp.createTemp('habitar_routine_scope_test_');
     addTearDown(() => directory.delete(recursive: true));
-    final repository =
-        LocalRoutineRepository(FileLocalStore(File('${directory.path}/h.json')));
+    final repository = LocalRoutineRepository(
+        FileLocalStore(File('${directory.path}/h.json')));
 
     final childRoutine = await repository.createRoutine(
       profileId: 'nico-child',
@@ -187,7 +187,8 @@ void main() {
         [childRoutine.metadata.id]);
     expect(teenRoutines.map((routine) => routine.metadata.id),
         [teenRoutine.metadata.id]);
-    expect(childSteps.map((step) => step.title), ['Aseo', 'Vestirse', 'Mochila']);
+    expect(
+        childSteps.map((step) => step.title), ['Aseo', 'Vestirse', 'Mochila']);
   });
 
   test('persists notifications, wellbeing, story progress and wearables',
@@ -455,8 +456,8 @@ void main() {
       LocalStoreCollections.adultInvitations,
       invitation.metadata.id,
     );
-    await store.put(LocalStoreCollections.adultInvitations,
-        invitation.metadata.id, {
+    await store
+        .put(LocalStoreCollections.adultInvitations, invitation.metadata.id, {
       ...record!,
       'expires_at': DateTime.utc(2020, 1, 1).toIso8601String(),
     });
@@ -475,7 +476,8 @@ void main() {
     expect(await families.membersForFamily(family.metadata.id), hasLength(1));
   });
 
-  test('does not duplicate an accepted invitation or existing member', () async {
+  test('does not duplicate an accepted invitation or existing member',
+      () async {
     final directory =
         await Directory.systemTemp.createTemp('habitar_local_store_test_');
     addTearDown(() => directory.delete(recursive: true));

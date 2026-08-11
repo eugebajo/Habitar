@@ -450,7 +450,7 @@ class HabitarScreenHeader extends StatelessWidget {
                       style: Theme.of(context).textTheme.displaySmall)),
             if (trailing != null) ...[
               const SizedBox(width: 12),
-              trailing!,
+              Flexible(child: trailing!),
             ],
             if (centerLogo) const Spacer(),
           ],

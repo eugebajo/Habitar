@@ -66,9 +66,8 @@ class _PendingInvitationScreenState
                 FilledButton(
                   onPressed:
                       pending == null || _isAccepting ? null : _acceptInvite,
-                  child: Text(_isAccepting
-                      ? 'Uniendo...'
-                      : 'Unirme a la familia'),
+                  child:
+                      Text(_isAccepting ? 'Uniendo...' : 'Unirme a la familia'),
                 ),
                 const SizedBox(height: 10),
                 TextButton(
@@ -102,8 +101,9 @@ class _PendingInvitationScreenState
             userId: user.metadata.id,
             userEmail: user.email,
           );
-      final family =
-          await ref.read(familyRepositoryProvider).currentFamily(user.metadata.id);
+      final family = await ref
+          .read(familyRepositoryProvider)
+          .currentFamily(user.metadata.id);
       if (family == null) {
         throw StateError('Family membership was not loaded after accept.');
       }
@@ -122,7 +122,8 @@ class _PendingInvitationScreenState
         if (teens.isNotEmpty) {
           ref.read(currentProfileIdProvider.notifier).state =
               teens.first.metadata.id;
-          ref.read(currentProfileKindProvider.notifier).state = ProfileKind.teen;
+          ref.read(currentProfileKindProvider.notifier).state =
+              ProfileKind.teen;
         }
       }
       ref.invalidate(appRestoreProvider);

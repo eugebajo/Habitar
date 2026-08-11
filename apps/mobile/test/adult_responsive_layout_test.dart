@@ -118,6 +118,7 @@ void main() {
       scrollable: find.byType(Scrollable).first,
       maxScrolls: 10,
     );
+    await tester.pumpAndSettle();
     expect(find.text('Eliminar'), findsWidgets);
     await tester.tap(find.text('Eliminar').first);
     await tester.pumpAndSettle();
@@ -254,7 +255,8 @@ Future<_LayoutFixture> _createFixture({
       repeatPolicy: RoutineRepeatPolicy.daily,
     );
     if (completedRoutine) {
-      final steps = await routineRepository.stepsForRoutine(routine.metadata.id);
+      final steps =
+          await routineRepository.stepsForRoutine(routine.metadata.id);
       await sessionRepository.save(
         RoutineSession(
           id: 'session-completed',

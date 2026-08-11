@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:habitar_application/application.dart';
 import 'package:habitar_data/data.dart';
+import 'package:habitar_domain/domain.dart';
 import 'package:habitar_mobile/src/routine_today.dart';
 import 'package:habitar_routine_engine/routine_engine.dart';
 

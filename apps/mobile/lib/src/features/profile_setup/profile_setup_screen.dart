@@ -76,8 +76,8 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                   const SizedBox(height: HabitarSpacing.md),
                   TextFormField(
                     controller: _ageController,
-                    decoration:
-                        const InputDecoration(labelText: '¿Cuántos años tiene?'),
+                    decoration: const InputDecoration(
+                        labelText: '¿Cuántos años tiene?'),
                     keyboardType: TextInputType.number,
                     validator: _ageValidator,
                   ),

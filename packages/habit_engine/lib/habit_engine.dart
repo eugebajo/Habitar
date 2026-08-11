@@ -1,6 +1,7 @@
 import 'package:habitar_domain/domain.dart';
 
-export 'package:habitar_domain/domain.dart' show HabitActivationDecision, HabitActivationPolicy;
+export 'package:habitar_domain/domain.dart'
+    show HabitActivationDecision, HabitActivationPolicy;
 
 class HabitActivationPlan {
   const HabitActivationPlan({
@@ -74,7 +75,8 @@ class HabitEngine {
     required Iterable<Habit> activeHabits,
   }) {
     final activeNewHabitCount = activeHabits.where(_isNewActive).length;
-    final decision = policy.evaluate(profileKind: profileKind, activeHabits: [...activeHabits, habit]);
+    final decision = policy.evaluate(
+        profileKind: profileKind, activeHabits: [...activeHabits, habit]);
     return HabitActivationPlan(
       habit: habit,
       decision: decision,
@@ -83,8 +85,12 @@ class HabitEngine {
     );
   }
 
-  WeeklyHabitSummary summarizeWeek({required String habitId, required Iterable<HabitProgressEntry> entries}) {
-    final matching = entries.where((entry) => entry.habitId == habitId).toList(growable: false);
+  WeeklyHabitSummary summarizeWeek(
+      {required String habitId,
+      required Iterable<HabitProgressEntry> entries}) {
+    final matching = entries
+        .where((entry) => entry.habitId == habitId)
+        .toList(growable: false);
     if (matching.isEmpty) {
       return WeeklyHabitSummary(
         habitId: habitId,
@@ -95,9 +101,12 @@ class HabitEngine {
       );
     }
 
-    final completions = matching.where((entry) => entry.completedMinimumVersion).length;
-    final helpTotal = matching.fold<int>(0, (total, entry) => total + entry.helpLevel);
-    final easeTotal = matching.fold<int>(0, (total, entry) => total + entry.ease);
+    final completions =
+        matching.where((entry) => entry.completedMinimumVersion).length;
+    final helpTotal =
+        matching.fold<int>(0, (total, entry) => total + entry.helpLevel);
+    final easeTotal =
+        matching.fold<int>(0, (total, entry) => total + entry.ease);
 
     return WeeklyHabitSummary(
       habitId: habitId,
@@ -109,6 +118,7 @@ class HabitEngine {
   }
 
   bool _isNewActive(Habit habit) {
-    return habit.status == HabitStatus.newHabit || habit.status == HabitStatus.practicing;
+    return habit.status == HabitStatus.newHabit ||
+        habit.status == HabitStatus.practicing;
   }
 }

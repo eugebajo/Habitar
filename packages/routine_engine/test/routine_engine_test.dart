@@ -8,7 +8,11 @@ void main() {
       final engine = RoutineEngine();
 
       expect(
-        () => engine.start(sessionId: 's1', routine: _routine(), steps: [_step('1', 1), _step('2', 2)], now: DateTime(2026)),
+        () => engine.start(
+            sessionId: 's1',
+            routine: _routine(),
+            steps: [_step('1', 1), _step('2', 2)],
+            now: DateTime(2026)),
         throwsArgumentError,
       );
     });
@@ -23,9 +27,13 @@ void main() {
         now: now,
       );
 
-      final afterFirstStep = engine.completeActiveStep(started, now.add(const Duration(minutes: 2)));
-      final paused = engine.pause(afterFirstStep, reason: RoutinePauseReason.sensory, now: now.add(const Duration(minutes: 3)));
-      final resumed = engine.resume(paused, now.add(const Duration(minutes: 5)));
+      final afterFirstStep = engine.completeActiveStep(
+          started, now.add(const Duration(minutes: 2)));
+      final paused = engine.pause(afterFirstStep,
+          reason: RoutinePauseReason.sensory,
+          now: now.add(const Duration(minutes: 3)));
+      final resumed =
+          engine.resume(paused, now.add(const Duration(minutes: 5)));
 
       expect(resumed.completedStepIds, ['1']);
       expect(resumed.activeStep?.metadata.id, '2');
@@ -41,7 +49,8 @@ void main() {
         now: DateTime(2026),
       );
 
-      final updated = engine.requestMoreTime(session, minutes: 5, now: DateTime(2026, 1, 1, 8, 5));
+      final updated = engine.requestMoreTime(session,
+          minutes: 5, now: DateTime(2026, 1, 1, 8, 5));
 
       expect(updated.activeStep?.metadata.id, '1');
       expect(updated.extraMinutesByStepId['1'], 5);
@@ -56,7 +65,8 @@ void main() {
         now: DateTime(2026),
       );
 
-      final updated = engine.skipActiveStep(session, now: DateTime(2026, 1, 1, 8, 5));
+      final updated =
+          engine.skipActiveStep(session, now: DateTime(2026, 1, 1, 8, 5));
 
       expect(updated.activeStep?.metadata.id, '2');
       expect(updated.progressFraction, 1 / 3);
@@ -67,7 +77,8 @@ void main() {
 Routine _routine() {
   final now = DateTime(2026);
   return Routine(
-    metadata: EntityMetadata(id: 'routine-1', createdAt: now, updatedAt: now, ownerId: 'profile-1'),
+    metadata: EntityMetadata(
+        id: 'routine-1', createdAt: now, updatedAt: now, ownerId: 'profile-1'),
     profileId: 'profile-1',
     title: 'Manana tranquila',
   );
@@ -76,7 +87,8 @@ Routine _routine() {
 RoutineStep _step(String id, int order) {
   final now = DateTime(2026);
   return RoutineStep(
-    metadata: EntityMetadata(id: id, createdAt: now, updatedAt: now, ownerId: 'profile-1'),
+    metadata: EntityMetadata(
+        id: id, createdAt: now, updatedAt: now, ownerId: 'profile-1'),
     routineId: 'routine-1',
     title: 'Paso $order',
     order: order,

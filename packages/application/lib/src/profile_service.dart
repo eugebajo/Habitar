@@ -84,9 +84,9 @@ class ProfileService {
       localDate: now,
     );
     final activeSessions = sessionsToday.where(_isOpenSession).toList();
-    RoutineSession? activeSession =
+    final RoutineSession? activeSession =
         activeSessions.isEmpty ? null : activeSessions.first;
-    RoutineSession? latestSession =
+    final RoutineSession? latestSession =
         sessionsToday.isEmpty ? null : sessionsToday.first;
     final completedRoutineIds = sessionsToday
         .where((session) => session.status == RoutineSessionStatus.completed)
@@ -97,7 +97,7 @@ class ProfileService {
         .toList(growable: false);
     final pendingRoutine =
         pendingRoutines.isEmpty ? null : pendingRoutines.first;
-    Routine? firstRoutine = activeSession?.routine ??
+    final Routine? firstRoutine = activeSession?.routine ??
         pendingRoutine ??
         latestSession?.routine ??
         (routines.isEmpty ? null : routines.first);
@@ -136,7 +136,9 @@ class ProfileService {
     final completedRoutineSteps = sessionsToday.fold<int>(
       0,
       (total, session) =>
-          total + session.completedStepIds.length + session.skippedStepIds.length,
+          total +
+          session.completedStepIds.length +
+          session.skippedStepIds.length,
     );
     final skippedRoutineSteps = activeSession?.skippedStepIds.length ?? 0;
     final activeRoutinePending = activeSession == null
@@ -161,9 +163,7 @@ class ProfileService {
       completedGoals: completedGoals,
       pendingTasks: pendingTasks,
       progressFraction: progressFraction,
-      activeRoutineTitle: activeSession?.routine.title ??
-          latestSession?.routine.title ??
-          firstRoutine?.title,
+      activeRoutineTitle: activeSession?.routine.title ?? firstRoutine?.title,
       nextTaskTitle: sessionCompleted
           ? null
           : activeSession?.activeStep?.title ??

@@ -107,8 +107,7 @@ class _WearablesScreenState extends ConsumerState<WearablesScreen> {
                       icon: Icons.vibration_rounded,
                       label: 'Vibración suave',
                       value: _vibration,
-                      onChanged: (value) =>
-                          setState(() => _vibration = value)),
+                      onChanged: (value) => setState(() => _vibration = value)),
                   _SwitchTile(
                       icon: Icons.volume_down_outlined,
                       label: 'Sonido breve',

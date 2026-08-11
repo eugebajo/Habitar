@@ -19,8 +19,7 @@ void main() {
   });
 
   test('surfaces email confirmation requirement without a session', () async {
-    final gateway =
-        _FakeSupabaseAuthGateway(requireEmailConfirmation: true);
+    final gateway = _FakeSupabaseAuthGateway(requireEmailConfirmation: true);
     final repository = SupabaseAuthRepository(gateway);
 
     await expectLater(

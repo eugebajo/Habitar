@@ -14,7 +14,8 @@ void main() {
       expect(decision.isAllowed, isTrue);
     });
 
-    test('requires override above two new active habits for a child profile', () {
+    test('requires override above two new active habits for a child profile',
+        () {
       final policy = HabitActivationPolicy();
 
       final decision = policy.evaluate(
@@ -42,7 +43,8 @@ void main() {
 Habit _habit(String id) {
   final now = DateTime(2026, 1, 1);
   return Habit(
-    metadata: EntityMetadata(id: id, createdAt: now, updatedAt: now, ownerId: 'adult-1'),
+    metadata: EntityMetadata(
+        id: id, createdAt: now, updatedAt: now, ownerId: 'adult-1'),
     profileId: 'profile-1',
     title: 'Habito $id',
     status: HabitStatus.newHabit,

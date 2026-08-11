@@ -6,12 +6,7 @@ enum AdultProfileKind { parent, caregiver, professional, teacher }
 
 enum FamilyMemberRole { owner, parent, caregiver, professional, viewer }
 
-enum AdultInvitationStatus {
-  pending,
-  accepted,
-  revoked,
-  expired
-}
+enum AdultInvitationStatus { pending, accepted, revoked, expired }
 
 enum ProfileKind { child, teen }
 

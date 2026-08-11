@@ -4,9 +4,21 @@ enum WearablePlatform { watchOS, wearOS }
 
 enum WearableConnectionStatus { unavailable, disconnected, connected, syncing }
 
-enum WearableQuickAction { completeStep, addFiveMinutes, requestHelp, postpone, pause, resume }
+enum WearableQuickAction {
+  completeStep,
+  addFiveMinutes,
+  requestHelp,
+  postpone,
+  pause,
+  resume
+}
 
-enum WearableTransport { backend, watchConnectivity, wearDataLayer, pushNotification }
+enum WearableTransport {
+  backend,
+  watchConnectivity,
+  wearDataLayer,
+  pushNotification
+}
 
 class WearableCapabilitySet {
   const WearableCapabilitySet({
@@ -46,7 +58,9 @@ class WearableRoutineSnapshot {
   final DateTime updatedAt;
 
   bool get isActionable {
-    return status == RoutineSessionStatus.running || status == RoutineSessionStatus.paused || status == RoutineSessionStatus.postponed;
+    return status == RoutineSessionStatus.running ||
+        status == RoutineSessionStatus.paused ||
+        status == RoutineSessionStatus.postponed;
   }
 }
 
@@ -69,9 +83,11 @@ class WearableCommand {
 abstract interface class WearableSyncGateway {
   Future<WearableConnectionStatus> status(WearablePlatform platform);
 
-  Future<void> publishSnapshot(WearablePlatform platform, WearableRoutineSnapshot snapshot);
+  Future<void> publishSnapshot(
+      WearablePlatform platform, WearableRoutineSnapshot snapshot);
 
-  Future<List<WearableCommand>> pendingCommands(WearablePlatform platform, String sessionId);
+  Future<List<WearableCommand>> pendingCommands(
+      WearablePlatform platform, String sessionId);
 }
 
 class WearableSnapshotMapper {
@@ -98,7 +114,11 @@ class WearablePlatformPlanner {
     return switch (platform) {
       WearablePlatform.watchOS => const WearableCapabilitySet(
           platform: WearablePlatform.watchOS,
-          transports: [WearableTransport.backend, WearableTransport.pushNotification, WearableTransport.watchConnectivity],
+          transports: [
+            WearableTransport.backend,
+            WearableTransport.pushNotification,
+            WearableTransport.watchConnectivity
+          ],
           quickActions: [
             WearableQuickAction.completeStep,
             WearableQuickAction.addFiveMinutes,
@@ -111,7 +131,11 @@ class WearablePlatformPlanner {
         ),
       WearablePlatform.wearOS => const WearableCapabilitySet(
           platform: WearablePlatform.wearOS,
-          transports: [WearableTransport.backend, WearableTransport.pushNotification, WearableTransport.wearDataLayer],
+          transports: [
+            WearableTransport.backend,
+            WearableTransport.pushNotification,
+            WearableTransport.wearDataLayer
+          ],
           quickActions: [
             WearableQuickAction.completeStep,
             WearableQuickAction.addFiveMinutes,

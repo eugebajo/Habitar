@@ -9,7 +9,11 @@ void main() {
     final session = RoutineEngine().start(
       sessionId: 'session-1',
       routine: Routine(
-        metadata: EntityMetadata(id: 'routine-1', createdAt: now, updatedAt: now, ownerId: 'profile-1'),
+        metadata: EntityMetadata(
+            id: 'routine-1',
+            createdAt: now,
+            updatedAt: now,
+            ownerId: 'profile-1'),
         profileId: 'profile-1',
         title: 'Salida',
       ),
@@ -31,15 +35,18 @@ void main() {
   test('plans distinct transports for watchOS and Wear OS', () {
     const planner = WearablePlatformPlanner();
 
-    expect(planner.capabilitiesFor(WearablePlatform.watchOS).transports, contains(WearableTransport.watchConnectivity));
-    expect(planner.capabilitiesFor(WearablePlatform.wearOS).transports, contains(WearableTransport.wearDataLayer));
+    expect(planner.capabilitiesFor(WearablePlatform.watchOS).transports,
+        contains(WearableTransport.watchConnectivity));
+    expect(planner.capabilitiesFor(WearablePlatform.wearOS).transports,
+        contains(WearableTransport.wearDataLayer));
   });
 }
 
 RoutineStep _step(String id, String title, int order) {
   final now = DateTime(2026);
   return RoutineStep(
-    metadata: EntityMetadata(id: id, createdAt: now, updatedAt: now, ownerId: 'profile-1'),
+    metadata: EntityMetadata(
+        id: id, createdAt: now, updatedAt: now, ownerId: 'profile-1'),
     routineId: 'routine-1',
     title: title,
     order: order,

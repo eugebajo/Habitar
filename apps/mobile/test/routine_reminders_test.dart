@@ -103,6 +103,6 @@ RoutineStep _step(String id, String routineId, String title) {
     ),
     routineId: routineId,
     title: title,
-    position: 0,
+    order: 0,
   );
 }
