@@ -4,8 +4,30 @@ enum RoutineSessionStatus { running, paused, completed, postponed }
 
 enum RoutinePauseReason { sensory, interruption }
 
+const habitarFunctionalTimeZoneName = 'America/Asuncion';
+// Paraguay uses permanent UTC-3 since October 2024 under Ley N. 7354.
+// Keep this aligned with PostgreSQL `at time zone 'America/Asuncion'`.
+// If Paraguay returns to seasonal time, replace this fixed offset with a
+// timezone database based implementation.
+const _asuncionUtcOffset = Duration(hours: -3);
+
+DateTime habitarFunctionalDate([DateTime? instant]) {
+  final utc = (instant ?? DateTime.now()).toUtc();
+  final asuncion = utc.add(_asuncionUtcOffset);
+  return DateTime(asuncion.year, asuncion.month, asuncion.day);
+}
+
+bool sameHabitarFunctionalDate(DateTime first, DateTime second) {
+  final a = habitarFunctionalDate(first);
+  final b = habitarFunctionalDate(second);
+  return a.year == b.year && a.month == b.month && a.day == b.day;
+}
+
 class RoutineProgress {
-  const RoutineProgress({required this.routine, required this.steps, required this.activeStepIndex});
+  const RoutineProgress(
+      {required this.routine,
+      required this.steps,
+      required this.activeStepIndex});
 
   final Routine routine;
   final List<RoutineStep> steps;
@@ -35,6 +57,7 @@ class RoutineSession {
     required this.activeStepIndex,
     required this.startedAt,
     required this.updatedAt,
+    DateTime? sessionDate,
     this.status = RoutineSessionStatus.running,
     this.completedStepIds = const [],
     this.skippedStepIds = const [],
@@ -42,7 +65,8 @@ class RoutineSession {
     this.pauseReason,
     this.helpRequested = false,
     this.postponedUntil,
-  });
+    this.completedAt,
+  }) : sessionDate = sessionDate ?? startedAt;
 
   final String id;
   final Routine routine;
@@ -50,6 +74,7 @@ class RoutineSession {
   final int activeStepIndex;
   final DateTime startedAt;
   final DateTime updatedAt;
+  final DateTime sessionDate;
   final RoutineSessionStatus status;
   final List<String> completedStepIds;
   final List<String> skippedStepIds;
@@ -57,6 +82,7 @@ class RoutineSession {
   final RoutinePauseReason? pauseReason;
   final bool helpRequested;
   final DateTime? postponedUntil;
+  final DateTime? completedAt;
 
   RoutineStep? get activeStep {
     if (activeStepIndex < 0 || activeStepIndex >= orderedSteps.length) {
@@ -87,10 +113,13 @@ class RoutineSession {
 
   int get estimatedRemainingMinutes {
     final remaining = orderedSteps.skip(activeStepIndex).where((step) {
-      return !completedStepIds.contains(step.metadata.id) && !skippedStepIds.contains(step.metadata.id);
+      return !completedStepIds.contains(step.metadata.id) &&
+          !skippedStepIds.contains(step.metadata.id);
     });
     return remaining.fold<int>(0, (total, step) {
-      return total + (step.estimatedMinutes ?? 0) + (extraMinutesByStepId[step.metadata.id] ?? 0);
+      return total +
+          (step.estimatedMinutes ?? 0) +
+          (extraMinutesByStepId[step.metadata.id] ?? 0);
     });
   }
 
@@ -106,6 +135,9 @@ class RoutineSession {
     bool? helpRequested,
     DateTime? postponedUntil,
     bool clearPostponedUntil = false,
+    DateTime? completedAt,
+    bool clearCompletedAt = false,
+    DateTime? sessionDate,
   }) {
     return RoutineSession(
       id: id,
@@ -114,13 +146,16 @@ class RoutineSession {
       activeStepIndex: activeStepIndex ?? this.activeStepIndex,
       startedAt: startedAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      sessionDate: sessionDate ?? this.sessionDate,
       status: status ?? this.status,
       completedStepIds: completedStepIds ?? this.completedStepIds,
       skippedStepIds: skippedStepIds ?? this.skippedStepIds,
       extraMinutesByStepId: extraMinutesByStepId ?? this.extraMinutesByStepId,
       pauseReason: clearPauseReason ? null : pauseReason ?? this.pauseReason,
       helpRequested: helpRequested ?? this.helpRequested,
-      postponedUntil: clearPostponedUntil ? null : postponedUntil ?? this.postponedUntil,
+      postponedUntil:
+          clearPostponedUntil ? null : postponedUntil ?? this.postponedUntil,
+      completedAt: clearCompletedAt ? null : completedAt ?? this.completedAt,
     );
   }
 }
@@ -135,7 +170,8 @@ class RoutineEngine {
     required DateTime now,
   }) {
     if (steps.length < 3) {
-      throw ArgumentError.value(steps.length, 'steps', 'A routine needs at least 3 steps in the MVP.');
+      throw ArgumentError.value(steps.length, 'steps',
+          'A routine needs at least 3 steps in the MVP.');
     }
     final ordered = [...steps]..sort((a, b) => a.order.compareTo(b.order));
     return RoutineSession(
@@ -145,47 +181,70 @@ class RoutineEngine {
       activeStepIndex: 0,
       startedAt: now,
       updatedAt: now,
+      sessionDate: habitarFunctionalDate(now),
     );
   }
 
   RoutineSession completeActiveStep(RoutineSession session, DateTime now) {
     final activeStep = session.activeStep;
     if (activeStep == null) {
-      return session.copyWith(status: RoutineSessionStatus.completed, updatedAt: now);
+      return session.copyWith(
+        status: RoutineSessionStatus.completed,
+        updatedAt: now,
+        completedAt: now,
+      );
     }
 
-    final completed = {...session.completedStepIds, activeStep.metadata.id}.toList(growable: false);
-    final nextIndex = _nextOpenIndex(session, completed, session.skippedStepIds, fromIndex: session.activeStepIndex + 1);
+    final completed = {...session.completedStepIds, activeStep.metadata.id}
+        .toList(growable: false);
+    final nextIndex = _nextOpenIndex(session, completed, session.skippedStepIds,
+        fromIndex: session.activeStepIndex + 1);
     return session.copyWith(
       activeStepIndex: nextIndex,
       completedStepIds: completed,
-      status: nextIndex >= session.steps.length ? RoutineSessionStatus.completed : RoutineSessionStatus.running,
+      status: nextIndex >= session.steps.length
+          ? RoutineSessionStatus.completed
+          : RoutineSessionStatus.running,
       updatedAt: now,
+      completedAt:
+          nextIndex >= session.steps.length ? now : session.completedAt,
       clearPauseReason: true,
       clearPostponedUntil: true,
     );
   }
 
-  RoutineSession requestMoreTime(RoutineSession session, {required int minutes, required DateTime now}) {
+  RoutineSession requestMoreTime(RoutineSession session,
+      {required int minutes, required DateTime now}) {
     final activeStep = session.activeStep;
     if (activeStep == null || minutes <= 0) {
       return session;
     }
-    final currentExtra = session.extraMinutesByStepId[activeStep.metadata.id] ?? 0;
+    final currentExtra =
+        session.extraMinutesByStepId[activeStep.metadata.id] ?? 0;
     final updatedExtras = Map<String, int>.of(session.extraMinutesByStepId);
     updatedExtras[activeStep.metadata.id] = currentExtra + minutes;
-    return session.copyWith(extraMinutesByStepId: updatedExtras, updatedAt: now);
+    return session.copyWith(
+        extraMinutesByStepId: updatedExtras, updatedAt: now);
   }
 
-  RoutineSession pause(RoutineSession session, {required RoutinePauseReason reason, required DateTime now}) {
-    return session.copyWith(status: RoutineSessionStatus.paused, pauseReason: reason, updatedAt: now);
+  RoutineSession pause(RoutineSession session,
+      {required RoutinePauseReason reason, required DateTime now}) {
+    return session.copyWith(
+        status: RoutineSessionStatus.paused,
+        pauseReason: reason,
+        updatedAt: now);
   }
 
   RoutineSession resume(RoutineSession session, DateTime now) {
-    return session.copyWith(status: RoutineSessionStatus.running, updatedAt: now, clearPauseReason: true, clearPostponedUntil: true);
+    return session.copyWith(
+        status: RoutineSessionStatus.running,
+        updatedAt: now,
+        clearPauseReason: true,
+        clearPostponedUntil: true);
   }
 
-  RoutineSession postpone(RoutineSession session, {required Duration duration, required DateTime now}) {
+  RoutineSession postpone(RoutineSession session,
+      {required Duration duration, required DateTime now}) {
     return session.copyWith(
       status: RoutineSessionStatus.postponed,
       postponedUntil: now.add(duration),
@@ -197,18 +256,29 @@ class RoutineEngine {
     return session.copyWith(helpRequested: true, updatedAt: now);
   }
 
-  RoutineSession skipActiveStep(RoutineSession session, {required DateTime now}) {
+  RoutineSession skipActiveStep(RoutineSession session,
+      {required DateTime now}) {
     final activeStep = session.activeStep;
     if (activeStep == null) {
-      return session.copyWith(status: RoutineSessionStatus.completed, updatedAt: now);
+      return session.copyWith(
+        status: RoutineSessionStatus.completed,
+        updatedAt: now,
+        completedAt: now,
+      );
     }
-    final skipped = {...session.skippedStepIds, activeStep.metadata.id}.toList(growable: false);
-    final nextIndex = _nextOpenIndex(session, session.completedStepIds, skipped, fromIndex: session.activeStepIndex + 1);
+    final skipped = {...session.skippedStepIds, activeStep.metadata.id}
+        .toList(growable: false);
+    final nextIndex = _nextOpenIndex(session, session.completedStepIds, skipped,
+        fromIndex: session.activeStepIndex + 1);
     return session.copyWith(
       activeStepIndex: nextIndex,
       skippedStepIds: skipped,
-      status: nextIndex >= session.steps.length ? RoutineSessionStatus.completed : RoutineSessionStatus.running,
+      status: nextIndex >= session.steps.length
+          ? RoutineSessionStatus.completed
+          : RoutineSessionStatus.running,
       updatedAt: now,
+      completedAt:
+          nextIndex >= session.steps.length ? now : session.completedAt,
     );
   }
 
@@ -221,7 +291,8 @@ class RoutineEngine {
     final ordered = session.orderedSteps;
     for (var index = fromIndex; index < ordered.length; index += 1) {
       final stepId = ordered[index].metadata.id;
-      if (!completedStepIds.contains(stepId) && !skippedStepIds.contains(stepId)) {
+      if (!completedStepIds.contains(stepId) &&
+          !skippedStepIds.contains(stepId)) {
         return index;
       }
     }

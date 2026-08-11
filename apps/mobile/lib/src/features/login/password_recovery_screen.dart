@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:habitar_design_system/design_system.dart';
 
 import '../../dependencies.dart';
+import '../../local_restore.dart';
 
 class PasswordRecoveryScreen extends ConsumerStatefulWidget {
   const PasswordRecoveryScreen({super.key});
@@ -126,7 +128,7 @@ class _PasswordRecoveryScreenState
     try {
       await ref.read(passwordRecoveryServiceProvider).requestReset(
             email: _emailController.text.trim(),
-            redirectTo: _passwordRecoveryRedirectUri(),
+            redirectTo: passwordRecoveryRedirectUri(),
           );
       if (mounted) {
         setState(() => _sent = true);
@@ -282,6 +284,8 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
       await ref.read(passwordRecoveryServiceProvider).updatePassword(
             password: _passwordController.text,
           );
+      ref.read(passwordRecoveryActiveProvider.notifier).state = false;
+      ref.invalidate(appRestoreProvider);
       if (mounted) {
         setState(() => _updated = true);
       }
@@ -300,8 +304,17 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
   }
 }
 
-Uri _passwordRecoveryRedirectUri() {
-  final base = Uri.base;
+@visibleForTesting
+Uri passwordRecoveryRedirectUri({
+  Uri? baseUri,
+  bool? isWebOverride,
+}) {
+  final isRunningOnWeb = isWebOverride ?? kIsWeb;
+  if (!isRunningOnWeb) {
+    return Uri.parse('com.habitarpy.app://reset-password');
+  }
+
+  final base = baseUri ?? Uri.base;
   if (base.hasScheme && base.host.isNotEmpty) {
     if (base.host == 'habitarpy.com' || base.host == 'www.habitarpy.com') {
       return Uri.parse('https://habitarpy.com/app/#/reset-password');

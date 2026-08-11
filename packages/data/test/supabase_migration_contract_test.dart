@@ -7,26 +7,32 @@ void main() {
   late final String migration0004;
   late final String migration0005;
   late final String migration0006;
+  late final String migration0007;
 
   setUpAll(() {
+    final root = _repoRoot();
     migration0003 = File(
-      'supabase/migrations/0003_time_bank_benefits.sql',
+      '${root.path}/supabase/migrations/0003_time_bank_benefits.sql',
     ).readAsStringSync();
     migration0004 = File(
-      'supabase/migrations/0004_family_invitations_and_routine_overrides.sql',
+      '${root.path}/supabase/migrations/0004_family_invitations_and_routine_overrides.sql',
     ).readAsStringSync();
     migration0005 = File(
-      'supabase/migrations/0005_initial_family_bootstrap.sql',
+      '${root.path}/supabase/migrations/0005_initial_family_bootstrap.sql',
     ).readAsStringSync();
     migration0006 = File(
-      'supabase/migrations/0006_pending_family_invitations.sql',
+      '${root.path}/supabase/migrations/0006_pending_family_invitations.sql',
+    ).readAsStringSync();
+    migration0007 = File(
+      '${root.path}/supabase/migrations/0007_role_permissions_hardening.sql',
     ).readAsStringSync();
   });
 
   test('protects time bank benefits with family-scoped RLS', () {
     expect(
       migration0003,
-      contains('alter table public.time_bank_benefits enable row level security'),
+      contains(
+          'alter table public.time_bank_benefits enable row level security'),
     );
     expect(
       migration0003,
@@ -142,8 +148,8 @@ void main() {
   });
 
   test('does not grant write access to viewer or professional roles', () {
-    final writePolicyStart =
-        migration0003.indexOf('authorized adults can insert time bank benefits');
+    final writePolicyStart = migration0003
+        .indexOf('authorized adults can insert time bank benefits');
     final writePolicyEnd =
         migration0003.indexOf('create policy "authorized adults can delete');
     final writePolicies =
@@ -176,7 +182,8 @@ void main() {
     final migrations = '${migration0003.toLowerCase()}\n'
         '${migration0004.toLowerCase()}\n'
         '${migration0005.toLowerCase()}\n'
-        '${migration0006.toLowerCase()}';
+        '${migration0006.toLowerCase()}\n'
+        '${migration0007.toLowerCase()}';
     expect(migrations, isNot(contains('drop table')));
     expect(migrations, isNot(contains('delete from')));
     expect(migrations, isNot(contains('truncate')));
@@ -275,4 +282,61 @@ void main() {
     expect(signature, isNotNull);
     expect(signature!.trim(), isEmpty);
   });
+
+  test('hardens role-based RLS for internal-test data tables', () {
+    for (final table in [
+      'profiles',
+      'routine_sessions',
+      'habits',
+      'habit_progress',
+      'support_requests',
+      'time_bank_benefits',
+    ]) {
+      expect(
+        migration0007,
+        contains('alter table public.$table enable row level security'),
+      );
+    }
+
+    expect(migration0007, contains('to authenticated'));
+    expect(migration0007, contains('family_members.user_id = auth.uid()'));
+    expect(
+      migration0007,
+      contains("family_members.role in ('owner', 'parent', 'caregiver')"),
+    );
+    expect(migration0007, contains('profiles.id = habits.profile_id'));
+    expect(migration0007, contains('habits.id = habit_progress.habit_id'));
+    expect(
+      migration0007,
+      contains('profiles.id = time_bank_benefits.profile_id'),
+    );
+    expect(migration0007, isNot(contains('using (true)')));
+    expect(migration0007, isNot(contains('with check (true)')));
+  });
+
+  test('does not grant writes to viewer or professional roles in 0007', () {
+    final writePolicies = migration0007
+        .split('create policy "family members can view')
+        .where((chunk) => chunk.contains('authorized adults can'))
+        .join('\n');
+
+    expect(writePolicies, contains("'owner', 'parent', 'caregiver'"));
+    expect(writePolicies, isNot(contains("'viewer'")));
+    expect(writePolicies, isNot(contains("'professional'")));
+  });
+}
+
+Directory _repoRoot() {
+  var directory = Directory.current;
+  while (true) {
+    if (File('${directory.path}/pubspec.yaml').existsSync() &&
+        Directory('${directory.path}/supabase/migrations').existsSync()) {
+      return directory;
+    }
+    final parent = directory.parent;
+    if (parent.path == directory.path) {
+      throw StateError('Could not locate Habitar repository root.');
+    }
+    directory = parent;
+  }
 }

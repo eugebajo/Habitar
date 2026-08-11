@@ -6,6 +6,9 @@ import 'package:habitar_design_system/design_system.dart';
 import 'package:habitar_domain/domain.dart';
 
 import '../../dependencies.dart';
+import '../../platform/routine_save_diagnostics.dart';
+import '../../routine_reminders.dart';
+import '../../selected_profile.dart';
 
 class RoutineSetupScreen extends ConsumerStatefulWidget {
   const RoutineSetupScreen({super.key, this.routineId});
@@ -46,6 +49,7 @@ class _RoutineSetupScreenState extends ConsumerState<RoutineSetupScreen> {
   var _isLoading = false;
   String? _loadError;
   var _isSubmitting = false;
+  var _isDeleting = false;
 
   bool get _isEditing => widget.routineId != null;
 
@@ -328,6 +332,16 @@ class _RoutineSetupScreenState extends ConsumerState<RoutineSetupScreen> {
                             ? 'Guardar cambios'
                             : 'Guardar rutina'),
                   ),
+                  if (_isEditing) ...[
+                    const SizedBox(height: HabitarSpacing.sm),
+                    OutlinedButton.icon(
+                      onPressed: _isDeleting ? null : _confirmDeleteRoutine,
+                      icon: const Icon(Icons.delete_outline_rounded),
+                      label: Text(
+                        _isDeleting ? 'Eliminando...' : 'Eliminar rutina',
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -460,7 +474,19 @@ class _RoutineSetupScreenState extends ConsumerState<RoutineSetupScreen> {
   }
 
   Future<void> _submit() async {
+    if (_isSubmitting) {
+      return;
+    }
     if (!_formKey.currentState!.validate()) {
+      return;
+    }
+    final stepTitles = _stepTitles();
+    if (stepTitles.length < 3) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Agregá al menos 3 pasos para guardar la rutina.'),
+        ),
+      );
       return;
     }
     final profileId = ref.read(currentProfileIdProvider);
@@ -475,22 +501,14 @@ class _RoutineSetupScreenState extends ConsumerState<RoutineSetupScreen> {
         final routine = _routineFromForm(_editingRoutine!);
         final saved = await repository.updateRoutine(
           routine: routine,
-          stepTitles: _stepTitles(),
+          stepTitles: stepTitles,
         );
-        final savedSteps = await repository.stepsForRoutine(saved.metadata.id);
-        if (kDebugMode) {
-          debugPrint(
-            'ROUTINE CREATED: routine_id=${saved.metadata.id} profile_id=${saved.profileId} title=${saved.title}',
-          );
-          debugPrint(
-            'ROUTINE STEPS CREATED: count=${savedSteps.length} ids=${savedSteps.map((step) => step.metadata.id).join(',')} routine_id=${saved.metadata.id}',
-          );
-        }
+        await _scheduleAndLogSavedRoutine(saved);
       } else {
         final saved = await repository.createRoutine(
           profileId: profileId,
           title: _titleController.text.trim(),
-          stepTitles: _stepTitles(),
+          stepTitles: stepTitles,
           weekdays: _selectedWeekdays.toList(growable: false)..sort(),
           scheduledHour: _scheduledTime?.hour,
           scheduledMinute: _scheduledTime?.minute,
@@ -509,23 +527,23 @@ class _RoutineSetupScreenState extends ConsumerState<RoutineSetupScreen> {
           canPostpone: _canPostpone,
           canRequestHelp: _canRequestHelp,
         );
-        final savedSteps = await repository.stepsForRoutine(saved.metadata.id);
-        if (kDebugMode) {
-          debugPrint(
-            'ROUTINE CREATED: routine_id=${saved.metadata.id} profile_id=${saved.profileId} title=${saved.title}',
-          );
-          debugPrint(
-            'ROUTINE STEPS CREATED: count=${savedSteps.length} ids=${savedSteps.map((step) => step.metadata.id).join(',')} routine_id=${saved.metadata.id}',
-          );
-        }
+        await _scheduleAndLogSavedRoutine(saved);
       }
       if (mounted) {
         context.go('/routines');
       }
-    } catch (error) {
+    } catch (error, stackTrace) {
+      logRoutineSaveFailure(error, stackTrace);
       if (mounted) {
+        final code = routineSaveDiagnosticCode(error);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No pudimos guardar la rutina.')),
+          SnackBar(
+            content: Text(
+              shouldShowRoutineSaveDiagnosticCode
+                  ? 'No pudimos guardar la rutina. Intentá nuevamente.\nCódigo: $code'
+                  : 'No pudimos guardar la rutina. Intentá nuevamente.',
+            ),
+          ),
         );
       }
     } finally {
@@ -535,10 +553,98 @@ class _RoutineSetupScreenState extends ConsumerState<RoutineSetupScreen> {
     }
   }
 
+  Future<void> _confirmDeleteRoutine() async {
+    final routine = _editingRoutine;
+    if (routine == null) {
+      return;
+    }
+    final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('¿Eliminar esta rutina?'),
+            content: const Text(
+              'Se eliminará de las rutinas activas y dejarán de programarse sus recordatorios. Esta acción no se puede deshacer.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancelar'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('Eliminar rutina'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+    if (!confirmed) {
+      return;
+    }
+    setState(() => _isDeleting = true);
+    try {
+      await ref
+          .read(routineRepositoryProvider)
+          .updateRoutineStatus(routine.metadata.id, EntityStatus.deleted);
+      await cancelRoutineReminders(ref, routine.metadata.id);
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Rutina eliminada de las activas.')),
+      );
+      context.go('/routines');
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'No pudimos eliminar la rutina. Revisá tus permisos e intentá nuevamente.',
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isDeleting = false);
+      }
+    }
+  }
+
   List<String> _stepTitles() => _stepControllers
       .map((controller) => controller.text.trim())
       .where((title) => title.isNotEmpty)
       .toList(growable: false);
+
+  Future<void> _scheduleAndLogSavedRoutine(Routine saved) async {
+    final repository = ref.read(routineRepositoryProvider);
+    final savedSteps = await repository.stepsForRoutine(saved.metadata.id);
+    if (kDebugMode) {
+      debugPrint(
+        'ROUTINE CREATED: routine_id=${saved.metadata.id} profile_id=${saved.profileId} title=${saved.title}',
+      );
+      debugPrint(
+        'ROUTINE STEPS CREATED: count=${savedSteps.length} ids=${savedSteps.map((step) => step.metadata.id).join(',')} routine_id=${saved.metadata.id}',
+      );
+    }
+    try {
+      final selectedProfile = await loadSelectedProfile(ref);
+      await scheduleRoutineReminders(
+        ref,
+        routine: saved,
+        steps: savedSteps,
+        profileName: selectedProfile?.displayName ?? 'este perfil',
+      );
+    } catch (error, stackTrace) {
+      if (kDebugMode) {
+        debugPrint(
+          'ROUTINE REMINDER SCHEDULE ERROR: routine_id=${saved.metadata.id} error=${error.runtimeType}',
+        );
+        debugPrintStack(stackTrace: stackTrace);
+      }
+    }
+  }
 
   Routine _routineFromForm(Routine current) => Routine(
         metadata: current.metadata,

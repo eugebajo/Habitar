@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:habitar_design_system/design_system.dart';
 
+import '../../dependencies.dart';
 import '../../local_restore.dart';
 
 class StartupScreen extends ConsumerWidget {
@@ -10,8 +11,19 @@ class StartupScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.listen(passwordRecoveryActiveProvider, (previous, next) {
+      if (next) {
+        context.go('/reset-password');
+      }
+    });
+
     ref.listen(appRestoreProvider, (previous, next) {
       next.whenData((result) {
+        if (ref.read(passwordRecoveryActiveProvider)) {
+          _debugLog('ROUTER DESTINATION: /reset-password');
+          context.go('/reset-password');
+          return;
+        }
         final location = switch (result.destination) {
           AppRestoreDestination.onboarding => '/onboarding',
           AppRestoreDestination.register => '/register',
@@ -23,6 +35,18 @@ class StartupScreen extends ConsumerWidget {
         context.go(location);
       });
     });
+
+    final recoveryActive = ref.watch(passwordRecoveryActiveProvider);
+    if (recoveryActive) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted) {
+          context.go('/reset-password');
+        }
+      });
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
     final restoreState = ref.watch(appRestoreProvider);
     return Scaffold(

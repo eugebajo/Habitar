@@ -3,10 +3,12 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:habitar_data/data.dart';
+import 'package:habitar_notifications/notifications.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'dependencies.dart';
+import 'platform/native_reminder_scheduler.dart';
 import 'platform/supabase_flutter_auth_gateway.dart';
 
 Future<List<Override>> buildProductionOverrides() async {
@@ -25,6 +27,9 @@ Future<List<Override>> buildProductionOverrides() async {
   final authRepository = supabaseClient == null
       ? LocalAuthRepository(store)
       : SupabaseAuthRepository(FlutterSupabaseAuthGateway(supabaseClient));
+  final reminderScheduler = Platform.isAndroid || Platform.isIOS
+      ? await NativeReminderScheduler.create()
+      : InMemoryReminderScheduler();
 
   return [
     localStoreProvider.overrideWithValue(store),
@@ -46,11 +51,18 @@ Future<List<Override>> buildProductionOverrides() async {
     routineOverrideRepositoryProvider.overrideWithValue(supabaseClient == null
         ? LocalRoutineOverrideRepository(store)
         : SupabaseRoutineOverrideRepository(supabaseClient)),
-    habitRepositoryProvider.overrideWithValue(LocalHabitRepository(store)),
-    habitProgressRepositoryProvider
-        .overrideWithValue(LocalHabitProgressRepository(store)),
+    habitRepositoryProvider.overrideWithValue(supabaseClient == null
+        ? LocalHabitRepository(store)
+        : SupabaseHabitRepository(supabaseClient)),
+    habitProgressRepositoryProvider.overrideWithValue(supabaseClient == null
+        ? LocalHabitProgressRepository(store)
+        : SupabaseHabitProgressRepository(supabaseClient)),
+    timeBankRepositoryProvider.overrideWithValue(supabaseClient == null
+        ? LocalTimeBankRepository(store)
+        : SupabaseTimeBankRepository(supabaseClient)),
     notificationPreferenceRepositoryProvider
         .overrideWithValue(LocalNotificationPreferenceRepository(store)),
+    reminderSchedulerProvider.overrideWithValue(reminderScheduler),
     emotionCheckInRepositoryProvider
         .overrideWithValue(LocalEmotionCheckInRepository(store)),
     supportRequestRepositoryProvider.overrideWithValue(supabaseClient == null

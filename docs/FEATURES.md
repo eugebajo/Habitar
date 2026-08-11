@@ -21,13 +21,14 @@
 - Secure family invitation acceptance through Supabase RPC.
 - Weekly PDF report generation and sharing.
 - Web build support.
+- Android local routine reminders for scheduled routines.
 
 ## Partial
 
 - Progress metrics use real routine counts plus simple MVP estimates for completion and autonomy.
-- Rewards/time-bank entities exist, but reward UX remains MVP.
+- Rewards/time-bank persistence is backed by Supabase when configured, but reward UX remains MVP.
 - Wearable UI and contracts exist, but native Wear OS/watchOS bridges are not shipped.
-- Notifications are modeled and signaled, but native push/local notification polish remains pending.
+- Notifications use Android local reminders for routine starts/follow-ups; push notifications and native wearable delivery are not implemented.
 - Invitation email delivery is not implemented; the app must describe this as an invitation being created, not as an email sent.
 
 ## Pending after internal test
@@ -46,3 +47,5 @@
 - Family invitation email delivery is not implemented.
 - Multiadult invitation acceptance requires final end-to-end validation.
 - Native smartwatch integration is not implemented.
+- Multi-family account switching remains limited to the first restored family.
+- Routine creation/editing currently saves the routine and steps in separate operations; transactional save is documented technical debt.

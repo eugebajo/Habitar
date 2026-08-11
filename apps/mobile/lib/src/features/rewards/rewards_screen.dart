@@ -139,7 +139,7 @@ class _RewardsScreenState extends ConsumerState<RewardsScreen> {
     await ref.read(timeBankServiceProvider).useMinutes(
           profileId: profileId,
           minutes: minutes,
-          approvedByAdultId: ref.read(currentFamilyIdProvider),
+          approvedByAdultId: 'authenticated-adult',
         );
     if (mounted) {
       setState(() => _refresh += 1);

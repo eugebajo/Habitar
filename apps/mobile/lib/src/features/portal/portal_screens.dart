@@ -11,6 +11,8 @@ import 'package:printing/printing.dart';
 
 import '../../components/adult_shell.dart';
 import '../../dependencies.dart';
+import '../../routine_reminders.dart';
+import '../../routine_today.dart';
 import '../../selected_profile.dart';
 
 class AdultSectionScreen extends StatelessWidget {
@@ -56,6 +58,7 @@ class _RoutinesSection extends ConsumerStatefulWidget {
 
 class _RoutinesSectionState extends ConsumerState<_RoutinesSection> {
   late Future<List<_RoutineView>> _future;
+  final Set<String> _deletingRoutineIds = {};
 
   @override
   void initState() {
@@ -83,9 +86,23 @@ class _RoutinesSectionState extends ConsumerState<_RoutinesSection> {
   }
 
   Future<void> _setStatus(Routine routine, EntityStatus status) async {
-    await ref
+    final updated = await ref
         .read(routineRepositoryProvider)
         .updateRoutineStatus(routine.metadata.id, status);
+    if (status == EntityStatus.active) {
+      final steps = await ref
+          .read(routineRepositoryProvider)
+          .stepsForRoutine(updated.metadata.id);
+      final profile = await loadSelectedProfile(ref);
+      await scheduleRoutineReminders(
+        ref,
+        routine: updated,
+        steps: steps,
+        profileName: profile?.displayName ?? 'este perfil',
+      );
+    } else {
+      await cancelRoutineReminders(ref, routine.metadata.id);
+    }
     _refresh();
   }
 
@@ -140,7 +157,6 @@ class _RoutinesSectionState extends ConsumerState<_RoutinesSection> {
             startMinute: newTime?.minute,
             isPaused: selected.isPaused,
             note: selected.note,
-            createdBy: ref.read(currentFamilyIdProvider),
           ),
         );
     if (!mounted) {
@@ -156,9 +172,10 @@ class _RoutinesSectionState extends ConsumerState<_RoutinesSection> {
     final confirmed = await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('Eliminar rutina'),
-            content: Text(
-              'La rutina "${routine.title}" dejará de aparecer para este perfil.',
+            title: const Text('¿Eliminar esta rutina?'),
+            content: const Text(
+              'Se eliminará de las rutinas activas y dejarán de programarse '
+              'sus recordatorios. Esta acción no se puede deshacer.',
             ),
             actions: [
               TextButton(
@@ -167,7 +184,7 @@ class _RoutinesSectionState extends ConsumerState<_RoutinesSection> {
               ),
               FilledButton(
                 onPressed: () => Navigator.of(context).pop(true),
-                child: const Text('Eliminar'),
+                child: const Text('Eliminar rutina'),
               ),
             ],
           ),
@@ -176,7 +193,31 @@ class _RoutinesSectionState extends ConsumerState<_RoutinesSection> {
     if (!confirmed) {
       return;
     }
-    await _setStatus(routine, EntityStatus.deleted);
+    setState(() => _deletingRoutineIds.add(routine.metadata.id));
+    try {
+      await _setStatus(routine, EntityStatus.deleted);
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Rutina eliminada de las activas.')),
+      );
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'No pudimos eliminar la rutina. Revisá tus permisos e intentá nuevamente.',
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _deletingRoutineIds.remove(routine.metadata.id));
+      }
+    }
   }
 
   @override
@@ -272,6 +313,9 @@ class _RoutinesSectionState extends ConsumerState<_RoutinesSection> {
                               : EntityStatus.paused,
                         ),
                         onDelete: () => _confirmDelete(view.routine),
+                        isDeleting: _deletingRoutineIds.contains(
+                          view.routine.metadata.id,
+                        ),
                       ),
                       const SizedBox(height: 12),
                     ],
@@ -337,6 +381,7 @@ class _RoutineTile extends StatelessWidget {
     required this.onAdjustToday,
     required this.onPause,
     required this.onDelete,
+    this.isDeleting = false,
   });
 
   final _RoutineView view;
@@ -345,6 +390,7 @@ class _RoutineTile extends StatelessWidget {
   final VoidCallback onAdjustToday;
   final VoidCallback onPause;
   final VoidCallback onDelete;
+  final bool isDeleting;
 
   IconData get _icon {
     final title = view.routine.title.toLowerCase();
@@ -412,7 +458,7 @@ class _RoutineTile extends StatelessWidget {
                 color: _statusColor),
           ]),
           const Divider(height: 28, color: HabitarColors.line),
-          Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
+          Wrap(alignment: WrapAlignment.spaceAround, spacing: 8, children: [
             _TileAction(
                 icon: Icons.edit_outlined, label: 'Editar', onTap: onEdit),
             _TileAction(
@@ -432,8 +478,8 @@ class _RoutineTile extends StatelessWidget {
             ),
             _TileAction(
               icon: Icons.delete_outline_rounded,
-              label: 'Eliminar',
-              onTap: onDelete,
+              label: isDeleting ? 'Eliminando' : 'Eliminar',
+              onTap: isDeleting ? null : onDelete,
             ),
           ]),
         ]),
@@ -461,7 +507,7 @@ class _TileAction extends StatelessWidget {
   });
   final IconData icon;
   final String label;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   @override
   Widget build(BuildContext context) => InkWell(
         borderRadius: BorderRadius.circular(18),
@@ -576,25 +622,36 @@ class _ProgressSection extends ConsumerWidget {
     }
     final routineRepository = ref.read(routineRepositoryProvider);
     final routines = await routineRepository.routinesForProfile(profile.id);
+    final today = habitarFunctionalDate();
+    final overrides = await ref
+        .read(routineOverrideRepositoryProvider)
+        .overridesForProfileDate(profileId: profile.id, date: today);
+    final scheduledRoutines = routines
+        .where(
+          (routine) =>
+              routine.metadata.status == EntityStatus.active &&
+              routineAppliesOnDate(routine, today),
+        )
+        .toList(growable: false);
     var steps = 0;
-    for (final routine in routines) {
+    for (final routine in scheduledRoutines) {
       steps +=
           (await routineRepository.stepsForRoutine(routine.metadata.id)).length;
     }
-    final session = await ref
+    final sessionsToday = await ref
         .read(routineSessionRepositoryProvider)
-        .activeSessionForProfile(profile.id);
-    final overrides = await ref
-        .read(routineOverrideRepositoryProvider)
-        .overridesForProfileDate(profileId: profile.id, date: DateTime.now());
+        .sessionsForProfileDate(profileId: profile.id, localDate: today);
+    final completedSteps = sessionsToday
+        .expand((session) => session.completedStepIds)
+        .toSet()
+        .length
+        .clamp(0, steps);
     return _ProgressReportData(
       profileName: profile.displayName,
-      routines: routines.length,
+      routines: scheduledRoutines.length,
       steps: steps,
-      completedSteps: session?.completedStepIds.length ?? 0,
-      activeRoutines: routines
-          .where((routine) => routine.metadata.status == EntityStatus.active)
-          .length,
+      completedSteps: completedSteps,
+      activeRoutines: scheduledRoutines.length,
       pausedToday: overrides.where((override) => override.isPaused).length,
       adjustedToday: overrides.length,
     );
@@ -631,110 +688,156 @@ class _ProgressSection extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(children: [
-                        const Icon(Icons.bar_chart_rounded,
-                            color: HabitarColors.primaryGreen),
-                        const SizedBox(width: 10),
-                        Text('Resumen semanal',
-                            style: Theme.of(context).textTheme.titleLarge),
-                      ]),
-                      const SizedBox(height: 22),
-                      Row(children: [
-                        ProgressRing(value: progress, size: 142),
-                        const SizedBox(width: 22),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 6,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          const Icon(Icons.bar_chart_rounded,
+                              color: HabitarColors.primaryGreen),
+                          Text(
+                            'Resumen semanal',
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final compact = constraints.maxWidth < 520;
+                          final ring = ProgressRing(
+                            value: progress,
+                            size: compact ? 112 : 142,
+                          );
+                          final summary = Column(
+                            crossAxisAlignment: compact
+                                ? CrossAxisAlignment.center
+                                : CrossAxisAlignment.start,
                             children: [
                               Text(
                                 data.steps == 0
                                     ? 'Sin progreso registrado'
-                                    : '${(progress * 100).round()}% completado\nesta semana',
+                                    : '${(progress * 100).round()}% completado esta semana',
+                                textAlign: compact
+                                    ? TextAlign.center
+                                    : TextAlign.start,
                                 style:
                                     Theme.of(context).textTheme.headlineSmall,
                               ),
                               const SizedBox(height: 8),
-                              Text('$completed de ${data.steps} pasos completados'),
-                              const SizedBox(height: 14),
-                              _LegendDot(
-                                color: HabitarColors.primaryGreen,
-                                label: 'Completado ($completed)',
+                              Text(
+                                '$completed de ${data.steps} pasos completados',
+                                textAlign: compact
+                                    ? TextAlign.center
+                                    : TextAlign.start,
                               ),
-                              const SizedBox(height: 8),
-                              _LegendDot(
-                                color: const Color(0xFFEADDC8),
-                                label: 'Pendiente ($pending)',
+                              const SizedBox(height: 14),
+                              Wrap(
+                                spacing: 14,
+                                runSpacing: 8,
+                                alignment: compact
+                                    ? WrapAlignment.center
+                                    : WrapAlignment.start,
+                                children: [
+                                  _LegendDot(
+                                    color: HabitarColors.primaryGreen,
+                                    label: 'Completado ($completed)',
+                                  ),
+                                  _LegendDot(
+                                    color: const Color(0xFFEADDC8),
+                                    label: 'Pendiente ($pending)',
+                                  ),
+                                ],
                               ),
                             ],
-                          ),
-                        ),
-                      ]),
+                          );
+                          if (compact) {
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                ring,
+                                const SizedBox(height: 14),
+                                summary,
+                              ],
+                            );
+                          }
+                          return Row(children: [
+                            ring,
+                            const SizedBox(width: 22),
+                            Expanded(child: summary),
+                          ]);
+                        },
+                      ),
                     ],
                   ),
                 ),
                 const SizedBox(height: 16),
-                GridView.count(
-                  crossAxisCount: MediaQuery.sizeOf(context).width > 700 ? 3 : 1,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  mainAxisSpacing: 12,
-                  crossAxisSpacing: 12,
-                  childAspectRatio:
-                      MediaQuery.sizeOf(context).width > 700 ? 1.05 : 2.6,
-                  children: [
-                    _ProgressStat(
-                        icon: Icons.check_circle_outline,
-                        value: completed.toString(),
-                        label: 'Pasos\ncompletados',
-                        note: 'datos reales'),
-                    _ProgressStat(
-                        icon: Icons.eco_rounded,
-                        value: data.activeRoutines.toString(),
-                        label: 'Rutinas\nen marcha',
-                        note: '${data.routines} creadas'),
-                    _ProgressStat(
-                        icon: Icons.today_rounded,
-                        value: data.adjustedToday.toString(),
-                        label: 'Ajustes de hoy',
-                        note: '${data.pausedToday} pausas'),
+                _ProgressStatGrid(
+                  stats: [
+                    _ProgressStatData(
+                      icon: Icons.check_circle_outline,
+                      value: completed.toString(),
+                      label: 'Pasos completados',
+                      note: 'datos reales',
+                    ),
+                    _ProgressStatData(
+                      icon: Icons.eco_rounded,
+                      value: data.activeRoutines.toString(),
+                      label: 'Rutinas en marcha',
+                      note: '${data.routines} creadas',
+                    ),
+                    _ProgressStatData(
+                      icon: Icons.today_rounded,
+                      value: data.adjustedToday.toString(),
+                      label: 'Ajustes de hoy',
+                      note: '${data.pausedToday} pausas',
+                    ),
                   ],
                 ),
                 const SizedBox(height: 20),
                 Text('Reporte y logros',
                     style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 12),
-                Row(children: [
-                  Expanded(
-                      child: FilledButton.icon(
-                          onPressed: () => _shareReport(context, ref),
-                          icon: const Icon(Icons.picture_as_pdf_outlined),
-                          label: const Text('Descargar reporte PDF'))),
-                  const SizedBox(width: 12),
-                  Expanded(
-                      child: OutlinedButton.icon(
-                          onPressed: () => _shareReport(context, ref),
-                          icon: const Icon(Icons.share_outlined),
-                          label: const Text('Compartir'))),
-                ]),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    FilledButton.icon(
+                      onPressed: () => _shareReport(context, ref),
+                      icon: const Icon(Icons.picture_as_pdf_outlined),
+                      label: const Text('Descargar reporte PDF'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: () => _shareReport(context, ref),
+                      icon: const Icon(Icons.share_outlined),
+                      label: const Text('Compartir'),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 16),
                 HabitarCard(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(children: [
-                        Expanded(
-                            child: Text(
-                                'Reporte semanal de ${data.profileName}',
-                                style:
-                                    Theme.of(context).textTheme.titleLarge)),
-                        const Text('Generado hoy',
-                            style: TextStyle(color: HabitarColors.mutedInk)),
-                      ]),
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 4,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Text(
+                            'Reporte semanal de ${data.profileName}',
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                          const Text(
+                            'Generado hoy',
+                            style: TextStyle(color: HabitarColors.mutedInk),
+                          ),
+                        ],
+                      ),
                       const SizedBox(height: 16),
                       _CategoryBar(label: 'Rutinas', value: progress),
                       _CategoryBar(
-                          label: 'Ajustes hoy',
-                          value: data.adjustmentFraction),
+                          label: 'Ajustes hoy', value: data.adjustmentFraction),
                     ],
                   ),
                 ),
@@ -744,16 +847,69 @@ class _ProgressSection extends ConsumerWidget {
         ),
       );
 }
+
 class _LegendDot extends StatelessWidget {
   const _LegendDot({required this.color, required this.label});
   final Color color;
   final String label;
   @override
-  Widget build(BuildContext context) => Row(children: [
-        CircleAvatar(radius: 7, backgroundColor: color),
-        const SizedBox(width: 8),
-        Text(label)
-      ]);
+  Widget build(BuildContext context) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          CircleAvatar(radius: 7, backgroundColor: color),
+          const SizedBox(width: 8),
+          Flexible(child: Text(label, softWrap: true)),
+        ],
+      );
+}
+
+class _ProgressStatData {
+  const _ProgressStatData({
+    required this.icon,
+    required this.value,
+    required this.label,
+    required this.note,
+  });
+
+  final IconData icon;
+  final String value;
+  final String label;
+  final String note;
+}
+
+class _ProgressStatGrid extends StatelessWidget {
+  const _ProgressStatGrid({required this.stats});
+
+  final List<_ProgressStatData> stats;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final useTwoColumns = constraints.maxWidth >= 430;
+        final spacing = useTwoColumns ? 12.0 : 10.0;
+        final width = useTwoColumns
+            ? (constraints.maxWidth - spacing) / 2
+            : constraints.maxWidth;
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: [
+            for (final stat in stats)
+              SizedBox(
+                width: width,
+                child: _ProgressStat(
+                  icon: stat.icon,
+                  value: stat.value,
+                  label: stat.label,
+                  note: stat.note,
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
 }
 
 class _ProgressStat extends StatelessWidget {
@@ -768,19 +924,38 @@ class _ProgressStat extends StatelessWidget {
   final String note;
   @override
   Widget build(BuildContext context) => HabitarCard(
-        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-          CircleAvatar(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            CircleAvatar(
               backgroundColor: HabitarColors.surfaceMist,
-              child: Icon(icon, color: HabitarColors.deepGreen)),
-          const SizedBox(height: 10),
-          Text(value,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.headlineSmall),
-          Text(label,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleMedium),
-          Text(note, textAlign: TextAlign.center),
-        ]),
+              child: Icon(icon, color: HabitarColors.deepGreen),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    value,
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
+                  Text(
+                    label,
+                    softWrap: true,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  Text(
+                    note,
+                    softWrap: true,
+                    style: const TextStyle(color: HabitarColors.mutedInk),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       );
 }
 
@@ -983,23 +1158,58 @@ class ChildHomeScreen extends ConsumerWidget {
     if (profile == null) {
       return const _ChildHomeData.empty();
     }
-    final routines =
-        await ref.read(routineRepositoryProvider).routinesForProfile(profile.id);
-    final routine = routines.isEmpty ? null : routines.first;
+    final routines = await ref
+        .read(routineRepositoryProvider)
+        .routinesForProfile(profile.id);
+    final now = habitarFunctionalDate();
+    final sessionRepository = ref.read(routineSessionRepositoryProvider);
+    final overrides = await ref
+        .read(routineOverrideRepositoryProvider)
+        .overridesForProfileDate(profileId: profile.id, date: now);
+    final todaysRoutines = await routinesForToday(
+      routines: routines,
+      localDate: now,
+      loadOverrides: () async => overrides,
+      loadSessionToday: (routine) =>
+          sessionRepository.latestSessionForRoutineDate(
+        routineId: routine.metadata.id,
+        localDate: now,
+      ),
+    );
+    final scheduledRoutines = <Routine>[];
+    for (final routine in routines) {
+      if (routineAppliesOnDate(routine, now, overrides: overrides)) {
+        scheduledRoutines.add(routine);
+      }
+    }
+    final routine = todaysRoutines.isEmpty ? null : todaysRoutines.first;
     final steps = routine == null
         ? const <RoutineStep>[]
         : await ref
             .read(routineRepositoryProvider)
             .stepsForRoutine(routine.metadata.id);
-    final session =
-        await ref.read(routineSessionRepositoryProvider).activeSessionForProfile(
-              profile.id,
-            );
+    RoutineSession? session;
+    if (routine != null) {
+      session = await sessionRepository.activeSessionForRoutineToday(
+        routineId: routine.metadata.id,
+        localDate: now,
+      );
+    }
+    final sessionsToday = await sessionRepository.sessionsForProfileDate(
+      profileId: profile.id,
+      localDate: now,
+    );
     return _ChildHomeData(
       profile: profile,
       routine: routine,
       steps: steps,
-      latestSession: session,
+      latestSession: session ?? _latestSession(sessionsToday),
+      scheduledRoutineCount: scheduledRoutines.length,
+      completedRoutineCount: sessionsToday
+          .where((session) => session.status == RoutineSessionStatus.completed)
+          .map((session) => session.routine.metadata.id)
+          .toSet()
+          .length,
     );
   }
 
@@ -1023,6 +1233,7 @@ class ChildHomeScreen extends ConsumerWidget {
                 final firstStep =
                     data.steps.isEmpty ? null : data.steps.first.title;
                 final completedToday = data.completedToday;
+                final hasRoutinesToday = data.scheduledRoutineCount > 0;
                 return Column(
                   children: [
                     Text('Hola, $name',
@@ -1040,13 +1251,18 @@ class ChildHomeScreen extends ConsumerWidget {
                         art: 'bag',
                         label: 'Ahora',
                         title: completedToday
-                            ? 'Rutina terminada\npor hoy'
-                            : data.routine?.title ?? 'Sin rutina\npreparada',
+                            ? 'Rutinas terminadas\npor hoy'
+                            : data.routine?.title ??
+                                (hasRoutinesToday
+                                    ? 'Todo listo\npor hoy'
+                                    : 'Sin rutina\npreparada'),
                         body: completedToday
                             ? 'Terminaste tus pasos de hoy. Cada paso cuenta.'
                             : firstStep == null
-                            ? 'Un adulto puede preparar tus pasos.'
-                            : 'Primer paso: $firstStep',
+                                ? hasRoutinesToday
+                                    ? 'No quedan pasos pendientes ahora.'
+                                    : 'Un adulto puede preparar tus pasos.'
+                                : 'Primer paso: $firstStep',
                         action: completedToday
                             ? 'Volver'
                             : data.routine == null
@@ -1089,28 +1305,43 @@ class _ChildHomeData {
     required this.routine,
     required this.steps,
     required this.latestSession,
+    required this.scheduledRoutineCount,
+    required this.completedRoutineCount,
   });
 
   const _ChildHomeData.empty()
       : profile = null,
         routine = null,
         steps = const [],
-        latestSession = null;
+        latestSession = null,
+        scheduledRoutineCount = 0,
+        completedRoutineCount = 0;
 
   final SelectedHabitarProfile? profile;
   final Routine? routine;
   final List<RoutineStep> steps;
   final RoutineSession? latestSession;
+  final int scheduledRoutineCount;
+  final int completedRoutineCount;
 
   bool get completedToday =>
-      latestSession?.status == RoutineSessionStatus.completed &&
-      _sameDay(latestSession!.startedAt, DateTime.now());
+      scheduledRoutineCount > 0 &&
+      completedRoutineCount >= scheduledRoutineCount;
 }
 
-bool _sameDay(DateTime first, DateTime second) {
-  return first.year == second.year &&
-      first.month == second.month &&
-      first.day == second.day;
+RoutineSession? _latestSession(List<RoutineSession> sessions) {
+  if (sessions.isEmpty) {
+    return null;
+  }
+  final sorted = [...sessions]
+    ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+  return sorted.first;
+}
+
+bool _isOpenRoutineSession(RoutineSession session) {
+  return session.status == RoutineSessionStatus.running ||
+      session.status == RoutineSessionStatus.paused ||
+      session.status == RoutineSessionStatus.postponed;
 }
 
 Future<void> _startRoutine(
@@ -1121,13 +1352,23 @@ Future<void> _startRoutine(
 ) async {
   final latestSession = await ref
       .read(routineSessionRepositoryProvider)
-      .activeSessionForProfile(routine.profileId);
-  if (latestSession?.status == RoutineSessionStatus.completed &&
-      _sameDay(latestSession!.startedAt, DateTime.now())) {
+      .latestSessionForRoutineDate(
+        routineId: routine.metadata.id,
+        localDate: habitarFunctionalDate(),
+      );
+  if (latestSession?.status == RoutineSessionStatus.completed) {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Esta rutina ya terminó por hoy.')),
       );
+    }
+    return;
+  }
+  if (latestSession != null && _isOpenRoutineSession(latestSession)) {
+    ref.read(currentRoutineSessionIdProvider.notifier).state =
+        latestSession.id;
+    if (context.mounted) {
+      context.go('/routine/player');
     }
     return;
   }
@@ -1141,10 +1382,23 @@ Future<void> _startRoutine(
     return;
   }
 
-  final session = await ref.read(routineServiceProvider).startExistingRoutine(
-        routine,
-        steps: steps,
+  RoutineSession session;
+  try {
+    session = await ref.read(routineServiceProvider).startExistingRoutine(
+          routine,
+          steps: steps,
+        );
+  } on StateError catch (error) {
+    if (context.mounted) {
+      final message = error.message == 'ROUTINE_ALREADY_COMPLETED_TODAY'
+          ? 'Esta rutina ya termino por hoy.'
+          : 'No pudimos iniciar la rutina.';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
       );
+    }
+    return;
+  }
   ref.read(currentRoutineSessionIdProvider.notifier).state = session.id;
   if (context.mounted) {
     context.go('/routine/player');

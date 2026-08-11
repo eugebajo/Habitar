@@ -614,7 +614,51 @@ class LocalRoutineSessionRepository implements RoutineSessionRepository {
   Future<RoutineSession?> activeSessionForProfile(String profileId) async {
     final records = await store.list(LocalStoreCollections.routineSessions);
     final sessions = records.map(_routineSessionFromJson).where((session) {
-      return session.routine.profileId == profileId;
+      return session.routine.profileId == profileId &&
+          _isOpenRoutineSession(session);
+    }).toList();
+    sessions.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    return sessions.isEmpty ? null : sessions.first;
+  }
+
+  @override
+  Future<RoutineSession?> activeSessionForRoutineToday({
+    required String routineId,
+    required DateTime localDate,
+  }) async {
+    final records = await store.list(LocalStoreCollections.routineSessions);
+    final sessions = records.map(_routineSessionFromJson).where((session) {
+      return session.routine.metadata.id == routineId &&
+          _isOpenRoutineSession(session) &&
+          sameHabitarFunctionalDate(session.sessionDate, localDate);
+    }).toList();
+    sessions.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    return sessions.isEmpty ? null : sessions.first;
+  }
+
+  @override
+  Future<List<RoutineSession>> sessionsForProfileDate({
+    required String profileId,
+    required DateTime localDate,
+  }) async {
+    final records = await store.list(LocalStoreCollections.routineSessions);
+    final sessions = records.map(_routineSessionFromJson).where((session) {
+      return session.routine.profileId == profileId &&
+          sameHabitarFunctionalDate(session.sessionDate, localDate);
+    }).toList();
+    sessions.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    return sessions;
+  }
+
+  @override
+  Future<RoutineSession?> latestSessionForRoutineDate({
+    required String routineId,
+    required DateTime localDate,
+  }) async {
+    final records = await store.list(LocalStoreCollections.routineSessions);
+    final sessions = records.map(_routineSessionFromJson).where((session) {
+      return session.routine.metadata.id == routineId &&
+          sameHabitarFunctionalDate(session.sessionDate, localDate);
     }).toList();
     sessions.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
     return sessions.isEmpty ? null : sessions.first;
@@ -1281,6 +1325,7 @@ Map<String, Object?> _routineSessionToJson(RoutineSession session) => {
       'active_step_index': session.activeStepIndex,
       'started_at': session.startedAt.toIso8601String(),
       'updated_at': session.updatedAt.toIso8601String(),
+      'session_date': session.sessionDate.toIso8601String(),
       'status': session.status.name,
       'completed_step_ids': session.completedStepIds,
       'skipped_step_ids': session.skippedStepIds,
@@ -1288,6 +1333,7 @@ Map<String, Object?> _routineSessionToJson(RoutineSession session) => {
       'pause_reason': session.pauseReason?.name,
       'help_requested': session.helpRequested,
       'postponed_until': session.postponedUntil?.toIso8601String(),
+      'completed_at': session.completedAt?.toIso8601String(),
     };
 
 RoutineSession _routineSessionFromJson(Map<String, Object?> json) =>
@@ -1300,6 +1346,8 @@ RoutineSession _routineSessionFromJson(Map<String, Object?> json) =>
       activeStepIndex: json['active_step_index'] as int,
       startedAt: DateTime.parse(json['started_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
+      sessionDate: _dateTimeOrNull(json['session_date']) ??
+          DateTime.parse(json['started_at'] as String),
       status: _byName(RoutineSessionStatus.values,
           json['status'] as String? ?? RoutineSessionStatus.running.name),
       completedStepIds: _stringList(json['completed_step_ids']),
@@ -1309,6 +1357,7 @@ RoutineSession _routineSessionFromJson(Map<String, Object?> json) =>
           RoutinePauseReason.values, json['pause_reason'] as String?),
       helpRequested: json['help_requested'] as bool? ?? false,
       postponedUntil: _dateTimeOrNull(json['postponed_until']),
+      completedAt: _dateTimeOrNull(json['completed_at']),
     );
 
 Map<String, Object?> _routineOverrideToJson(RoutineOverride override) => {
@@ -1556,6 +1605,11 @@ DateTime? _dateTimeOrNull(Object? value) =>
 
 bool _sameDay(DateTime a, DateTime b) =>
     a.year == b.year && a.month == b.month && a.day == b.day;
+
+bool _isOpenRoutineSession(RoutineSession session) =>
+    session.status == RoutineSessionStatus.running ||
+    session.status == RoutineSessionStatus.paused ||
+    session.status == RoutineSessionStatus.postponed;
 
 T _byName<T extends Enum>(List<T> values, String name) => values.byName(name);
 

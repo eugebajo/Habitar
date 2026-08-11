@@ -22,6 +22,12 @@ We corrected `0004` directly because it had not been applied to the remote Supab
 
 Editing a routine updates the base schedule and steps. "Adjust only today" creates a `routine_override` so the weekly routine remains unchanged.
 
+Routine save still writes the routine and its steps as separate operations. This is acceptable for the internal test, but a future release should move create/update into a single transactional Supabase RPC so a partial network failure cannot leave a routine without all of its steps.
+
+## Notifications
+
+Android routine reminders are local notifications scheduled on the device for routine start and follow-up. They are cancelled when a routine is paused or completed from the app. Habitar does not yet ship FCM push, transactional email reminders, or native smartwatch notification delivery.
+
 ## Web
 
 Flutter Web is enabled as the same product surface. Web should use the same auth and Supabase data as mobile when environment variables are configured.

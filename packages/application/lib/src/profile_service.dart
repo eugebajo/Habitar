@@ -78,15 +78,35 @@ class ProfileService {
     required ProfileKind kind,
   }) async {
     final routines = await routineRepository.routinesForProfile(profileId);
-    final latestSession =
-        await sessionRepository.activeSessionForProfile(profileId);
-    final now = DateTime.now();
-    final activeSession =
-        latestSession != null && _sameDay(latestSession.startedAt, now)
-            ? latestSession
-            : null;
+    final now = habitarFunctionalDate();
+    final sessionsToday = await sessionRepository.sessionsForProfileDate(
+      profileId: profileId,
+      localDate: now,
+    );
+    final activeSessions = sessionsToday.where(_isOpenSession).toList();
+    RoutineSession? activeSession =
+        activeSessions.isEmpty ? null : activeSessions.first;
+    RoutineSession? latestSession =
+        sessionsToday.isEmpty ? null : sessionsToday.first;
+    final completedRoutineIds = sessionsToday
+        .where((session) => session.status == RoutineSessionStatus.completed)
+        .map((session) => session.routine.metadata.id)
+        .toSet();
+    final pendingRoutines = routines
+        .where((routine) => !completedRoutineIds.contains(routine.metadata.id))
+        .toList(growable: false);
+    final pendingRoutine =
+        pendingRoutines.isEmpty ? null : pendingRoutines.first;
+    Routine? firstRoutine = activeSession?.routine ??
+        pendingRoutine ??
+        latestSession?.routine ??
+        (routines.isEmpty ? null : routines.first);
+    var routineStepTotal = 0;
+    for (final routine in routines) {
+      routineStepTotal +=
+          (await routineRepository.stepsForRoutine(routine.metadata.id)).length;
+    }
     final habits = await habitRepository.habitsForProfile(profileId);
-    final firstRoutine = routines.isEmpty ? null : routines.first;
     final firstRoutineSteps = firstRoutine == null
         ? const <RoutineStep>[]
         : await routineRepository.stepsForRoutine(firstRoutine.metadata.id);
@@ -110,18 +130,22 @@ class ProfileService {
     }
 
     final sessionCompleted =
-        activeSession?.status == RoutineSessionStatus.completed;
-    final completedRoutineSteps = activeSession?.completedStepIds.length ?? 0;
+        latestSession?.status == RoutineSessionStatus.completed &&
+            activeSession == null &&
+            pendingRoutine == null;
+    final completedRoutineSteps = sessionsToday.fold<int>(
+      0,
+      (total, session) =>
+          total + session.completedStepIds.length + session.skippedStepIds.length,
+    );
     final skippedRoutineSteps = activeSession?.skippedStepIds.length ?? 0;
     final activeRoutinePending = activeSession == null
-        ? firstRoutineSteps.length
+        ? (routineStepTotal - completedRoutineSteps).clamp(0, routineStepTotal)
         : activeSession.steps.length -
-            completedRoutineSteps -
+            activeSession.completedStepIds.length -
             skippedRoutineSteps;
     final pendingTasks = activeRoutinePending + habitsWithoutProgress;
-    final totalTrackable = activeSession == null
-        ? firstRoutineSteps.length + habits.length
-        : activeSession.steps.length + habits.length;
+    final totalTrackable = routineStepTotal + habits.length;
     final completedGoals = completedRoutineSteps + habitCompletions;
     final progressFraction = totalTrackable == 0
         ? 0.0
@@ -137,7 +161,9 @@ class ProfileService {
       completedGoals: completedGoals,
       pendingTasks: pendingTasks,
       progressFraction: progressFraction,
-      activeRoutineTitle: activeSession?.routine.title ?? firstRoutine?.title,
+      activeRoutineTitle: activeSession?.routine.title ??
+          latestSession?.routine.title ??
+          firstRoutine?.title,
       nextTaskTitle: sessionCompleted
           ? null
           : activeSession?.activeStep?.title ??
@@ -171,11 +197,10 @@ class ProfileService {
   }
 }
 
-bool _sameDay(DateTime first, DateTime second) {
-  return first.year == second.year &&
-      first.month == second.month &&
-      first.day == second.day;
-}
+bool _isOpenSession(RoutineSession session) =>
+    session.status == RoutineSessionStatus.running ||
+    session.status == RoutineSessionStatus.paused ||
+    session.status == RoutineSessionStatus.postponed;
 
 class ProfileProgressSummary {
   const ProfileProgressSummary({

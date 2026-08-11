@@ -1,6 +1,8 @@
 import 'package:habitar_data/data.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 
+import 'auth_diagnostics.dart';
+
 class FlutterSupabaseAuthGateway implements SupabaseAuthGateway {
   const FlutterSupabaseAuthGateway(this.client);
 
@@ -46,7 +48,7 @@ class FlutterSupabaseAuthGateway implements SupabaseAuthGateway {
     final normalizedEmail = email.trim().toLowerCase();
     try {
       _debugLog('AUTH LOGIN:');
-      _debugLog('email: $normalizedEmail');
+      _debugLog('email_present: ${normalizedEmail.isNotEmpty}');
       final response = await client.auth.signInWithPassword(
         email: normalizedEmail,
         password: password,
@@ -60,8 +62,8 @@ class FlutterSupabaseAuthGateway implements SupabaseAuthGateway {
         throw StateError('No pudimos iniciar sesion.');
       }
       _debugLog('AUTH LOGIN RESULT: OK');
-      _debugLog('AUTH USER ID: ${user.id}');
-      _debugLog('AUTH USER EMAIL: ${user.email?.trim().toLowerCase()}');
+      _debugLog('auth_user_id_present: ${user.id.trim().isNotEmpty}');
+      _debugLog('auth_user_email_present: ${user.email?.trim().isNotEmpty}');
       return _mapUser(user);
     } on supabase.AuthException catch (error) {
       _debugLog('AUTH LOGIN RESULT: ERROR');
@@ -83,7 +85,8 @@ class FlutterSupabaseAuthGateway implements SupabaseAuthGateway {
     final normalizedEmail = email.trim().toLowerCase();
     try {
       _debugLog('PASSWORD_RESET_REQUEST:');
-      _debugLog('email: $normalizedEmail');
+      _debugLog('email_present: ${normalizedEmail.isNotEmpty}');
+      _debugLog('redirectTo: $redirectTo');
       await client.auth.resetPasswordForEmail(
         normalizedEmail,
         redirectTo: redirectTo.toString(),
@@ -96,6 +99,10 @@ class FlutterSupabaseAuthGateway implements SupabaseAuthGateway {
     } catch (error) {
       _debugLog('PASSWORD_RESET_REQUEST: ERROR');
       _debugLog('error: ${error.runtimeType}');
+      _debugLog(
+        'classification: '
+        '${classifyAuthFailure(message: error.toString(), error: error).name}',
+      );
       rethrow;
     }
   }
@@ -138,16 +145,22 @@ class FlutterSupabaseAuthGateway implements SupabaseAuthGateway {
 }
 
 void _debugLog(String message) {
-  assert(() {
-    // Development-only diagnostics. Do not log passwords, tokens or secrets.
-    // ignore: avoid_print
-    print(message);
-    return true;
-  }());
+  // Diagnostics are intentionally sanitized: no passwords, tokens, sessions or
+  // complete keys are logged.
+  logAuthDiagnostic(message);
 }
 
 void _logAuthException(supabase.AuthException error) {
   _debugLog('AuthException statusCode: ${error.statusCode}');
   _debugLog('AuthException code: ${error.code}');
   _debugLog('AuthException message: ${error.message}');
+  _debugLog(
+    'classification: '
+    '${classifyAuthFailure(
+      statusCode: error.statusCode,
+      code: error.code,
+      message: error.message,
+      error: error,
+    ).name}',
+  );
 }

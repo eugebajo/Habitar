@@ -7,6 +7,7 @@ import 'package:habitar_domain/domain.dart';
 import 'package:habitar_routine_engine/routine_engine.dart';
 
 import '../../dependencies.dart';
+import '../../routine_reminders.dart';
 
 class RoutinePlayerScreen extends ConsumerStatefulWidget {
   const RoutinePlayerScreen({super.key});
@@ -37,8 +38,8 @@ class _RoutinePlayerScreenState extends ConsumerState<RoutinePlayerScreen> {
                 ? const _EmptyRoutine()
                 : _RoutineBody(
                     session: session,
-                    isTeen:
-                        ref.watch(currentProfileKindProvider) == ProfileKind.teen,
+                    isTeen: ref.watch(currentProfileKindProvider) ==
+                        ProfileKind.teen,
                     onDone: () =>
                         _update((service) => service.completeStep(session)),
                     onMoreTime: () =>
@@ -79,6 +80,9 @@ class _RoutinePlayerScreenState extends ConsumerState<RoutinePlayerScreen> {
     final service = ref.read(routineServiceProvider);
     final updated = await action(service);
     ref.read(currentRoutineSessionIdProvider.notifier).state = updated.id;
+    if (updated.status == RoutineSessionStatus.completed) {
+      await cancelRoutineReminders(ref, updated.routine.metadata.id);
+    }
     if (mounted) setState(() => _session = updated);
   }
 }

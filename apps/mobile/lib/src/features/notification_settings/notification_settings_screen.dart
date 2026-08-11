@@ -21,7 +21,6 @@ class _NotificationSettingsScreenState
 
   @override
   Widget build(BuildContext context) {
-    final scheduled = ref.watch(reminderSchedulerProvider).scheduled;
     return Scaffold(
       appBar: AppBar(title: const Text('Recordatorios suaves')),
       body: SafeArea(
@@ -80,21 +79,12 @@ class _NotificationSettingsScreenState
             Text('Avisos preparados',
                 style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: HabitarSpacing.md),
-            for (final request in scheduled)
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(HabitarSpacing.md),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(request.title,
-                          style: Theme.of(context).textTheme.titleMedium),
-                      Text(request.body),
-                      Text('Incluye ${request.actions.length} apoyo(s).'),
-                    ],
-                  ),
-                ),
-              ),
+            const EmptyState(
+              icon: Icons.notifications_active_outlined,
+              title: 'Los avisos se programan en el telefono',
+              message:
+                  'Habitar usa las rutinas con horario para preparar recordatorios locales.',
+            ),
           ],
         ),
       ),

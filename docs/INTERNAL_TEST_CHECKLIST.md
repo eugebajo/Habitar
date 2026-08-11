@@ -14,6 +14,8 @@
 - [ ] Finish the routine.
 - [ ] Review progress.
 - [ ] Generate and open the PDF report.
+- [ ] Schedule a routine with a time and confirm Android local reminder behavior.
+- [ ] Pause or complete a routine and confirm reminders do not keep firing for that routine.
 - [ ] Log out and log in again.
 - [ ] Confirm profile isolation between child and teen.
 - [ ] Confirm web/mobile data consistency when Supabase credentials are used.
@@ -25,3 +27,5 @@
 - Family invitation email delivery is not implemented.
 - Multiadult invitation acceptance still needs final end-to-end validation.
 - Native smartwatch integration is not implemented.
+- Multi-family switching is limited during this test.
+- Routine save is not yet transactional; if a network error happens while saving steps, retry the routine edit.

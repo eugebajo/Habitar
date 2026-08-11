@@ -161,6 +161,21 @@ abstract interface class RoutineSessionRepository {
 
   Future<RoutineSession?> activeSessionForProfile(String profileId);
 
+  Future<RoutineSession?> activeSessionForRoutineToday({
+    required String routineId,
+    required DateTime localDate,
+  });
+
+  Future<List<RoutineSession>> sessionsForProfileDate({
+    required String profileId,
+    required DateTime localDate,
+  });
+
+  Future<RoutineSession?> latestSessionForRoutineDate({
+    required String routineId,
+    required DateTime localDate,
+  });
+
   Future<RoutineSession?> byId(String sessionId);
 }
 

@@ -1,7 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:habitar_design_system/design_system.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 
+import 'dependencies.dart';
 import 'features/adult_registration/adult_registration_screen.dart';
 import 'features/family_dashboard/family_dashboard_screen.dart';
 import 'features/habit_setup/habit_setup_screen.dart';
@@ -144,8 +149,42 @@ final appRouter = GoRouter(
   ],
 );
 
-class HabitarMobileApp extends StatelessWidget {
+class HabitarMobileApp extends ConsumerStatefulWidget {
   const HabitarMobileApp({super.key});
+
+  @override
+  ConsumerState<HabitarMobileApp> createState() => _HabitarMobileAppState();
+}
+
+class _HabitarMobileAppState extends ConsumerState<HabitarMobileApp> {
+  StreamSubscription<supabase.AuthState>? _authSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _listenForPasswordRecovery();
+  }
+
+  @override
+  void dispose() {
+    _authSubscription?.cancel();
+    super.dispose();
+  }
+
+  void _listenForPasswordRecovery() {
+    try {
+      final auth = supabase.Supabase.instance.client.auth;
+      _authSubscription = auth.onAuthStateChange.listen((data) {
+        if (data.event != supabase.AuthChangeEvent.passwordRecovery) {
+          return;
+        }
+        ref.read(passwordRecoveryActiveProvider.notifier).state = true;
+        appRouter.go('/reset-password');
+      });
+    } catch (_) {
+      // Supabase is not initialized in local-only development/test overrides.
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

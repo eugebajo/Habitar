@@ -100,12 +100,15 @@ class AdultPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) => AdultShell(
         child: SafeArea(
-          child: ListView(padding: const EdgeInsets.all(22), children: [
-            HabitarScreenHeader(
-                title: title, subtitle: subtitle, trailing: action),
-            const SizedBox(height: 22),
-            child,
-          ]),
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(22, 22, 22, 132),
+            children: [
+              HabitarScreenHeader(
+                  title: title, subtitle: subtitle, trailing: action),
+              const SizedBox(height: 22),
+              child,
+            ],
+          ),
         ),
       );
 }

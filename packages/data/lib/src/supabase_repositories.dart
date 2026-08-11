@@ -1,5 +1,6 @@
 import 'package:habitar_application/application.dart';
 import 'package:habitar_domain/domain.dart';
+import 'package:habitar_habit_engine/habit_engine.dart';
 import 'package:habitar_routine_engine/routine_engine.dart';
 import 'package:supabase/supabase.dart';
 
@@ -111,7 +112,8 @@ class SupabaseFamilyRepository implements FamilyRepository {
       String authenticatedEmail) async {
     final currentEmail = client.auth.currentUser?.email?.trim().toLowerCase();
     _debugLog('PENDING INVITATIONS RPC: START');
-    _debugLog('authenticated email: ${authenticatedEmail.trim().toLowerCase()}');
+    _debugLog(
+        'authenticated email: ${authenticatedEmail.trim().toLowerCase()}');
     _debugLog('auth current email: $currentEmail');
     if (currentEmail == null ||
         currentEmail.isEmpty ||
@@ -265,50 +267,79 @@ class SupabaseRoutineRepository implements RoutineRepository {
     bool canPostpone = true,
     bool canRequestHelp = true,
   }) async {
-    final userId = _currentUserId(client);
-    final routineRow = await client
-        .from('routines')
-        .insert({
-          'owner': userId,
-          'profile_id': profileId,
-          'title': title,
-          'weekdays': weekdays,
-          'scheduled_hour': scheduledHour,
-          'scheduled_minute': scheduledMinute,
-          'estimated_duration_minutes': estimatedDurationMinutes,
-          'lead_reminder_minutes': leadReminderMinutes,
-          'repeat_policy': repeatPolicy.name,
-          'responsible_adult_profile_id': responsibleAdultProfileId,
-          'context_label': contextLabel,
-          'minimum_version': minimumVersion,
-          'benefit_description': benefitDescription,
-          'max_reminder_count': maxReminderCount,
-          'reminder_interval_minutes': reminderIntervalMinutes,
-          'vibration_enabled': vibrationEnabled,
-          'sound_enabled': soundEnabled,
-          'silent_notification': silentNotification,
-          'can_postpone': canPostpone,
-          'can_request_help': canRequestHelp,
-          'access_rules': <Object?>[],
-        })
-        .select()
-        .single();
-    final routineId = routineRow['id'] as String;
-    for (var index = 0; index < stepTitles.length; index += 1) {
-      await client.from('routine_steps').insert({
-        'owner': userId,
-        'routine_id': routineId,
-        'title': stepTitles[index],
-        'step_order': index + 1,
-        'estimated_minutes': 5,
-        'access_rules': <Object?>[],
-      });
+    if (stepTitles.length < 3) {
+      throw ArgumentError.value(
+          stepTitles.length, 'stepTitles', 'A routine needs at least 3 steps.');
     }
-    final steps = await stepsForRoutine(routineId);
-    return _routineFromRow(
-      routineRow,
-      stepIds: steps.map((step) => step.metadata.id).toList(growable: false),
-    );
+    final userId = _currentUserId(client);
+    try {
+      _debugLog('ROUTINE SAVE: CREATE START');
+      _debugLog('ROUTINE SAVE payload: profile_id=$profileId');
+      _debugLog('ROUTINE SAVE payload: title_length=${title.trim().length}');
+      _debugLog('ROUTINE SAVE payload: step_count=${stepTitles.length}');
+      _debugLog('ROUTINE SAVE payload: weekdays=${weekdays.join(',')}');
+      _debugLog('ROUTINE SAVE payload: scheduled_hour=$scheduledHour');
+      _debugLog('ROUTINE SAVE payload: scheduled_minute=$scheduledMinute');
+      _debugLog(
+          'ROUTINE SAVE payload: estimated_duration_minutes=$estimatedDurationMinutes');
+      _debugLog('ROUTINE SAVE payload: repeat_policy=${repeatPolicy.name}');
+      _debugLog(
+          'ROUTINE SAVE payload: responsible_adult_profile_id=$responsibleAdultProfileId');
+      final routineRow = await client
+          .from('routines')
+          .insert({
+            'owner': userId,
+            'profile_id': profileId,
+            'title': title,
+            'weekdays': weekdays,
+            'scheduled_hour': scheduledHour,
+            'scheduled_minute': scheduledMinute,
+            'estimated_duration_minutes': estimatedDurationMinutes,
+            'lead_reminder_minutes': leadReminderMinutes,
+            'repeat_policy': repeatPolicy.name,
+            'responsible_adult_profile_id': responsibleAdultProfileId,
+            'context_label': contextLabel,
+            'minimum_version': minimumVersion,
+            'benefit_description': benefitDescription,
+            'max_reminder_count': maxReminderCount,
+            'reminder_interval_minutes': reminderIntervalMinutes,
+            'vibration_enabled': vibrationEnabled,
+            'sound_enabled': soundEnabled,
+            'silent_notification': silentNotification,
+            'can_postpone': canPostpone,
+            'can_request_help': canRequestHelp,
+            'access_rules': <Object?>[],
+          })
+          .select()
+          .single();
+      final routineId = routineRow['id'] as String;
+      _debugLog('ROUTINE SAVE: ROUTINE INSERT OK routine_id=$routineId');
+      for (var index = 0; index < stepTitles.length; index += 1) {
+        _debugLog(
+            'ROUTINE SAVE: STEP INSERT START routine_id=$routineId order=${index + 1}');
+        await client.from('routine_steps').insert({
+          'owner': userId,
+          'routine_id': routineId,
+          'title': stepTitles[index],
+          'step_order': index + 1,
+          'estimated_minutes': 5,
+          'access_rules': <Object?>[],
+        });
+      }
+      _debugLog(
+          'ROUTINE SAVE: STEPS INSERT OK routine_id=$routineId count=${stepTitles.length}');
+      final steps = await stepsForRoutine(routineId);
+      _debugLog(
+          'ROUTINE SAVE: STEPS READ OK routine_id=$routineId count=${steps.length}');
+      return _routineFromRow(
+        routineRow,
+        stepIds: steps.map((step) => step.metadata.id).toList(growable: false),
+      );
+    } on PostgrestException catch (error) {
+      _debugLog('ROUTINE SAVE: POSTGREST ERROR');
+      _logPostgrestError(error);
+      rethrow;
+    }
   }
 
   @override
@@ -358,32 +389,45 @@ class SupabaseRoutineRepository implements RoutineRepository {
           stepTitles.length, 'stepTitles', 'A routine needs at least 3 steps.');
     }
     final now = DateTime.now().toUtc().toIso8601String();
-    final row = await client
-        .from('routines')
-        .update({
-          'title': routine.title,
-          'weekdays': routine.weekdays,
-          'scheduled_hour': routine.scheduledHour,
-          'scheduled_minute': routine.scheduledMinute,
-          'estimated_duration_minutes': routine.estimatedDurationMinutes,
-          'lead_reminder_minutes': routine.leadReminderMinutes,
-          'repeat_policy': routine.repeatPolicy.name,
-          'responsible_adult_profile_id': routine.responsibleAdultProfileId,
-          'context_label': routine.contextLabel,
-          'minimum_version': routine.minimumVersion,
-          'benefit_description': routine.benefitDescription,
-          'max_reminder_count': routine.maxReminderCount,
-          'reminder_interval_minutes': routine.reminderIntervalMinutes,
-          'vibration_enabled': routine.vibrationEnabled,
-          'sound_enabled': routine.soundEnabled,
-          'silent_notification': routine.silentNotification,
-          'can_postpone': routine.canPostpone,
-          'can_request_help': routine.canRequestHelp,
-          'updated_at': now,
-        })
-        .eq('id', routine.metadata.id)
-        .select()
-        .single();
+    Map<String, dynamic> row;
+    try {
+      _debugLog('ROUTINE SAVE: UPDATE START');
+      _debugLog('ROUTINE SAVE payload: routine_id=${routine.metadata.id}');
+      _debugLog('ROUTINE SAVE payload: profile_id=${routine.profileId}');
+      _debugLog('ROUTINE SAVE payload: title_length=${routine.title.length}');
+      _debugLog('ROUTINE SAVE payload: step_count=${stepTitles.length}');
+      row = await client
+          .from('routines')
+          .update({
+            'title': routine.title,
+            'weekdays': routine.weekdays,
+            'scheduled_hour': routine.scheduledHour,
+            'scheduled_minute': routine.scheduledMinute,
+            'estimated_duration_minutes': routine.estimatedDurationMinutes,
+            'lead_reminder_minutes': routine.leadReminderMinutes,
+            'repeat_policy': routine.repeatPolicy.name,
+            'responsible_adult_profile_id': routine.responsibleAdultProfileId,
+            'context_label': routine.contextLabel,
+            'minimum_version': routine.minimumVersion,
+            'benefit_description': routine.benefitDescription,
+            'max_reminder_count': routine.maxReminderCount,
+            'reminder_interval_minutes': routine.reminderIntervalMinutes,
+            'vibration_enabled': routine.vibrationEnabled,
+            'sound_enabled': routine.soundEnabled,
+            'silent_notification': routine.silentNotification,
+            'can_postpone': routine.canPostpone,
+            'can_request_help': routine.canRequestHelp,
+            'updated_at': now,
+          })
+          .eq('id', routine.metadata.id)
+          .select()
+          .single();
+      _debugLog('ROUTINE SAVE: ROUTINE UPDATE OK');
+    } on PostgrestException catch (error) {
+      _debugLog('ROUTINE SAVE: POSTGREST ERROR');
+      _logPostgrestError(error);
+      rethrow;
+    }
     final existingSteps = await stepsForRoutine(routine.metadata.id);
     final userId = _currentUserId(client);
     final stepIds = <String>[];
@@ -546,9 +590,8 @@ class SupabaseRoutineSessionRepository implements RoutineSessionRepository {
         .select('id')
         .eq('profile_id', profileId)
         .neq('status', 'deleted');
-    final routineIds = routineRows
-        .map((row) => row['id'] as String)
-        .toList(growable: false);
+    final routineIds =
+        routineRows.map((row) => row['id'] as String).toList(growable: false);
     if (routineIds.isEmpty) {
       return null;
     }
@@ -556,6 +599,82 @@ class SupabaseRoutineSessionRepository implements RoutineSessionRepository {
         .from('routine_sessions')
         .select()
         .inFilter('routine_id', routineIds)
+        .inFilter('session_status', [
+          RoutineSessionStatus.running.name,
+          RoutineSessionStatus.paused.name,
+          RoutineSessionStatus.postponed.name,
+        ])
+        .order('updated_at', ascending: false)
+        .limit(1);
+    if (rows.isEmpty) {
+      return null;
+    }
+    return _sessionFromRow(rows.first);
+  }
+
+  @override
+  Future<RoutineSession?> activeSessionForRoutineToday({
+    required String routineId,
+    required DateTime localDate,
+  }) async {
+    final range = _asuncionUtcRange(localDate);
+    final rows = await client
+        .from('routine_sessions')
+        .select()
+        .eq('routine_id', routineId)
+        .gte('created_at', range.start.toIso8601String())
+        .lt('created_at', range.end.toIso8601String())
+        .inFilter('session_status', [
+          RoutineSessionStatus.running.name,
+          RoutineSessionStatus.paused.name,
+          RoutineSessionStatus.postponed.name,
+        ])
+        .order('updated_at', ascending: false)
+        .limit(1);
+    if (rows.isEmpty) {
+      return null;
+    }
+    return _sessionFromRow(rows.first);
+  }
+
+  @override
+  Future<List<RoutineSession>> sessionsForProfileDate({
+    required String profileId,
+    required DateTime localDate,
+  }) async {
+    final routineRows = await client
+        .from('routines')
+        .select('id')
+        .eq('profile_id', profileId)
+        .neq('status', 'deleted');
+    final routineIds =
+        routineRows.map((row) => row['id'] as String).toList(growable: false);
+    if (routineIds.isEmpty) {
+      return const [];
+    }
+    final range = _asuncionUtcRange(localDate);
+    final rows = await client
+        .from('routine_sessions')
+        .select()
+        .inFilter('routine_id', routineIds)
+        .gte('created_at', range.start.toIso8601String())
+        .lt('created_at', range.end.toIso8601String())
+        .order('updated_at', ascending: false);
+    return Future.wait(rows.map(_sessionFromRow));
+  }
+
+  @override
+  Future<RoutineSession?> latestSessionForRoutineDate({
+    required String routineId,
+    required DateTime localDate,
+  }) async {
+    final range = _asuncionUtcRange(localDate);
+    final rows = await client
+        .from('routine_sessions')
+        .select()
+        .eq('routine_id', routineId)
+        .gte('created_at', range.start.toIso8601String())
+        .lt('created_at', range.end.toIso8601String())
         .order('updated_at', ascending: false)
         .limit(1);
     if (rows.isEmpty) {
@@ -576,40 +695,62 @@ class SupabaseRoutineSessionRepository implements RoutineSessionRepository {
 
   @override
   Future<void> save(RoutineSession session) async {
-    await client.from('routine_sessions').upsert({
-      'id': session.id,
-      'owner': _currentUserId(client),
-      'routine_id': session.routine.metadata.id,
-      'status': EntityStatus.active.name,
-      'access_rules': <Object?>[],
-      'active_step_index': session.activeStepIndex,
-      'session_status': session.status.name,
-      'completed_step_ids': session.completedStepIds,
-      'skipped_step_ids': session.skippedStepIds,
-      'extra_minutes_by_step_id': session.extraMinutesByStepId,
-      'pause_reason': session.pauseReason?.name,
-      'help_requested': session.helpRequested,
-      'postponed_until': session.postponedUntil?.toUtc().toIso8601String(),
-      'updated_at': DateTime.now().toUtc().toIso8601String(),
-    });
+    try {
+      await client.from('routine_sessions').upsert({
+        'id': session.id,
+        'owner': _currentUserId(client),
+        'routine_id': session.routine.metadata.id,
+        'status': EntityStatus.active.name,
+        'access_rules': <Object?>[],
+        'active_step_index': session.activeStepIndex,
+        'session_status': session.status.name,
+        'completed_step_ids': session.completedStepIds,
+        'skipped_step_ids': session.skippedStepIds,
+        'extra_minutes_by_step_id': session.extraMinutesByStepId,
+        'pause_reason': session.pauseReason?.name,
+        'help_requested': session.helpRequested,
+        'postponed_until': session.postponedUntil?.toUtc().toIso8601String(),
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      });
+    } on PostgrestException catch (error) {
+      final details = error.details?.toString();
+      if (error.code == '23505' &&
+          (error.message
+                  .contains('routine_sessions_unique_routine_session_date') ||
+              details?.contains(
+                    'routine_sessions_unique_routine_session_date',
+                  ) ==
+                  true)) {
+        throw StateError('ROUTINE_SESSION_ALREADY_EXISTS_TODAY');
+      }
+      rethrow;
+    }
   }
 
   Future<RoutineSession> _sessionFromRow(Map<String, dynamic> row) async {
     final routineId = row['routine_id'] as String;
-    final routine = await SupabaseRoutineRepository(client).routineById(routineId);
+    final routine =
+        await SupabaseRoutineRepository(client).routineById(routineId);
     if (routine == null) {
       throw StateError('Routine not found for session: $routineId');
     }
-    final steps = await SupabaseRoutineRepository(client).stepsForRoutine(routineId);
+    final steps =
+        await SupabaseRoutineRepository(client).stepsForRoutine(routineId);
+    final createdAt = DateTime.parse(row['created_at'] as String).toLocal();
+    final sessionDateValue = row['session_date'];
+    final sessionDate = sessionDateValue == null
+        ? habitarFunctionalDate(createdAt)
+        : DateTime.parse(sessionDateValue as String);
     return RoutineSession(
       id: row['id'] as String,
       routine: routine,
       steps: steps,
       activeStepIndex: row['active_step_index'] as int? ?? 0,
-      startedAt: DateTime.parse(row['created_at'] as String),
+      startedAt: createdAt,
       updatedAt: DateTime.parse(
         (row['updated_at'] ?? row['created_at']) as String,
-      ),
+      ).toLocal(),
+      sessionDate: sessionDate,
       status: RoutineSessionStatus.values.byName(
         row['session_status'] as String? ?? RoutineSessionStatus.running.name,
       ),
@@ -620,8 +761,164 @@ class SupabaseRoutineSessionRepository implements RoutineSessionRepository {
       helpRequested: row['help_requested'] as bool? ?? false,
       postponedUntil: row['postponed_until'] == null
           ? null
-          : DateTime.parse(row['postponed_until'] as String),
+          : DateTime.parse(row['postponed_until'] as String).toLocal(),
+      completedAt: row['completed_at'] == null
+          ? null
+          : DateTime.parse(row['completed_at'] as String).toLocal(),
     );
+  }
+}
+
+class _UtcDateRange {
+  const _UtcDateRange(this.start, this.end);
+
+  final DateTime start;
+  final DateTime end;
+}
+
+_UtcDateRange _asuncionUtcRange(DateTime date) {
+  final functionalDate = habitarFunctionalDate(date);
+  final start = DateTime.utc(
+    functionalDate.year,
+    functionalDate.month,
+    functionalDate.day,
+    3,
+  );
+  return _UtcDateRange(start, start.add(const Duration(days: 1)));
+}
+
+class SupabaseTimeBankRepository implements TimeBankRepository {
+  const SupabaseTimeBankRepository(this.client);
+
+  final SupabaseClient client;
+
+  @override
+  Future<List<TimeBankBenefit>> benefitsForProfile(String profileId) async {
+    final rows = await client
+        .from('time_bank_benefits')
+        .select()
+        .eq('profile_id', profileId)
+        .order('created_at');
+    return rows.map(_timeBankBenefitFromRow).toList(growable: false);
+  }
+
+  @override
+  Future<TimeBankBenefit> saveBenefit(TimeBankBenefit benefit) async {
+    final currentUserId = _currentUserId(client);
+    final row = await client
+        .from('time_bank_benefits')
+        .upsert({
+          'id': benefit.metadata.id,
+          'profile_id': benefit.profileId,
+          'routine_id': benefit.routineId,
+          'habit_id': benefit.habitId,
+          'kind': benefit.kind.name,
+          'description': benefit.description,
+          'minutes_earned': benefit.minutesEarned,
+          'minutes_used': benefit.minutesUsed,
+          'daily_limit_minutes': benefit.dailyLimitMinutes,
+          'expires_at': benefit.expiresAt?.toUtc().toIso8601String(),
+          'accumulation_allowed': benefit.accumulationAllowed,
+          'status': benefit.status.name,
+          'source_action': benefit.sourceAction,
+          'idempotency_key': benefit.idempotencyKey,
+          'approved_by_adult_id':
+              benefit.approvedByAdultId == null ? null : currentUserId,
+          'updated_at': DateTime.now().toUtc().toIso8601String(),
+          'owner_id': null,
+        })
+        .select()
+        .single();
+    return _timeBankBenefitFromRow(row);
+  }
+}
+
+class SupabaseHabitRepository implements HabitRepository {
+  const SupabaseHabitRepository(this.client);
+
+  final SupabaseClient client;
+
+  @override
+  Future<Habit> proposeHabit({
+    required String profileId,
+    required String title,
+    required String minimumVersion,
+    required HabitStatus status,
+  }) async {
+    final now = DateTime.now().toUtc();
+    final row = await client
+        .from('habits')
+        .insert({
+          'profile_id': profileId,
+          'title': title,
+          'minimum_version': minimumVersion,
+          'habit_status': _habitStatusToDb(status),
+          'owner': _currentUserId(client),
+          'created_at': now.toIso8601String(),
+          'updated_at': now.toIso8601String(),
+        })
+        .select()
+        .single();
+    return _habitFromRow(row);
+  }
+
+  @override
+  Future<Habit> saveHabit(Habit habit) async {
+    final row = await client
+        .from('habits')
+        .upsert({
+          'id': habit.metadata.id,
+          'profile_id': habit.profileId,
+          'title': habit.title,
+          'minimum_version': habit.minimumVersion,
+          'habit_status': _habitStatusToDb(habit.status),
+          'owner': _currentUserId(client),
+          'updated_at': DateTime.now().toUtc().toIso8601String(),
+        })
+        .select()
+        .single();
+    return _habitFromRow(row);
+  }
+
+  @override
+  Future<List<Habit>> habitsForProfile(String profileId) async {
+    final rows = await client
+        .from('habits')
+        .select()
+        .eq('profile_id', profileId)
+        .neq('status', 'deleted')
+        .order('created_at');
+    return rows.map(_habitFromRow).toList(growable: false);
+  }
+}
+
+class SupabaseHabitProgressRepository implements HabitProgressRepository {
+  const SupabaseHabitProgressRepository(this.client);
+
+  final SupabaseClient client;
+
+  @override
+  Future<void> record(HabitProgressEntry entry) async {
+    await client.from('habit_progress').insert({
+      'habit_id': entry.habitId,
+      'recorded_at': entry.recordedAt.toUtc().toIso8601String(),
+      'completed_minimum_version': entry.completedMinimumVersion,
+      'help_level': entry.helpLevel,
+      'ease': entry.ease,
+      'note': entry.note,
+      'owner': _currentUserId(client),
+    });
+  }
+
+  @override
+  Future<List<HabitProgressEntry>> entriesForHabit(String habitId) async {
+    final rows = await client
+        .from('habit_progress')
+        .select()
+        .eq('habit_id', habitId)
+        .neq('status', 'deleted')
+        .order('recorded_at');
+    return rows.map(_habitProgressFromRow).toList(growable: false);
   }
 }
 
@@ -810,6 +1107,51 @@ RoutineOverride _routineOverrideFromRow(Map<String, dynamic> row) {
   );
 }
 
+Habit _habitFromRow(Map<String, dynamic> row) {
+  return Habit(
+    metadata: _metadataFromRow(row),
+    profileId: row['profile_id'] as String,
+    title: row['title'] as String,
+    status: _habitStatusFromDb(row['habit_status'] as String?),
+    minimumVersion: row['minimum_version'] as String?,
+  );
+}
+
+HabitProgressEntry _habitProgressFromRow(Map<String, dynamic> row) {
+  return HabitProgressEntry(
+    habitId: row['habit_id'] as String,
+    recordedAt: DateTime.parse(row['recorded_at'] as String),
+    completedMinimumVersion: row['completed_minimum_version'] as bool? ?? false,
+    helpLevel: row['help_level'] as int? ?? 0,
+    ease: row['ease'] as int? ?? 0,
+    note: row['note'] as String?,
+  );
+}
+
+TimeBankBenefit _timeBankBenefitFromRow(Map<String, dynamic> row) {
+  return TimeBankBenefit(
+    metadata: _metadataFromRow(row),
+    profileId: row['profile_id'] as String,
+    routineId: row['routine_id'] as String?,
+    habitId: row['habit_id'] as String?,
+    kind: BenefitKind.values.byName(
+      row['kind'] as String? ?? BenefitKind.digitalTime.name,
+    ),
+    description: row['description'] as String,
+    minutesEarned: row['minutes_earned'] as int,
+    minutesUsed: row['minutes_used'] as int? ?? 0,
+    dailyLimitMinutes: row['daily_limit_minutes'] as int?,
+    expiresAt: _dateTimeOrNull(row['expires_at']),
+    accumulationAllowed: row['accumulation_allowed'] as bool? ?? true,
+    status: BenefitStatus.values.byName(
+      row['status'] as String? ?? BenefitStatus.available.name,
+    ),
+    sourceAction: row['source_action'] as String?,
+    idempotencyKey: row['idempotency_key'] as String?,
+    approvedByAdultId: row['approved_by_adult_id'] as String?,
+  );
+}
+
 EntityMetadata _metadataFromRow(Map<String, dynamic> row) {
   final createdAt = DateTime.parse(row['created_at'] as String);
   final updatedAt = DateTime.parse(
@@ -820,6 +1162,7 @@ EntityMetadata _metadataFromRow(Map<String, dynamic> row) {
     createdAt: createdAt,
     updatedAt: updatedAt,
     ownerId: (row['owner'] ??
+        row['owner_id'] ??
         row['user_id'] ??
         row['invited_by_user_id'] ??
         row['family_id']) as String,
@@ -848,10 +1191,11 @@ FamilyMemberRole _familyMemberRole(String? role) {
 
 AdultInvitationStatus _adultInvitationStatus(String? status) {
   return switch (status) {
+    null || 'pending' => AdultInvitationStatus.pending,
     'accepted' => AdultInvitationStatus.accepted,
     'revoked' => AdultInvitationStatus.revoked,
     'expired' => AdultInvitationStatus.expired,
-    _ => AdultInvitationStatus.pending,
+    _ => throw StateError('Unknown adult invitation status: $status'),
   };
 }
 
@@ -866,9 +1210,41 @@ RoutineOverrideType _routineOverrideType(String? type) {
   };
 }
 
+String _habitStatusToDb(HabitStatus status) {
+  return switch (status) {
+    HabitStatus.newHabit => 'new_habit',
+    HabitStatus.proposed => 'proposed',
+    HabitStatus.practicing => 'practicing',
+    HabitStatus.stable => 'stable',
+    HabitStatus.paused => 'paused',
+    HabitStatus.archived => 'archived',
+  };
+}
+
+HabitStatus _habitStatusFromDb(String? status) {
+  return switch (status) {
+    'new_habit' => HabitStatus.newHabit,
+    'practicing' => HabitStatus.practicing,
+    'stable' => HabitStatus.stable,
+    'paused' => HabitStatus.paused,
+    'archived' => HabitStatus.archived,
+    _ => HabitStatus.proposed,
+  };
+}
+
 String _dateOnly(DateTime date) => '${date.year.toString().padLeft(4, '0')}-'
     '${date.month.toString().padLeft(2, '0')}-'
     '${date.day.toString().padLeft(2, '0')}';
+
+DateTime? _dateTimeOrNull(Object? value) {
+  if (value == null) {
+    return null;
+  }
+  if (value is DateTime) {
+    return value;
+  }
+  return DateTime.parse(value as String);
+}
 
 List<int> _intList(Object? value) {
   return (value as List? ?? const []).map((item) => item as int).toList();

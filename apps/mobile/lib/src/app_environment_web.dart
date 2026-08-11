@@ -44,9 +44,15 @@ Future<List<Override>> buildProductionOverrides() async {
     routineOverrideRepositoryProvider.overrideWithValue(supabaseClient == null
         ? LocalRoutineOverrideRepository(store)
         : SupabaseRoutineOverrideRepository(supabaseClient)),
-    habitRepositoryProvider.overrideWithValue(LocalHabitRepository(store)),
-    habitProgressRepositoryProvider
-        .overrideWithValue(LocalHabitProgressRepository(store)),
+    habitRepositoryProvider.overrideWithValue(supabaseClient == null
+        ? LocalHabitRepository(store)
+        : SupabaseHabitRepository(supabaseClient)),
+    habitProgressRepositoryProvider.overrideWithValue(supabaseClient == null
+        ? LocalHabitProgressRepository(store)
+        : SupabaseHabitProgressRepository(supabaseClient)),
+    timeBankRepositoryProvider.overrideWithValue(supabaseClient == null
+        ? LocalTimeBankRepository(store)
+        : SupabaseTimeBankRepository(supabaseClient)),
     notificationPreferenceRepositoryProvider
         .overrideWithValue(LocalNotificationPreferenceRepository(store)),
     emotionCheckInRepositoryProvider

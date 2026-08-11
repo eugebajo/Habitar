@@ -105,10 +105,37 @@ class RoutineService {
     return sessionRepository.activeSessionForProfile(profileId);
   }
 
+  Future<RoutineSession?> activeSessionForRoutineToday(Routine routine) {
+    return sessionRepository.activeSessionForRoutineToday(
+      routineId: routine.metadata.id,
+      localDate: habitarFunctionalDate(),
+    );
+  }
+
+  Future<RoutineSession?> latestSessionForRoutineToday(Routine routine) {
+    return sessionRepository.latestSessionForRoutineDate(
+      routineId: routine.metadata.id,
+      localDate: habitarFunctionalDate(),
+    );
+  }
+
   Future<RoutineSession> startExistingRoutine(
     Routine routine, {
     List<RoutineStep>? steps,
   }) async {
+    final today = habitarFunctionalDate();
+    final existingToday = await sessionRepository.latestSessionForRoutineDate(
+      routineId: routine.metadata.id,
+      localDate: today,
+    );
+    if (existingToday != null) {
+      if (existingToday.status == RoutineSessionStatus.completed) {
+        throw StateError('ROUTINE_ALREADY_COMPLETED_TODAY');
+      }
+      if (_isOpenSession(existingToday)) {
+        return existingToday;
+      }
+    }
     final loadedSteps =
         steps ?? await routineRepository.stepsForRoutine(routine.metadata.id);
     final session = engine.start(
@@ -117,7 +144,25 @@ class RoutineService {
       steps: loadedSteps,
       now: DateTime.now(),
     );
-    await sessionRepository.save(session);
+    try {
+      await sessionRepository.save(session);
+    } on StateError catch (error) {
+      if (error.message != 'ROUTINE_SESSION_ALREADY_EXISTS_TODAY') {
+        rethrow;
+      }
+      final existingAfterCollision =
+          await sessionRepository.latestSessionForRoutineDate(
+        routineId: routine.metadata.id,
+        localDate: today,
+      );
+      if (existingAfterCollision == null) {
+        rethrow;
+      }
+      if (existingAfterCollision.status == RoutineSessionStatus.completed) {
+        throw StateError('ROUTINE_ALREADY_COMPLETED_TODAY');
+      }
+      return existingAfterCollision;
+    }
     _debugLog(
       'SESSION CREATED: session_id=${session.id} routine_id=${routine.metadata.id} profile_id=${routine.profileId}',
     );
@@ -225,6 +270,11 @@ class RoutineService {
     );
   }
 }
+
+bool _isOpenSession(RoutineSession session) =>
+    session.status == RoutineSessionStatus.running ||
+    session.status == RoutineSessionStatus.paused ||
+    session.status == RoutineSessionStatus.postponed;
 
 String _sessionNote(RoutineSession session, {String? stepId}) {
   final parts = [

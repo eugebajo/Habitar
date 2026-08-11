@@ -163,20 +163,20 @@ class InMemoryFamilyRepository implements FamilyRepository {
         PendingFamilyInvitation(
           invitation: invitation,
           familyName: _familiesByOwner.values
-                  .firstWhere(
-                    (family) => family.metadata.id == invitation.familyId,
-                    orElse: () => Family(
-                      metadata: EntityMetadata(
-                        id: invitation.familyId,
-                        createdAt: now,
-                        updatedAt: now,
-                        ownerId: invitation.invitedByUserId ?? invitation.familyId,
-                      ),
-                      name: 'Familia',
-                      adultUserIds: const [],
-                    ),
-                  )
-                  .name,
+              .firstWhere(
+                (family) => family.metadata.id == invitation.familyId,
+                orElse: () => Family(
+                  metadata: EntityMetadata(
+                    id: invitation.familyId,
+                    createdAt: now,
+                    updatedAt: now,
+                    ownerId: invitation.invitedByUserId ?? invitation.familyId,
+                  ),
+                  name: 'Familia',
+                  adultUserIds: const [],
+                ),
+              )
+              .name,
         ),
     ];
   }
@@ -641,7 +641,47 @@ class InMemoryRoutineSessionRepository implements RoutineSessionRepository {
   @override
   Future<RoutineSession?> activeSessionForProfile(String profileId) async {
     final sessions = _sessions.values.where((session) {
-      return session.routine.profileId == profileId;
+      return session.routine.profileId == profileId && _isOpenSession(session);
+    }).toList();
+    sessions.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    return sessions.isEmpty ? null : sessions.first;
+  }
+
+  @override
+  Future<RoutineSession?> activeSessionForRoutineToday({
+    required String routineId,
+    required DateTime localDate,
+  }) async {
+    final sessions = _sessions.values.where((session) {
+      return session.routine.metadata.id == routineId &&
+          _isOpenSession(session) &&
+          sameHabitarFunctionalDate(session.sessionDate, localDate);
+    }).toList();
+    sessions.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    return sessions.isEmpty ? null : sessions.first;
+  }
+
+  @override
+  Future<List<RoutineSession>> sessionsForProfileDate({
+    required String profileId,
+    required DateTime localDate,
+  }) async {
+    final sessions = _sessions.values.where((session) {
+      return session.routine.profileId == profileId &&
+          sameHabitarFunctionalDate(session.sessionDate, localDate);
+    }).toList();
+    sessions.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    return sessions;
+  }
+
+  @override
+  Future<RoutineSession?> latestSessionForRoutineDate({
+    required String routineId,
+    required DateTime localDate,
+  }) async {
+    final sessions = _sessions.values.where((session) {
+      return session.routine.metadata.id == routineId &&
+          sameHabitarFunctionalDate(session.sessionDate, localDate);
     }).toList();
     sessions.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
     return sessions.isEmpty ? null : sessions.first;
@@ -655,6 +695,11 @@ class InMemoryRoutineSessionRepository implements RoutineSessionRepository {
     _sessions[session.id] = session;
   }
 }
+
+bool _isOpenSession(RoutineSession session) =>
+    session.status == RoutineSessionStatus.running ||
+    session.status == RoutineSessionStatus.paused ||
+    session.status == RoutineSessionStatus.postponed;
 
 class InMemoryRoutineOverrideRepository implements RoutineOverrideRepository {
   final List<RoutineOverride> _overrides = [];

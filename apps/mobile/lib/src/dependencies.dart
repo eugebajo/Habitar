@@ -30,7 +30,7 @@ final notificationPreferenceRepositoryProvider =
     Provider<NotificationPreferenceRepository>(
         (ref) => InMemoryNotificationPreferenceRepository());
 final reminderSchedulerProvider =
-    Provider<InMemoryReminderScheduler>((ref) => InMemoryReminderScheduler());
+    Provider<LocalReminderScheduler>((ref) => InMemoryReminderScheduler());
 final emotionCheckInRepositoryProvider = Provider<EmotionCheckInRepository>(
     (ref) => InMemoryEmotionCheckInRepository());
 final supportRequestRepositoryProvider = Provider<SupportRequestRepository>(
@@ -54,7 +54,8 @@ final sessionServiceProvider = Provider<SessionService>((ref) {
   return SessionService(ref.watch(authRepositoryProvider));
 });
 
-final passwordRecoveryServiceProvider = Provider<PasswordRecoveryService>((ref) {
+final passwordRecoveryServiceProvider =
+    Provider<PasswordRecoveryService>((ref) {
   return PasswordRecoveryService(ref.watch(authRepositoryProvider));
 });
 
@@ -78,6 +79,7 @@ final currentFamilyIdProvider = StateProvider<String?>((ref) => null);
 final currentProfileIdProvider = StateProvider<String?>((ref) => null);
 final currentProfileKindProvider = StateProvider<ProfileKind?>((ref) => null);
 final currentRoutineSessionIdProvider = StateProvider<String?>((ref) => null);
+final passwordRecoveryActiveProvider = StateProvider<bool>((ref) => false);
 
 final routineServiceProvider = Provider<RoutineService>((ref) {
   return RoutineService(
