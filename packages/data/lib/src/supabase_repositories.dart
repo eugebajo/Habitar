@@ -531,7 +531,7 @@ class SupabaseRoutineRepository implements RoutineRepository {
         .select()
         .eq('routine_id', routineId)
         .neq('status', 'deleted')
-        .order('step_order');
+        .order('step_order', ascending: true);
     return rows.map(_routineStepFromRow).toList(growable: false);
   }
 }
