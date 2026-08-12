@@ -1212,6 +1212,7 @@ class ChildHomeScreen extends ConsumerWidget {
           .map((session) => session.routine.metadata.id)
           .toSet()
           .length,
+      pendingRoutines: todaysRoutines,
     );
   }
 
@@ -1278,6 +1279,22 @@ class ChildHomeScreen extends ConsumerWidget {
                                   data.routine!,
                                   data.steps,
                                 )),
+                    if (data.otherPendingRoutines.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text('Más para hoy',
+                            style: Theme.of(context).textTheme.titleMedium),
+                      ),
+                      const SizedBox(height: 10),
+                      for (final routine in data.otherPendingRoutines) ...[
+                        _ChildRoutineListTile(
+                          routine: routine,
+                          onTap: () => _startRoutineById(context, ref, routine),
+                        ),
+                        const SizedBox(height: 10),
+                      ],
+                    ],
                     const SizedBox(height: 12),
                     _ChildPriorityCard(
                         color: HabitarColors.surfaceMist,
@@ -1309,6 +1326,7 @@ class _ChildHomeData {
     required this.latestSession,
     required this.scheduledRoutineCount,
     required this.completedRoutineCount,
+    required this.pendingRoutines,
   });
 
   const _ChildHomeData.empty()
@@ -1317,7 +1335,8 @@ class _ChildHomeData {
         steps = const [],
         latestSession = null,
         scheduledRoutineCount = 0,
-        completedRoutineCount = 0;
+        completedRoutineCount = 0,
+        pendingRoutines = const [];
 
   final SelectedHabitarProfile? profile;
   final Routine? routine;
@@ -1325,10 +1344,16 @@ class _ChildHomeData {
   final RoutineSession? latestSession;
   final int scheduledRoutineCount;
   final int completedRoutineCount;
+  final List<Routine> pendingRoutines;
 
   bool get completedToday =>
       scheduledRoutineCount > 0 &&
       completedRoutineCount >= scheduledRoutineCount;
+
+  /// Pending routines for today besides the one already highlighted in the
+  /// "Ahora" card, in the same schedule order.
+  List<Routine> get otherPendingRoutines =>
+      pendingRoutines.length <= 1 ? const [] : pendingRoutines.skip(1).toList();
 }
 
 RoutineSession? _latestSession(List<RoutineSession> sessions) {
@@ -1344,6 +1369,22 @@ bool _isOpenRoutineSession(RoutineSession session) {
   return session.status == RoutineSessionStatus.running ||
       session.status == RoutineSessionStatus.paused ||
       session.status == RoutineSessionStatus.postponed;
+}
+
+/// Loads a routine's steps on demand and starts it. Used by the "more for
+/// today" list, where steps aren't preloaded for every pending routine.
+Future<void> _startRoutineById(
+  BuildContext context,
+  WidgetRef ref,
+  Routine routine,
+) async {
+  final steps = await ref
+      .read(routineRepositoryProvider)
+      .stepsForRoutine(routine.metadata.id);
+  if (!context.mounted) {
+    return;
+  }
+  await _startRoutine(context, ref, routine, steps);
 }
 
 Future<void> _startRoutine(
@@ -1456,6 +1497,38 @@ class _ChildPriorityCard extends StatelessWidget {
                     const SizedBox(width: 14),
                     const Icon(Icons.arrow_forward_rounded)
                   ])),
+        ]),
+      );
+}
+
+/// Simple row for a pending routine that isn't the highlighted "Ahora" one,
+/// just enough to identify it and start it.
+class _ChildRoutineListTile extends StatelessWidget {
+  const _ChildRoutineListTile({required this.routine, required this.onTap});
+
+  final Routine routine;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => HabitarCard(
+        padding: const EdgeInsets.all(14),
+        child: Row(children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(routine.title,
+                    style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 4),
+                Text(
+                  routine.scheduledTimeLabel ?? 'Sin horario',
+                  style: const TextStyle(color: HabitarColors.mutedInk),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          FilledButton(onPressed: onTap, child: const Text('Empezar')),
         ]),
       );
 }

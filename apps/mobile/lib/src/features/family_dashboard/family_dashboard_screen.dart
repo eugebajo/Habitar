@@ -103,22 +103,26 @@ class FamilyDashboardScreen extends ConsumerWidget {
         scheduledRoutines.add(routine);
       }
     }
-    final routine = todaysRoutines.isEmpty ? null : todaysRoutines.first;
-    final steps = routine == null
-        ? const <RoutineStep>[]
-        : await routineRepository.stepsForRoutine(routine.metadata.id);
+    final routineItems = <_RoutineDayItem>[];
+    for (final routine in todaysRoutines) {
+      final steps =
+          await routineRepository.stepsForRoutine(routine.metadata.id);
+      final session = await sessionRepository.activeSessionForRoutineToday(
+        routineId: routine.metadata.id,
+        localDate: now,
+      );
+      routineItems.add(_RoutineDayItem(
+        routine: routine,
+        steps: steps,
+        session: session,
+      ));
+    }
     final sessionsToday = await sessionRepository.sessionsForProfileDate(
       profileId: profile.id,
       localDate: now,
     );
     final totalScheduledSteps =
         await _totalStepsFor(routineRepository, scheduledRoutines);
-    final todaySession = routine == null
-        ? null
-        : await sessionRepository.activeSessionForRoutineToday(
-            routineId: routine.metadata.id,
-            localDate: now,
-          );
     final supportRequests =
         await ref.read(supportRequestRepositoryProvider).requestsForProfile(
               profile.id,
@@ -135,11 +139,8 @@ class FamilyDashboardScreen extends ConsumerWidget {
 
     return _DashboardData(
       profile: profile,
-      routines: todaysRoutines,
       scheduledRoutines: scheduledRoutines,
-      currentRoutine: routine,
-      currentSteps: steps,
-      activeSession: todaySession,
+      routineItems: routineItems,
       sessionsToday: sessionsToday,
       totalScheduledSteps: totalScheduledSteps,
       supportRequests: supportRequests,
@@ -256,33 +257,27 @@ class _TodayCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = data.profile;
-    final routine = data.currentRoutine;
-    final session = data.activeSession;
-    final completed = session?.completedStepIds.length ?? 0;
-    final total = data.currentSteps.length;
-    final pending = total == 0 ? 0 : (total - completed).clamp(0, total);
-    final progress = total == 0 ? 0.0 : completed / total;
-    final isCompleted = session?.status == RoutineSessionStatus.completed;
+    final items = data.routineItems;
     final completedRoutineIds = data.sessionsToday
         .where((session) => session.status == RoutineSessionStatus.completed)
         .map((session) => session.routine.metadata.id)
         .toSet();
     final allScheduledCompleted = data.scheduledRoutines.isNotEmpty &&
-        routine == null &&
+        items.isEmpty &&
         completedRoutineIds.isNotEmpty;
-    final nextStep = isCompleted
-        ? null
-        : session?.activeStep ??
-            (data.currentSteps.isEmpty ? null : data.currentSteps.first);
+    final totalPendingSteps = items.fold<int>(
+      0,
+      (total, item) => total + item.pendingStepCount,
+    );
     final statusLabel = profile == null
         ? 'Sin perfil'
         : allScheduledCompleted
             ? 'Todo completado'
-            : routine == null
+            : items.isEmpty
                 ? 'Sin rutinas'
-                : isCompleted
-                    ? 'Rutina completada'
-                    : '$pending de $total pendientes';
+                : items.length == 1
+                    ? '$totalPendingSteps pendientes'
+                    : '${items.length} rutinas - $totalPendingSteps pendientes';
 
     return HabitarCard(
       child: Column(
@@ -306,14 +301,15 @@ class _TodayCard extends ConsumerWidget {
           ),
           const SizedBox(height: 14),
           Text(
-            routine?.title ??
-                (allScheduledCompleted
+            items.isEmpty
+                ? (allScheduledCompleted
                     ? 'Rutinas completadas'
-                    : 'Todavía no hay rutinas'),
+                    : 'Todavía no hay rutinas')
+                : 'Rutinas de hoy',
             style: Theme.of(context).textTheme.headlineSmall,
           ),
           const SizedBox(height: 10),
-          if (routine == null)
+          if (items.isEmpty)
             Text(
               profile == null
                   ? 'Elegí un perfil para ver su día real.'
@@ -322,132 +318,29 @@ class _TodayCard extends ConsumerWidget {
                       : 'Creá una rutina para este perfil y aparecerá acá.',
               style: const TextStyle(color: HabitarColors.mutedInk),
             )
-          else ...[
-            Wrap(
-              spacing: 12,
-              runSpacing: 8,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                ConstrainedBox(
-                  constraints: const BoxConstraints(minWidth: 140),
-                  child: SizedBox(
-                    width: MediaQuery.sizeOf(context).width > 420 ? 360 : 220,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(99),
-                      child: LinearProgressIndicator(
-                        value: progress,
-                        minHeight: 10,
-                        backgroundColor: HabitarColors.surfaceMist,
-                        color: HabitarColors.primaryGreen,
-                      ),
-                    ),
-                  ),
-                ),
-                Text('${(progress * 100).round()}% completado'),
-              ],
-            ),
-            const SizedBox(height: 18),
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: HabitarColors.surface,
-                borderRadius: BorderRadius.circular(22),
+          else
+            for (final item in items) ...[
+              _RoutineDayRow(
+                item: item,
+                onRemind: () => _sendRoutineSignal(context, ref, item.routine),
               ),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final compact = constraints.maxWidth < 460;
-                  final textBlock = Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        isCompleted ? 'Listo por hoy' : 'Siguiente paso',
-                        style: const TextStyle(color: HabitarColors.mutedInk),
-                      ),
-                      Text(
-                        isCompleted
-                            ? 'Rutina completada'
-                            : nextStep?.title ?? 'Sin pasos cargados',
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      const SizedBox(height: 4),
-                      Wrap(
-                        spacing: 6,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.schedule_rounded,
-                            size: 18,
-                            color: HabitarColors.primaryGreen,
-                          ),
-                          Text(routine.scheduledTimeLabel ?? 'Sin horario'),
-                        ],
-                      ),
-                    ],
-                  );
-                  final reminderButton = FilledButton.icon(
-                    onPressed: () => _sendRoutineSignal(context, ref),
-                    icon: const Icon(Icons.notifications_active_outlined),
-                    label: const Text('Recordar'),
-                  );
-                  if (compact) {
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const SizedBox(
-                              width: 72,
-                              height: 72,
-                              child: HabitarSoftIllustration(label: 'bag'),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(child: textBlock),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        SizedBox(width: double.infinity, child: reminderButton),
-                      ],
-                    );
-                  }
-                  return Row(children: [
-                    const SizedBox(
-                      width: 90,
-                      height: 90,
-                      child: HabitarSoftIllustration(label: 'bag'),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(child: textBlock),
-                    const SizedBox(width: 12),
-                    reminderButton,
-                  ]);
-                },
-              ),
-            ),
-          ],
+              if (item != items.last) const SizedBox(height: 14),
+            ],
         ],
       ),
     );
   }
 
-  Future<void> _sendRoutineSignal(BuildContext context, WidgetRef ref) async {
+  Future<void> _sendRoutineSignal(
+    BuildContext context,
+    WidgetRef ref,
+    Routine routine,
+  ) async {
     final profileId = ref.read(currentProfileIdProvider);
     if (profileId == null) {
       context.go('/profiles');
       return;
     }
-    final routines =
-        await ref.read(routineRepositoryProvider).routinesForProfile(profileId);
-    if (!context.mounted) return;
-    if (routines.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Primero prepará una rutina para este perfil.'),
-        ),
-      );
-      return;
-    }
-    final routine = routines.first;
     final steps = await ref
         .read(routineRepositoryProvider)
         .stepsForRoutine(routine.metadata.id);
@@ -469,6 +362,102 @@ class _TodayCard extends ConsumerWidget {
         content: Text(
           plan.isBlocked ? plan.blockedReason! : 'Señal enviada con suavidad.',
         ),
+      ),
+    );
+  }
+}
+
+/// One routine's progress for today, with its own progress bar, next step
+/// and reminder action — so a profile with several pending routines shows
+/// all of them, not just the earliest one.
+class _RoutineDayRow extends StatelessWidget {
+  const _RoutineDayRow({required this.item, required this.onRemind});
+
+  final _RoutineDayItem item;
+  final VoidCallback onRemind;
+
+  @override
+  Widget build(BuildContext context) {
+    final routine = item.routine;
+    final progress = item.progress;
+    final isCompleted = item.session?.status == RoutineSessionStatus.completed;
+    final nextStep = isCompleted ? null : item.nextStep;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: HabitarColors.surface,
+        borderRadius: BorderRadius.circular(22),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 460;
+          final textBlock = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(routine.title,
+                  style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(99),
+                      child: LinearProgressIndicator(
+                        value: progress,
+                        minHeight: 8,
+                        backgroundColor: HabitarColors.surfaceMist,
+                        color: HabitarColors.primaryGreen,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text('${(progress * 100).round()}%'),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                isCompleted
+                    ? 'Rutina completada'
+                    : nextStep?.title ?? 'Sin pasos cargados',
+                style: const TextStyle(color: HabitarColors.mutedInk),
+              ),
+              const SizedBox(height: 4),
+              Wrap(
+                spacing: 6,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.schedule_rounded,
+                    size: 18,
+                    color: HabitarColors.primaryGreen,
+                  ),
+                  Text(routine.scheduledTimeLabel ?? 'Sin horario'),
+                ],
+              ),
+            ],
+          );
+          final reminderButton = OutlinedButton.icon(
+            onPressed: onRemind,
+            icon: const Icon(Icons.notifications_active_outlined),
+            label: const Text('Recordar'),
+          );
+          if (compact) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                textBlock,
+                const SizedBox(height: 12),
+                SizedBox(width: double.infinity, child: reminderButton),
+              ],
+            );
+          }
+          return Row(children: [
+            Expanded(child: textBlock),
+            const SizedBox(width: 12),
+            reminderButton,
+          ]);
+        },
       ),
     );
   }
@@ -999,11 +988,8 @@ class _AdultTeamCard extends ConsumerWidget {
 class _DashboardData {
   const _DashboardData({
     required this.profile,
-    required this.routines,
     required this.scheduledRoutines,
-    required this.currentRoutine,
-    required this.currentSteps,
-    required this.activeSession,
+    required this.routineItems,
     required this.sessionsToday,
     required this.totalScheduledSteps,
     required this.supportRequests,
@@ -1012,26 +998,44 @@ class _DashboardData {
 
   const _DashboardData.empty()
       : profile = null,
-        routines = const [],
         scheduledRoutines = const [],
-        currentRoutine = null,
-        currentSteps = const [],
-        activeSession = null,
+        routineItems = const [],
         sessionsToday = const [],
         totalScheduledSteps = 0,
         supportRequests = const [],
         overridesToday = const [];
 
   final SelectedHabitarProfile? profile;
-  final List<Routine> routines;
   final List<Routine> scheduledRoutines;
-  final Routine? currentRoutine;
-  final List<RoutineStep> currentSteps;
-  final RoutineSession? activeSession;
+  final List<_RoutineDayItem> routineItems;
   final List<RoutineSession> sessionsToday;
   final int totalScheduledSteps;
   final List<SupportRequest> supportRequests;
   final List<RoutineOverride> overridesToday;
+}
+
+/// A single pending routine for today, together with its steps and its
+/// session (if one was already started), so each row in the "today" list
+/// can show its own progress independently.
+class _RoutineDayItem {
+  const _RoutineDayItem({
+    required this.routine,
+    required this.steps,
+    required this.session,
+  });
+
+  final Routine routine;
+  final List<RoutineStep> steps;
+  final RoutineSession? session;
+
+  int get completedStepCount => session?.completedStepIds.length ?? 0;
+  int get totalStepCount => steps.length;
+  int get pendingStepCount =>
+      (totalStepCount - completedStepCount).clamp(0, totalStepCount);
+  double get progress =>
+      totalStepCount == 0 ? 0.0 : completedStepCount / totalStepCount;
+  RoutineStep? get nextStep =>
+      session?.activeStep ?? (steps.isEmpty ? null : steps.first);
 }
 
 class _AdultTeamData {
