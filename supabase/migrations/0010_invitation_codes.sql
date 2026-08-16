@@ -10,12 +10,14 @@
 -- PRE-FLIGHT CHECKS (run manually, read-only, before applying):
 --
 -- 1) select extnamespace::regnamespace from pg_extension where extname = 'pgcrypto';
---    This migration calls public.digest(...) for the code hash, matching how
---    0001_initial_schema.sql originally ran `create extension if not exists
---    "pgcrypto"` with no explicit schema (which installs into `public` on a
---    default search_path). If the query above returns a different schema
---    (e.g. `extensions`, which is where newer Supabase projects put it),
---    replace `public.digest` with that schema everywhere in this file
+--    Verified against this project: pgcrypto lives in the `extensions`
+--    schema, not `public` (0001_initial_schema.sql's unqualified `create
+--    extension if not exists "pgcrypto"` turned out not to control this -
+--    the project already had it provisioned in `extensions`). This
+--    migration calls `extensions.digest(...)` for the code hash
+--    accordingly. If you ever run this against a different project, redo
+--    this check first - if it returns something other than `extensions`,
+--    replace `extensions.digest` with that schema everywhere in this file
 --    before applying.
 --
 -- 2) select conname, pg_get_constraintdef(oid)
@@ -185,7 +187,7 @@ begin
   -- A v4 UUID is exactly 128 bits of randomness from pg_catalog (no
   -- extension needed); stripping the dashes gives a 32-char hex code.
   raw_code := replace(gen_random_uuid()::text, '-', '');
-  code_hash := encode(public.digest(raw_code, 'sha256'), 'hex');
+  code_hash := encode(extensions.digest(raw_code, 'sha256'), 'hex');
 
   begin
     insert into public.adult_invitations (
@@ -285,7 +287,7 @@ begin
     raise exception 'INVITATION_CODE_INVALID_OR_EXPIRED';
   end if;
 
-  code_hash := encode(public.digest(normalized_code, 'sha256'), 'hex');
+  code_hash := encode(extensions.digest(normalized_code, 'sha256'), 'hex');
 
   select *
   into invitation_row
