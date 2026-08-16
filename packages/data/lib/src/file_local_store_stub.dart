@@ -20,4 +20,10 @@ class FileLocalStore implements LocalStore {
     throw UnsupportedError(
         'FileLocalStore is only available on dart:io platforms.');
   }
+
+  @override
+  Future<void> delete(String collection, String id) {
+    throw UnsupportedError(
+        'FileLocalStore is only available on dart:io platforms.');
+  }
 }

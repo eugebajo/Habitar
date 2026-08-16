@@ -32,4 +32,10 @@ class DriftLocalStore implements LocalStore {
     throw UnsupportedError(
         'DriftLocalStore is only available on dart:io platforms.');
   }
+
+  @override
+  Future<void> delete(String collection, String id) {
+    throw UnsupportedError(
+        'DriftLocalStore is only available on dart:io platforms.');
+  }
 }

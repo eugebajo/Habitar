@@ -60,6 +60,7 @@ class InMemoryFamilyRepository implements FamilyRepository {
   final Map<String, Family> _familiesByOwner = {};
   final List<FamilyMember> _members = [];
   final List<AdultInvitation> _invitations = [];
+  final Map<String, String> _invitationCodes = {};
 
   @override
   Future<Family> createFamily(
@@ -257,6 +258,197 @@ class InMemoryFamilyRepository implements FamilyRepository {
       expiresAt: invitation.expiresAt,
       invitedByUserId: invitation.invitedByUserId,
       acceptedByUserId: userId,
+    );
+  }
+
+  @override
+  Future<InvitationCodeCreated> createInvitationWithCode({
+    required String familyId,
+    required String email,
+    required FamilyMemberRole role,
+    required String invitedByUserId,
+    required String invitedByUserEmail,
+  }) async {
+    const allowedRoles = {
+      FamilyMemberRole.parent,
+      FamilyMemberRole.caregiver,
+      FamilyMemberRole.professional,
+      FamilyMemberRole.viewer,
+    };
+    if (!allowedRoles.contains(role)) {
+      throw const FamilyInvitationException('INVITATION_ROLE_INVALID');
+    }
+    final normalizedEmail = email.trim().toLowerCase();
+    if (normalizedEmail.isEmpty || !normalizedEmail.contains('@')) {
+      throw const FamilyInvitationException('INVITATION_EMAIL_INVALID');
+    }
+    if (normalizedEmail == invitedByUserEmail.trim().toLowerCase()) {
+      throw const FamilyInvitationException('INVITATION_SELF_FORBIDDEN');
+    }
+    final inviter = _members.where((member) =>
+        member.familyId == familyId && member.userId == invitedByUserId);
+    if (inviter.isEmpty ||
+        !const {FamilyMemberRole.owner, FamilyMemberRole.parent}
+            .contains(inviter.first.role)) {
+      throw const FamilyInvitationException('INVITATION_CREATE_FORBIDDEN');
+    }
+    final now = DateTime.now();
+    for (var i = 0; i < _invitations.length; i++) {
+      final existing = _invitations[i];
+      if (existing.familyId == familyId &&
+          existing.email == normalizedEmail &&
+          existing.status == AdultInvitationStatus.pending &&
+          existing.expiresAt.isBefore(now)) {
+        _invitations[i] =
+            _invitationWithStatus(existing, AdultInvitationStatus.expired, now);
+      }
+    }
+    final stillPending = _invitations.any((invitation) =>
+        invitation.familyId == familyId &&
+        invitation.email == normalizedEmail &&
+        invitation.status == AdultInvitationStatus.pending);
+    if (stillPending) {
+      throw const FamilyInvitationException('INVITATION_ALREADY_PENDING');
+    }
+    final invitation = AdultInvitation(
+      metadata: EntityMetadata(
+          id: _uuid.v4(),
+          createdAt: now,
+          updatedAt: now,
+          ownerId: invitedByUserId),
+      familyId: familyId,
+      email: normalizedEmail,
+      role: role,
+      status: AdultInvitationStatus.pending,
+      expiresAt: now.add(const Duration(days: 7)),
+      invitedByUserId: invitedByUserId,
+    );
+    _invitations.add(invitation);
+    final code = _uuid.v4().replaceAll('-', '');
+    _invitationCodes[invitation.metadata.id] = code;
+    return InvitationCodeCreated(
+      invitationId: invitation.metadata.id,
+      familyId: familyId,
+      email: normalizedEmail,
+      role: role,
+      expiresAt: invitation.expiresAt,
+      code: code,
+    );
+  }
+
+  @override
+  Future<InvitationCodeAccepted> acceptInvitationByCode({
+    required String code,
+    required String userId,
+    required String userEmail,
+  }) async {
+    final normalizedCode =
+        code.trim().toLowerCase().replaceAll(RegExp(r'\s'), '');
+    if (normalizedCode.isEmpty) {
+      throw const FamilyInvitationException(
+          'INVITATION_CODE_INVALID_OR_EXPIRED');
+    }
+    final index = _invitations.indexWhere((invitation) =>
+        _invitationCodes[invitation.metadata.id] == normalizedCode);
+    if (index < 0) {
+      throw const FamilyInvitationException(
+          'INVITATION_CODE_INVALID_OR_EXPIRED');
+    }
+    var invitation = _invitations[index];
+    final now = DateTime.now();
+    if (invitation.status == AdultInvitationStatus.pending &&
+        invitation.expiresAt.isBefore(now)) {
+      invitation =
+          _invitationWithStatus(invitation, AdultInvitationStatus.expired, now);
+      _invitations[index] = invitation;
+      throw const FamilyInvitationException(
+          'INVITATION_CODE_INVALID_OR_EXPIRED');
+    }
+    if (invitation.status != AdultInvitationStatus.pending) {
+      throw const FamilyInvitationException(
+          'INVITATION_CODE_INVALID_OR_EXPIRED');
+    }
+    if (invitation.email != userEmail.trim().toLowerCase()) {
+      throw const FamilyInvitationException(
+          'INVITATION_CODE_INVALID_OR_EXPIRED');
+    }
+
+    // One family per adult: leave every other family before joining this
+    // one. Abandoned families are left in place, just like the Supabase RPC.
+    _members.removeWhere((member) =>
+        member.userId == userId && member.familyId != invitation.familyId);
+    final alreadyMember = _members.any((member) =>
+        member.familyId == invitation.familyId && member.userId == userId);
+    if (!alreadyMember) {
+      _members.add(FamilyMember(
+        metadata: EntityMetadata(
+            id: _uuid.v4(), createdAt: now, updatedAt: now, ownerId: userId),
+        familyId: invitation.familyId,
+        userId: userId,
+        role: invitation.role,
+        email: invitation.email,
+      ));
+    }
+    _invitations[index] = _invitationWithStatus(
+      invitation,
+      AdultInvitationStatus.accepted,
+      now,
+      acceptedByUserId: userId,
+    );
+    return InvitationCodeAccepted(
+      familyId: invitation.familyId,
+      role: invitation.role,
+    );
+  }
+
+  @override
+  Future<void> cancelInvitation({
+    required String invitationId,
+    required String userId,
+  }) async {
+    final index = _invitations
+        .indexWhere((invitation) => invitation.metadata.id == invitationId);
+    if (index < 0) {
+      throw const FamilyInvitationException('INVITATION_NOT_FOUND');
+    }
+    final invitation = _invitations[index];
+    final canceller = _members.where((member) =>
+        member.familyId == invitation.familyId && member.userId == userId);
+    if (canceller.isEmpty ||
+        !const {FamilyMemberRole.owner, FamilyMemberRole.parent}
+            .contains(canceller.first.role)) {
+      throw const FamilyInvitationException('INVITATION_CANCEL_FORBIDDEN');
+    }
+    if (invitation.status != AdultInvitationStatus.pending) {
+      throw const FamilyInvitationException('INVITATION_NOT_PENDING');
+    }
+    _invitations[index] = _invitationWithStatus(
+      invitation,
+      AdultInvitationStatus.canceled,
+      DateTime.now(),
+    );
+  }
+
+  AdultInvitation _invitationWithStatus(
+    AdultInvitation invitation,
+    AdultInvitationStatus status,
+    DateTime now, {
+    String? acceptedByUserId,
+  }) {
+    return AdultInvitation(
+      metadata: EntityMetadata(
+        id: invitation.metadata.id,
+        createdAt: invitation.metadata.createdAt,
+        updatedAt: now,
+        ownerId: invitation.metadata.ownerId,
+      ),
+      familyId: invitation.familyId,
+      email: invitation.email,
+      role: invitation.role,
+      status: status,
+      expiresAt: invitation.expiresAt,
+      invitedByUserId: invitation.invitedByUserId,
+      acceptedByUserId: acceptedByUserId ?? invitation.acceptedByUserId,
     );
   }
 }

@@ -158,6 +158,92 @@ class SupabaseFamilyRepository implements FamilyRepository {
     }
     return _familyMemberFromRow(row['member'] as Map<String, dynamic>);
   }
+
+  @override
+  Future<InvitationCodeCreated> createInvitationWithCode({
+    required String familyId,
+    required String email,
+    required FamilyMemberRole role,
+    required String invitedByUserId,
+    required String invitedByUserEmail,
+  }) async {
+    // invitedByUserEmail isn't sent to the RPC - the self-invitation check
+    // is authoritative server-side, derived from auth.jwt() regardless of
+    // what the client passes. It's only needed by backends without an
+    // ambient auth context (see the interface doc comment).
+    final currentUserId = _currentUserId(client);
+    if (invitedByUserId != currentUserId) {
+      throw StateError('Cannot create an invitation for another adult user.');
+    }
+    try {
+      _debugLog('INVITATION CODE CREATE:');
+      _debugLog('family_id: $familyId');
+      final result = await client.rpc(
+        'create_family_invitation_with_code',
+        params: {
+          'target_family_id': familyId,
+          'target_email': email.trim().toLowerCase(),
+          'target_role': role.name,
+        },
+      ) as Map<String, dynamic>;
+      _debugLog('INVITATION CODE CREATE RESULT: OK');
+      return InvitationCodeCreated(
+        invitationId: result['invitation_id'] as String,
+        familyId: result['family_id'] as String,
+        email: result['email'] as String,
+        role: _familyMemberRole(result['role'] as String?),
+        expiresAt: DateTime.parse(result['expires_at'] as String),
+        code: result['invite_code'] as String,
+      );
+    } on PostgrestException catch (error) {
+      _debugLog('INVITATION CODE CREATE RESULT: ERROR');
+      _logPostgrestError(error);
+      throw FamilyInvitationException(error.message);
+    }
+  }
+
+  @override
+  Future<InvitationCodeAccepted> acceptInvitationByCode({
+    required String code,
+    required String userId,
+    required String userEmail,
+  }) async {
+    try {
+      _debugLog('INVITATION CODE ACCEPT: START');
+      final result = await client.rpc(
+        'accept_family_invitation_by_code',
+        params: {'invitation_code': code},
+      ) as Map<String, dynamic>;
+      _debugLog('INVITATION CODE ACCEPT RESULT: OK');
+      return InvitationCodeAccepted(
+        familyId: result['family_id'] as String,
+        role: _familyMemberRole(result['role'] as String?),
+      );
+    } on PostgrestException catch (error) {
+      _debugLog('INVITATION CODE ACCEPT RESULT: ERROR');
+      _logPostgrestError(error);
+      throw FamilyInvitationException(error.message);
+    }
+  }
+
+  @override
+  Future<void> cancelInvitation({
+    required String invitationId,
+    required String userId,
+  }) async {
+    try {
+      _debugLog('INVITATION CANCEL: START');
+      await client.rpc(
+        'cancel_family_invitation',
+        params: {'target_invitation_id': invitationId},
+      );
+      _debugLog('INVITATION CANCEL RESULT: OK');
+    } on PostgrestException catch (error) {
+      _debugLog('INVITATION CANCEL RESULT: ERROR');
+      _logPostgrestError(error);
+      throw FamilyInvitationException(error.message);
+    }
+  }
 }
 
 class SupabaseProfileRepository implements ProfileRepository {
@@ -1195,6 +1281,7 @@ AdultInvitationStatus _adultInvitationStatus(String? status) {
     'accepted' => AdultInvitationStatus.accepted,
     'revoked' => AdultInvitationStatus.revoked,
     'expired' => AdultInvitationStatus.expired,
+    'canceled' => AdultInvitationStatus.canceled,
     _ => throw StateError('Unknown adult invitation status: $status'),
   };
 }

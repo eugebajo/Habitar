@@ -144,6 +144,7 @@ class _AdultRegistrationScreenState
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    final next = GoRouterState.of(context).uri.queryParameters['next'];
     setState(() {
       _isSubmitting = true;
       _error = null;
@@ -159,7 +160,7 @@ class _AdultRegistrationScreenState
           );
       ref.read(currentFamilyIdProvider.notifier).state =
           result.family.metadata.id;
-      if (mounted) context.go('/profile');
+      if (mounted) context.go(next ?? '/profile');
     } on EmailConfirmationRequiredException catch (error) {
       await _savePendingBootstrap(error.email);
       if (mounted) setState(() => _error = _registrationErrorMessage(error));

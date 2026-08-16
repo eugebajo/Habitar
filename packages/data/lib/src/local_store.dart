@@ -4,6 +4,8 @@ abstract interface class LocalStore {
   Future<Map<String, Object?>?> get(String collection, String id);
 
   Future<List<Map<String, Object?>>> list(String collection);
+
+  Future<void> delete(String collection, String id);
 }
 
 class LocalStoreCollections {

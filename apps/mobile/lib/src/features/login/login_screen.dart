@@ -125,6 +125,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 10),
+                TextButton(
+                  onPressed: _isSubmitting
+                      ? null
+                      : () => context.go('/invitation/redeem'),
+                  child: const Text('Tengo un código de invitación'),
+                ),
                 const SizedBox(height: 12),
                 const HabitarPill(
                   icon: Icons.lock_outline_rounded,
@@ -160,6 +167,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    final next = GoRouterState.of(context).uri.queryParameters['next'];
     setState(() {
       _isSubmitting = true;
       _error = null;
@@ -170,7 +178,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             password: _passwordController.text,
           );
       ref.invalidate(appRestoreProvider);
-      if (mounted) context.go('/');
+      if (mounted) context.go(next ?? '/');
     } catch (error) {
       if (!mounted) return;
       setState(() => _error = _loginErrorMessage(error));

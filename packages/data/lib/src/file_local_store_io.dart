@@ -32,6 +32,13 @@ class FileLocalStore implements LocalStore {
     await _write(data);
   }
 
+  @override
+  Future<void> delete(String collection, String id) async {
+    final data = await _read();
+    data[collection]?.remove(id);
+    await _write(data);
+  }
+
   Future<Map<String, Map<String, Map<String, Object?>>>> _read() async {
     if (!await file.exists()) {
       return {};

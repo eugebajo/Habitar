@@ -300,6 +300,229 @@ class LocalFamilyRepository implements FamilyRepository {
       acceptedByUserId: userId,
     );
   }
+
+  @override
+  Future<InvitationCodeCreated> createInvitationWithCode({
+    required String familyId,
+    required String email,
+    required FamilyMemberRole role,
+    required String invitedByUserId,
+    required String invitedByUserEmail,
+  }) async {
+    const allowedRoles = {
+      FamilyMemberRole.parent,
+      FamilyMemberRole.caregiver,
+      FamilyMemberRole.professional,
+      FamilyMemberRole.viewer,
+    };
+    if (!allowedRoles.contains(role)) {
+      throw const FamilyInvitationException('INVITATION_ROLE_INVALID');
+    }
+    final normalizedEmail = email.trim().toLowerCase();
+    if (normalizedEmail.isEmpty || !normalizedEmail.contains('@')) {
+      throw const FamilyInvitationException('INVITATION_EMAIL_INVALID');
+    }
+    if (normalizedEmail == invitedByUserEmail.trim().toLowerCase()) {
+      throw const FamilyInvitationException('INVITATION_SELF_FORBIDDEN');
+    }
+    final inviter = (await membersForFamily(familyId))
+        .where((member) => member.userId == invitedByUserId);
+    if (inviter.isEmpty ||
+        !const {FamilyMemberRole.owner, FamilyMemberRole.parent}
+            .contains(inviter.first.role)) {
+      throw const FamilyInvitationException('INVITATION_CREATE_FORBIDDEN');
+    }
+    final now = DateTime.now();
+    final invitationRecords =
+        await store.list(LocalStoreCollections.adultInvitations);
+    for (final record in invitationRecords) {
+      final existing = _adultInvitationFromJson(record);
+      if (existing.familyId == familyId &&
+          existing.email == normalizedEmail &&
+          existing.status == AdultInvitationStatus.pending &&
+          existing.expiresAt.isBefore(now)) {
+        final expired =
+            _invitationWithStatus(existing, AdultInvitationStatus.expired, now);
+        final json = _adultInvitationToJson(expired);
+        json['invite_code'] = record['invite_code'];
+        await store.put(
+            LocalStoreCollections.adultInvitations, existing.metadata.id, json);
+      }
+    }
+    final refreshedRecords =
+        await store.list(LocalStoreCollections.adultInvitations);
+    final stillPending = refreshedRecords.map(_adultInvitationFromJson).any(
+        (invitation) =>
+            invitation.familyId == familyId &&
+            invitation.email == normalizedEmail &&
+            invitation.status == AdultInvitationStatus.pending);
+    if (stillPending) {
+      throw const FamilyInvitationException('INVITATION_ALREADY_PENDING');
+    }
+    final invitation = AdultInvitation(
+      metadata: EntityMetadata(
+          id: _uuid.v4(),
+          createdAt: now,
+          updatedAt: now,
+          ownerId: invitedByUserId),
+      familyId: familyId,
+      email: normalizedEmail,
+      role: role,
+      status: AdultInvitationStatus.pending,
+      expiresAt: now.add(const Duration(days: 7)),
+      invitedByUserId: invitedByUserId,
+    );
+    final code = _uuid.v4().replaceAll('-', '');
+    final json = _adultInvitationToJson(invitation);
+    json['invite_code'] = code;
+    await store.put(
+        LocalStoreCollections.adultInvitations, invitation.metadata.id, json);
+    return InvitationCodeCreated(
+      invitationId: invitation.metadata.id,
+      familyId: familyId,
+      email: normalizedEmail,
+      role: role,
+      expiresAt: invitation.expiresAt,
+      code: code,
+    );
+  }
+
+  @override
+  Future<InvitationCodeAccepted> acceptInvitationByCode({
+    required String code,
+    required String userId,
+    required String userEmail,
+  }) async {
+    final normalizedCode =
+        code.trim().toLowerCase().replaceAll(RegExp(r'\s'), '');
+    if (normalizedCode.isEmpty) {
+      throw const FamilyInvitationException(
+          'INVITATION_CODE_INVALID_OR_EXPIRED');
+    }
+    final records = await store.list(LocalStoreCollections.adultInvitations);
+    Map<String, Object?>? matchedRecord;
+    for (final record in records) {
+      if ((record['invite_code'] as String?) == normalizedCode) {
+        matchedRecord = record;
+        break;
+      }
+    }
+    if (matchedRecord == null) {
+      throw const FamilyInvitationException(
+          'INVITATION_CODE_INVALID_OR_EXPIRED');
+    }
+    var invitation = _adultInvitationFromJson(matchedRecord);
+    final now = DateTime.now();
+    if (invitation.status == AdultInvitationStatus.pending &&
+        invitation.expiresAt.isBefore(now)) {
+      invitation =
+          _invitationWithStatus(invitation, AdultInvitationStatus.expired, now);
+      final json = _adultInvitationToJson(invitation);
+      json['invite_code'] = normalizedCode;
+      await store.put(
+          LocalStoreCollections.adultInvitations, invitation.metadata.id, json);
+      throw const FamilyInvitationException(
+          'INVITATION_CODE_INVALID_OR_EXPIRED');
+    }
+    if (invitation.status != AdultInvitationStatus.pending) {
+      throw const FamilyInvitationException(
+          'INVITATION_CODE_INVALID_OR_EXPIRED');
+    }
+    if (invitation.email != userEmail.trim().toLowerCase()) {
+      throw const FamilyInvitationException(
+          'INVITATION_CODE_INVALID_OR_EXPIRED');
+    }
+
+    // One family per adult: leave every other family before joining this
+    // one. Abandoned families are left in place, just like the Supabase RPC.
+    final memberRecords = await store.list(LocalStoreCollections.familyMembers);
+    for (final record in memberRecords) {
+      final member = _familyMemberFromJson(record);
+      if (member.userId == userId && member.familyId != invitation.familyId) {
+        await store.delete(
+            LocalStoreCollections.familyMembers, member.metadata.id);
+      }
+    }
+    final alreadyMember = (await membersForFamily(invitation.familyId))
+        .any((member) => member.userId == userId);
+    if (!alreadyMember) {
+      final member = FamilyMember(
+        metadata: EntityMetadata(
+            id: _uuid.v4(), createdAt: now, updatedAt: now, ownerId: userId),
+        familyId: invitation.familyId,
+        userId: userId,
+        role: invitation.role,
+        email: invitation.email,
+      );
+      await store.put(LocalStoreCollections.familyMembers, member.metadata.id,
+          _familyMemberToJson(member));
+    }
+    final accepted = _invitationWithStatus(
+      invitation,
+      AdultInvitationStatus.accepted,
+      now,
+      acceptedByUserId: userId,
+    );
+    final acceptedJson = _adultInvitationToJson(accepted);
+    acceptedJson['invite_code'] = normalizedCode;
+    await store.put(LocalStoreCollections.adultInvitations,
+        accepted.metadata.id, acceptedJson);
+    return InvitationCodeAccepted(
+      familyId: invitation.familyId,
+      role: invitation.role,
+    );
+  }
+
+  @override
+  Future<void> cancelInvitation({
+    required String invitationId,
+    required String userId,
+  }) async {
+    final record =
+        await store.get(LocalStoreCollections.adultInvitations, invitationId);
+    if (record == null) {
+      throw const FamilyInvitationException('INVITATION_NOT_FOUND');
+    }
+    final invitation = _adultInvitationFromJson(record);
+    final canceller = (await membersForFamily(invitation.familyId))
+        .where((member) => member.userId == userId);
+    if (canceller.isEmpty ||
+        !const {FamilyMemberRole.owner, FamilyMemberRole.parent}
+            .contains(canceller.first.role)) {
+      throw const FamilyInvitationException('INVITATION_CANCEL_FORBIDDEN');
+    }
+    if (invitation.status != AdultInvitationStatus.pending) {
+      throw const FamilyInvitationException('INVITATION_NOT_PENDING');
+    }
+    final canceled = _invitationWithStatus(
+        invitation, AdultInvitationStatus.canceled, DateTime.now());
+    final json = _adultInvitationToJson(canceled);
+    json['invite_code'] = record['invite_code'];
+    await store.put(LocalStoreCollections.adultInvitations, invitationId, json);
+  }
+
+  AdultInvitation _invitationWithStatus(
+    AdultInvitation invitation,
+    AdultInvitationStatus status,
+    DateTime now, {
+    String? acceptedByUserId,
+  }) {
+    return AdultInvitation(
+      metadata: EntityMetadata(
+        id: invitation.metadata.id,
+        createdAt: invitation.metadata.createdAt,
+        updatedAt: now,
+        ownerId: invitation.metadata.ownerId,
+      ),
+      familyId: invitation.familyId,
+      email: invitation.email,
+      role: invitation.role,
+      status: status,
+      expiresAt: invitation.expiresAt,
+      invitedByUserId: invitation.invitedByUserId,
+      acceptedByUserId: acceptedByUserId ?? invitation.acceptedByUserId,
+    );
+  }
 }
 
 class LocalProfileRepository implements ProfileRepository {

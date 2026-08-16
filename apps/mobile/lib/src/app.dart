@@ -14,6 +14,7 @@ import 'features/legal/legal_screen.dart';
 import 'features/login/login_screen.dart';
 import 'features/login/pending_invitation_screen.dart';
 import 'features/login/password_recovery_screen.dart';
+import 'features/login/redeem_invitation_code_screen.dart';
 import 'features/notification_settings/notification_settings_screen.dart';
 import 'features/onboarding/onboarding_screen.dart';
 import 'features/profiles/profiles_screen.dart';
@@ -59,6 +60,9 @@ final appRouter = GoRouter(
     GoRoute(
         path: '/invitation',
         builder: (context, state) => const PendingInvitationScreen()),
+    GoRoute(
+        path: '/invitation/redeem',
+        builder: (context, state) => const RedeemInvitationCodeScreen()),
     GoRoute(
         path: '/profile',
         builder: (context, state) => const ProfileSetupScreen()),
@@ -240,7 +244,9 @@ class _AppBackGuard extends StatelessWidget {
     if (location == '/login' || location == '/register') {
       return '/onboarding';
     }
-    if (location == '/invitation') return '/onboarding';
+    if (location == '/invitation' || location == '/invitation/redeem') {
+      return '/onboarding';
+    }
     if (location == '/profile' || location == '/profiles') return '/dashboard';
     if (location == '/routine/create' || location == '/habits') {
       return '/routines';

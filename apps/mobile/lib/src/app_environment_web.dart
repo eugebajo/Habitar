@@ -118,6 +118,11 @@ class BrowserLocalStore implements LocalStore {
     web.window.localStorage.setItem(_key(collection, id), jsonEncode(value));
   }
 
+  @override
+  Future<void> delete(String collection, String id) async {
+    web.window.localStorage.removeItem(_key(collection, id));
+  }
+
   String _prefix(String collection) => '$namespace::$collection::';
 
   String _key(String collection, String id) => '${_prefix(collection)}$id';

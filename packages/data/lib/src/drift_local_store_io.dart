@@ -64,6 +64,14 @@ class DriftLocalStore implements LocalStore {
     );
   }
 
+  @override
+  Future<void> delete(String collection, String id) async {
+    await _executor.runCustom(
+      'DELETE FROM local_records WHERE collection = ? AND id = ?',
+      [collection, id],
+    );
+  }
+
   Future<void> _ensureSchema() async {
     await _executor.ensureOpen(const _DriftLocalStoreExecutorUser());
     await _executor.runCustom('''

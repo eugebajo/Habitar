@@ -60,6 +60,57 @@ class PendingFamilyInvitation {
   final String familyName;
 }
 
+/// Result of creating a WhatsApp-shareable invitation code. [code] is the
+/// plaintext code - it only ever exists here, once, right after creation.
+/// Nothing persists it; only its hash is stored.
+class InvitationCodeCreated {
+  const InvitationCodeCreated({
+    required this.invitationId,
+    required this.familyId,
+    required this.email,
+    required this.role,
+    required this.expiresAt,
+    required this.code,
+  });
+
+  final String invitationId;
+  final String familyId;
+  final String email;
+  final FamilyMemberRole role;
+  final DateTime expiresAt;
+  final String code;
+}
+
+/// Result of redeeming an invitation code: the family the caller just
+/// joined (leaving any other family they belonged to) and the role they
+/// were granted.
+class InvitationCodeAccepted {
+  const InvitationCodeAccepted({
+    required this.familyId,
+    required this.role,
+  });
+
+  final String familyId;
+  final FamilyMemberRole role;
+}
+
+/// Thrown by [FamilyRepository.createInvitationWithCode],
+/// [FamilyRepository.acceptInvitationByCode] and
+/// [FamilyRepository.cancelInvitation] for expected, named failures (an
+/// invalid/expired/used/canceled code, a duplicate pending invitation,
+/// self-invitation, a caller without permission, and so on). [code] is the
+/// raw error identifier (e.g. 'INVITATION_CODE_INVALID_OR_EXPIRED') and is
+/// meant to be mapped to user-facing copy by the caller - it is not
+/// user-facing text itself and must never be shown directly.
+class FamilyInvitationException implements Exception {
+  const FamilyInvitationException(this.code);
+
+  final String code;
+
+  @override
+  String toString() => 'FamilyInvitationException($code)';
+}
+
 abstract interface class ProfileRepository {
   Future<List<ChildProfile>> childProfiles(String familyId);
 
@@ -100,6 +151,48 @@ abstract interface class FamilyRepository {
     required String invitationId,
     required String userId,
     required String userEmail,
+  });
+
+  /// Creates a WhatsApp-shareable invitation code for [email] in [familyId].
+  /// [invitedByUserEmail] is the caller's own email, used for the
+  /// self-invitation check - on Supabase the RPC re-derives it from
+  /// auth.jwt() regardless of what's passed, but local/in-memory backends
+  /// have no ambient auth context to look it up from [invitedByUserId], so
+  /// it's passed explicitly to keep the check meaningful on every backend.
+  /// Throws [FamilyInvitationException] with codes such as
+  /// 'INVITATION_SELF_FORBIDDEN', 'INVITATION_ALREADY_PENDING',
+  /// 'INVITATION_ROLE_INVALID', 'INVITATION_EMAIL_INVALID' or
+  /// 'INVITATION_CREATE_FORBIDDEN'.
+  Future<InvitationCodeCreated> createInvitationWithCode({
+    required String familyId,
+    required String email,
+    required FamilyMemberRole role,
+    required String invitedByUserId,
+    required String invitedByUserEmail,
+  });
+
+  /// Redeems [code] for the caller identified by [userId]/[userEmail],
+  /// moving them out of any other family they belong to and into the
+  /// invitation's family (one family per adult). Throws
+  /// [FamilyInvitationException] with code
+  /// 'INVITATION_CODE_INVALID_OR_EXPIRED' for every one of: an unknown
+  /// code, an expired one, one already used, one that was canceled, and one
+  /// whose email doesn't match the caller's - deliberately indistinguishable
+  /// so a forwarded/misdirected code can't be used to learn whether it, or
+  /// the email address it was meant for, exist.
+  Future<InvitationCodeAccepted> acceptInvitationByCode({
+    required String code,
+    required String userId,
+    required String userEmail,
+  });
+
+  /// Cancels a still-pending invitation so its code stops working. Only the
+  /// family's owner/parent may call this. Throws [FamilyInvitationException]
+  /// with codes such as 'INVITATION_NOT_FOUND', 'INVITATION_CANCEL_FORBIDDEN'
+  /// or 'INVITATION_NOT_PENDING'.
+  Future<void> cancelInvitation({
+    required String invitationId,
+    required String userId,
   });
 }
 

@@ -52,6 +52,11 @@ class OnboardingScreen extends StatelessWidget {
               onPressed: () => context.go('/login'),
               child: const Text('Ya tengo una cuenta'),
             ),
+            const SizedBox(height: 14),
+            TextButton(
+              onPressed: () => context.go('/invitation/redeem'),
+              child: const Text('Tengo un código de invitación'),
+            ),
             const SizedBox(height: 22),
             Wrap(
               alignment: WrapAlignment.center,

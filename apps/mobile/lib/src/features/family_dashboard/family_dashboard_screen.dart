@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:habitar_application/application.dart';
@@ -6,6 +7,7 @@ import 'package:habitar_design_system/design_system.dart';
 import 'package:habitar_domain/domain.dart';
 import 'package:habitar_notifications/notifications.dart';
 import 'package:habitar_routine_engine/routine_engine.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../components/adult_shell.dart';
 import '../../dependencies.dart';
@@ -51,7 +53,10 @@ class FamilyDashboardScreen extends ConsumerWidget {
                 const SizedBox(height: 24),
                 _ProgressCard(data: data),
                 const SizedBox(height: 18),
-                _AdultTeamCard(hasProfile: data.profile != null),
+                _AdultTeamCard(
+                  hasProfile: data.profile != null,
+                  profileName: data.profile?.displayName,
+                ),
                 const SizedBox(height: 18),
                 OutlinedButton.icon(
                   onPressed: data.profile == null
@@ -636,16 +641,32 @@ class _ProgressCard extends StatelessWidget {
   }
 }
 
-class _AdultTeamCard extends ConsumerWidget {
-  const _AdultTeamCard({required this.hasProfile});
+class _AdultTeamCard extends ConsumerStatefulWidget {
+  const _AdultTeamCard({required this.hasProfile, this.profileName});
 
   final bool hasProfile;
+  final String? profileName;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_AdultTeamCard> createState() => _AdultTeamCardState();
+}
+
+class _AdultTeamCardState extends ConsumerState<_AdultTeamCard> {
+  Future<_AdultTeamData>? _future;
+  String? _loadedFamilyId;
+  String? _loadedProfileId;
+
+  void _refresh(String familyId, String profileId) {
+    setState(() {
+      _future = _loadTeam(familyId, profileId);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final familyId = ref.watch(currentFamilyIdProvider);
     final profileId = ref.watch(currentProfileIdProvider);
-    if (!hasProfile || familyId == null || profileId == null) {
+    if (!widget.hasProfile || familyId == null || profileId == null) {
       return HabitarCard(
         child: ListTile(
           leading: const Icon(Icons.groups_rounded,
@@ -659,8 +680,15 @@ class _AdultTeamCard extends ConsumerWidget {
         ),
       );
     }
+    if (_future == null ||
+        _loadedFamilyId != familyId ||
+        _loadedProfileId != profileId) {
+      _loadedFamilyId = familyId;
+      _loadedProfileId = profileId;
+      _future = _loadTeam(familyId, profileId);
+    }
     return FutureBuilder<_AdultTeamData>(
-      future: _loadTeam(ref, familyId, profileId),
+      future: _future,
       builder: (context, snapshot) {
         final data = snapshot.data ?? const _AdultTeamData.empty();
         return HabitarCard(
@@ -684,8 +712,9 @@ class _AdultTeamCard extends ConsumerWidget {
                   TextButton.icon(
                     onPressed: () => _showInviteAdultDialog(
                       context: context,
-                      ref: ref,
                       familyId: familyId,
+                      profileName: widget.profileName,
+                      onCreated: () => _refresh(familyId, profileId),
                     ),
                     icon: const Icon(Icons.mail_outline_rounded),
                     label: const Text('Invitar'),
@@ -693,9 +722,9 @@ class _AdultTeamCard extends ConsumerWidget {
                   TextButton.icon(
                     onPressed: () => _showAddAdultDialog(
                       context: context,
-                      ref: ref,
                       familyId: familyId,
                       profileId: profileId,
+                      onAdded: () => _refresh(familyId, profileId),
                     ),
                     icon: const Icon(Icons.add_rounded),
                     label: const Text('Acompañante'),
@@ -748,23 +777,7 @@ class _AdultTeamCard extends ConsumerWidget {
                   ),
                   const SizedBox(height: 6),
                   for (final invitation in data.invitations)
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: const CircleAvatar(
-                        backgroundColor: HabitarColors.surfaceWarm,
-                        child: Icon(
-                          Icons.mark_email_unread_outlined,
-                          color: HabitarColors.deepGreen,
-                        ),
-                      ),
-                      title: Text(
-                        invitation.email,
-                        softWrap: true,
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 2,
-                      ),
-                      subtitle: Text(_familyMemberRoleLabel(invitation.role)),
-                    ),
+                    _InvitationRow(invitation: invitation),
                 ],
                 if (data.adults.isNotEmpty) ...[
                   const SizedBox(height: 8),
@@ -805,11 +818,7 @@ class _AdultTeamCard extends ConsumerWidget {
     );
   }
 
-  Future<_AdultTeamData> _loadTeam(
-    WidgetRef ref,
-    String familyId,
-    String profileId,
-  ) async {
+  Future<_AdultTeamData> _loadTeam(String familyId, String profileId) async {
     final familyRepository = ref.read(familyRepositoryProvider);
     final members = await familyRepository.membersForFamily(familyId);
     final invitations = await familyRepository.invitationsForFamily(familyId);
@@ -828,11 +837,14 @@ class _AdultTeamCard extends ConsumerWidget {
 
   Future<void> _showInviteAdultDialog({
     required BuildContext context,
-    required WidgetRef ref,
     required String familyId,
+    required String? profileName,
+    required VoidCallback onCreated,
   }) async {
     final emailController = TextEditingController();
     var role = FamilyMemberRole.parent;
+    var isSubmitting = false;
+    String? error;
     await showDialog<void>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
@@ -840,10 +852,19 @@ class _AdultTeamCard extends ConsumerWidget {
           title: const Text('Invitar adulto'),
           content: SingleChildScrollView(
             child: Column(mainAxisSize: MainAxisSize.min, children: [
+              const Text(
+                'Vamos a generar un código para compartir por WhatsApp. '
+                'Quien lo use se suma a esta familia.',
+                style: TextStyle(color: HabitarColors.mutedInk),
+              ),
+              const SizedBox(height: 12),
               TextField(
                 controller: emailController,
                 keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(labelText: 'Correo'),
+                enabled: !isSubmitting,
+                decoration: const InputDecoration(
+                  labelText: 'Correo de quien invitás',
+                ),
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<FamilyMemberRole>(
@@ -860,50 +881,150 @@ class _AdultTeamCard extends ConsumerWidget {
                           child: Text(_familyMemberRoleLabel(value)),
                         ))
                     .toList(growable: false),
-                onChanged: (value) {
-                  if (value != null) setDialogState(() => role = value);
-                },
+                onChanged: isSubmitting
+                    ? null
+                    : (value) {
+                        if (value != null) setDialogState(() => role = value);
+                      },
               ),
+              if (error != null) ...[
+                const SizedBox(height: 12),
+                Text(error!,
+                    style: const TextStyle(color: HabitarColors.supportRose)),
+              ],
             ]),
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
+              onPressed:
+                  isSubmitting ? null : () => Navigator.pop(dialogContext),
               child: const Text('Cancelar'),
             ),
             FilledButton(
-              onPressed: () async {
-                final email = emailController.text.trim();
-                if (!email.contains('@')) return;
-                try {
-                  final user =
-                      await ref.read(authRepositoryProvider).currentUser();
-                  if (user == null) {
-                    throw StateError('No active adult session.');
-                  }
-                  await ref
-                      .read(familyRepositoryProvider)
-                      .createAdultInvitation(
-                        familyId: familyId,
-                        email: email,
-                        role: role,
-                        invitedByUserId: user.metadata.id,
-                      );
-                } catch (_) {
-                  if (dialogContext.mounted) {
-                    ScaffoldMessenger.of(dialogContext).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'No pudimos crear la invitacion. Revisa tu acceso e intenta de nuevo.',
-                        ),
-                      ),
-                    );
-                  }
-                  return;
-                }
-                if (dialogContext.mounted) Navigator.pop(dialogContext);
-              },
-              child: const Text('Guardar'),
+              onPressed: isSubmitting
+                  ? null
+                  : () async {
+                      final email = emailController.text.trim();
+                      if (!email.contains('@')) {
+                        setDialogState(
+                            () => error = 'Ingresá un correo válido.');
+                        return;
+                      }
+                      setDialogState(() {
+                        isSubmitting = true;
+                        error = null;
+                      });
+                      InvitationCodeCreated created;
+                      try {
+                        final user = await ref
+                            .read(authRepositoryProvider)
+                            .currentUser();
+                        if (user == null) {
+                          throw StateError('No active adult session.');
+                        }
+                        created = await ref
+                            .read(familyRepositoryProvider)
+                            .createInvitationWithCode(
+                              familyId: familyId,
+                              email: email,
+                              role: role,
+                              invitedByUserId: user.metadata.id,
+                              invitedByUserEmail: user.email,
+                            );
+                      } on FamilyInvitationException catch (invitationError) {
+                        setDialogState(() {
+                          isSubmitting = false;
+                          error = _invitationErrorMessage(invitationError.code);
+                        });
+                        return;
+                      } catch (_) {
+                        setDialogState(() {
+                          isSubmitting = false;
+                          error =
+                              'No pudimos crear la invitación. Intentá nuevamente.';
+                        });
+                        return;
+                      }
+                      onCreated();
+                      if (dialogContext.mounted) Navigator.pop(dialogContext);
+                      if (context.mounted) {
+                        await _showInvitationCodeCard(
+                          context: context,
+                          created: created,
+                          profileName: profileName,
+                        );
+                      }
+                    },
+              child: Text(isSubmitting ? 'Generando...' : 'Generar código'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showInvitationCodeCard({
+    required BuildContext context,
+    required InvitationCodeCreated created,
+    required String? profileName,
+  }) async {
+    final message = 'Te invito a acompañar las rutinas de '
+        '${profileName ?? 'nuestra familia'} en Habitar. '
+        'Descargá la app y usá este código: ${created.code}';
+    var copied = false;
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Código generado'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                'Compartilo por WhatsApp. Vale por 7 días y se puede usar una sola vez.',
+                style: TextStyle(color: HabitarColors.mutedInk),
+              ),
+              const SizedBox(height: 14),
+              SelectableText(
+                created.code,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w900,
+                  fontSize: 16,
+                  letterSpacing: 1.1,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      await Clipboard.setData(
+                          ClipboardData(text: created.code));
+                      setDialogState(() => copied = true);
+                    },
+                    icon:
+                        Icon(copied ? Icons.check_rounded : Icons.copy_rounded),
+                    label: Text(copied ? 'Copiado' : 'Copiar'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: () =>
+                        Share.share(message, subject: 'Invitación a Habitar'),
+                    icon: const Icon(Icons.share_rounded),
+                    label: const Text('Compartir'),
+                  ),
+                ),
+              ]),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Listo'),
             ),
           ],
         ),
@@ -913,9 +1034,9 @@ class _AdultTeamCard extends ConsumerWidget {
 
   Future<void> _showAddAdultDialog({
     required BuildContext context,
-    required WidgetRef ref,
     required String familyId,
     required String profileId,
+    required VoidCallback onAdded,
   }) async {
     final nameController = TextEditingController();
     final emailController = TextEditingController();
@@ -974,6 +1095,7 @@ class _AdultTeamCard extends ConsumerWidget {
                       ),
                     );
                 ref.invalidate(adultProfileServiceProvider);
+                onAdded();
                 if (dialogContext.mounted) Navigator.pop(dialogContext);
               },
               child: const Text('Guardar'),
@@ -1053,6 +1175,128 @@ class _AdultTeamData {
   final List<FamilyMember> members;
   final List<AdultInvitation> invitations;
   final List<AdultProfile> adults;
+}
+
+/// One "Invitaciones pendientes" row. Keeps its own local copy of the
+/// invitation so cancelling updates its displayed status immediately,
+/// without needing the ancestor FutureBuilder (built from a fresh
+/// `_loadTeam` future on every rebuild) to reload first.
+class _InvitationRow extends ConsumerStatefulWidget {
+  const _InvitationRow({required this.invitation});
+
+  final AdultInvitation invitation;
+
+  @override
+  ConsumerState<_InvitationRow> createState() => _InvitationRowState();
+}
+
+class _InvitationRowState extends ConsumerState<_InvitationRow> {
+  late AdultInvitation _invitation;
+  var _isCanceling = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _invitation = widget.invitation;
+  }
+
+  bool get _canCancel =>
+      _invitation.status == AdultInvitationStatus.pending &&
+      _invitation.expiresAt.isAfter(DateTime.now());
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: CircleAvatar(
+        backgroundColor: HabitarColors.surfaceWarm,
+        child: Icon(
+          _canCancel
+              ? Icons.mark_email_unread_outlined
+              : Icons.mail_outline_rounded,
+          color: HabitarColors.deepGreen,
+        ),
+      ),
+      title: Text(
+        _invitation.email,
+        softWrap: true,
+        overflow: TextOverflow.ellipsis,
+        maxLines: 2,
+      ),
+      subtitle: Text(
+        '${_familyMemberRoleLabel(_invitation.role)} · ${_invitationStatusLabel(_invitation)}',
+      ),
+      trailing: _canCancel
+          ? TextButton(
+              onPressed: _isCanceling ? null : _cancel,
+              child: Text(_isCanceling ? 'Cancelando...' : 'Cancelar'),
+            )
+          : null,
+    );
+  }
+
+  Future<void> _cancel() async {
+    final user = await ref.read(authRepositoryProvider).currentUser();
+    if (user == null) return;
+    setState(() => _isCanceling = true);
+    try {
+      await ref.read(familyRepositoryProvider).cancelInvitation(
+            invitationId: _invitation.metadata.id,
+            userId: user.metadata.id,
+          );
+      if (!mounted) return;
+      setState(() {
+        _invitation = AdultInvitation(
+          metadata: _invitation.metadata,
+          familyId: _invitation.familyId,
+          email: _invitation.email,
+          role: _invitation.role,
+          status: AdultInvitationStatus.canceled,
+          expiresAt: _invitation.expiresAt,
+          invitedByUserId: _invitation.invitedByUserId,
+          acceptedByUserId: _invitation.acceptedByUserId,
+        );
+      });
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'No pudimos cancelar la invitación. Intentá nuevamente.',
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isCanceling = false);
+    }
+  }
+}
+
+String _invitationStatusLabel(AdultInvitation invitation) {
+  if (invitation.status == AdultInvitationStatus.pending &&
+      invitation.expiresAt.isBefore(DateTime.now())) {
+    return 'Vencida';
+  }
+  return switch (invitation.status) {
+    AdultInvitationStatus.pending => 'Pendiente',
+    AdultInvitationStatus.accepted => 'Aceptada',
+    AdultInvitationStatus.revoked => 'Revocada',
+    AdultInvitationStatus.expired => 'Vencida',
+    AdultInvitationStatus.canceled => 'Cancelada',
+  };
+}
+
+String _invitationErrorMessage(String code) {
+  return switch (code) {
+    'INVITATION_SELF_FORBIDDEN' => 'No podés invitarte a vos misma/o.',
+    'INVITATION_ALREADY_PENDING' =>
+      'Ya hay una invitación pendiente para ese correo en esta familia.',
+    'INVITATION_ROLE_INVALID' => 'Elegí un rol válido.',
+    'INVITATION_EMAIL_INVALID' => 'Ingresá un correo válido.',
+    'INVITATION_CREATE_FORBIDDEN' =>
+      'No tenés permiso para invitar en esta familia.',
+    _ => 'No pudimos crear la invitación. Intentá nuevamente.',
+  };
 }
 
 String _adultKindLabel(AdultProfileKind kind) {
