@@ -1,6 +1,14 @@
--- Local verification plan for 0008 and 0009.
--- Run only against a disposable/local Supabase database after applying
--- migrations 0001 -> 0009. Do not run against production data.
+-- Local verification plan for 0008, 0011 and 0012 (0011/0012 renumbered
+-- from what was originally a single 0009 file, then split in two per
+-- deployment-order review).
+--
+-- Run only against a disposable/local Supabase database. Do not run against
+-- production data.
+--
+-- IMPORTANT: 0012 locks down direct routine_sessions writes and must only be
+-- applied, even locally, after exercising the Flutter RPC path. If you are
+-- verifying 0011 alone (the normal case before a Flutter release ships),
+-- skip every check below marked "(0012 only)".
 --
 -- This file intentionally contains no credentials and no service_role key.
 -- It is a checklist-style SQL harness because this repo does not currently
@@ -34,6 +42,19 @@ from pg_policies
 where schemaname = 'public'
   and tablename = 'family_activity_events';
 
+-- 1b. (0012 only) routine_sessions should have three narrow policies instead
+-- of the single 0007 "authorized adults can manage routine sessions" FOR ALL
+-- one. Before 0012 is applied, this will still show the original policy —
+-- that is expected and correct.
+select
+  policyname,
+  cmd,
+  roles
+from pg_policies
+where schemaname = 'public'
+  and tablename = 'routine_sessions'
+order by policyname;
+
 -- 2. Direct activity writes must remain unavailable to ordinary clients.
 select
   grantee,
@@ -65,12 +86,17 @@ order by p.proname;
 --   same (routine_id, session_date);
 -- - get_or_create_routine_session allows a new row for the next session_date;
 -- - complete_routine_session(session_id) creates exactly one
---   family_activity_events row;
+--   family_activity_events row, and the response includes completed_at;
 -- - calling complete_routine_session(session_id) twice returns the same
 --   completed session state and does not duplicate activity;
 -- - anon cannot select/insert/update/delete family_activity_events;
 -- - a member of another family cannot select or complete the session;
 -- - archiving a routine leaves family_activity_events readable by family
---   members with routine_title/profile_display_name snapshots intact.
+--   members with routine_title/profile_display_name snapshots intact;
+-- - (0012 only) an authenticated adult UPDATEing their own routine_sessions
+--   row directly with session_status = 'completed' is rejected by RLS;
+-- - (0012 only) the same adult can still directly UPDATE the row for
+--   pause/postpone/step-progress changes that do not set session_status to
+--   'completed' (unchanged from 0007).
 
 rollback;

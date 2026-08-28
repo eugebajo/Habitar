@@ -1,10 +1,45 @@
 -- Adds family activity events and an atomic routine completion RPC.
+-- Purely additive: creates a new table and a new function, touches nothing
+-- that already exists. Safe to apply today, independently of what version of
+-- Flutter is installed on any device — the app keeps working exactly as
+-- before until a Flutter release actually calls complete_routine_session.
+--
+-- Renumbered from 0009 -> 0011: this file was written before 0010
+-- (invitation codes) but 0010 was applied to remote first and 0009 never
+-- was. Applying a lower-numbered migration after a higher one is confusing
+-- for anyone reading the migrations folder chronologically and for tooling
+-- that assumes monotonic order, so this file was renamed instead of applied
+-- out of order. No SQL inside it changed because of the rename.
+--
+-- pgcrypto check: this file does not call public.digest or any other
+-- pgcrypto function. gen_random_uuid() is pg_catalog, not pgcrypto, so no
+-- schema qualification is needed here. (Verified against the same
+-- extensions-vs-public finding recorded in 0010.)
+--
+-- Prerequisite: 0008_routine_session_completion.sql must already be applied.
+-- This migration's RPC reads routine_sessions.completed_at and
+-- routine_sessions.session_status, both added by 0008. If 0008 is not
+-- applied yet, creating the function below will fail immediately (loud,
+-- not silent) — run the preflight check first.
+--
+-- The direct-UPDATE completion gap (Flutter's upsert can still set
+-- session_status = 'completed' without ever calling this RPC) is
+-- deliberately NOT closed here. That change lives in
+-- 0012_routine_sessions_completion_lockdown.sql and must not be applied
+-- until the Flutter version that calls complete_routine_session is already
+-- published and installed on devices — see that file's header.
+--
 -- No data is deleted. The table stores the minimum context needed for a
 -- family-facing activity feed.
 --
 -- Rollback notes:
+--   -- Roll back 0012 first if it was applied, then:
 --   drop function if exists public.complete_routine_session(uuid);
 --   drop table if exists public.family_activity_events;
+
+-- ---------------------------------------------------------------------------
+-- 1. family_activity_events
+-- ---------------------------------------------------------------------------
 
 create table if not exists public.family_activity_events (
   id uuid primary key default gen_random_uuid(),
@@ -50,6 +85,10 @@ revoke all on public.family_activity_events from anon;
 revoke insert, update, delete on public.family_activity_events
   from authenticated;
 grant select on public.family_activity_events to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- 2. complete_routine_session
+-- ---------------------------------------------------------------------------
 
 -- SECURITY DEFINER is used only for routine completion because this operation
 -- must atomically lock the session, mark it completed, and write exactly one
@@ -169,6 +208,7 @@ begin
   return jsonb_build_object(
     'session_id', target_session_id,
     'status', 'completed',
+    'completed_at', completed_at_value,
     'event_id', event_id
   );
 end;
@@ -178,7 +218,3 @@ revoke all on function public.complete_routine_session(uuid)
   from public, anon;
 grant execute on function public.complete_routine_session(uuid)
   to authenticated;
-
--- Future hardening after Flutter completion is moved to the RPC:
--- replace direct routine_sessions UPDATE completion paths with policies that
--- allow ordinary session progress updates but not arbitrary completed writes.
