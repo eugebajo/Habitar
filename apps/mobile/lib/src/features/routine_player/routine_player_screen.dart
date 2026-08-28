@@ -20,6 +20,8 @@ class RoutinePlayerScreen extends ConsumerStatefulWidget {
 class _RoutinePlayerScreenState extends ConsumerState<RoutinePlayerScreen> {
   RoutineSession? _session;
   var _isLoading = true;
+  var _isBusy = false;
+  String? _error;
 
   @override
   void initState() {
@@ -40,6 +42,8 @@ class _RoutinePlayerScreenState extends ConsumerState<RoutinePlayerScreen> {
                     session: session,
                     isTeen: ref.watch(currentProfileKindProvider) ==
                         ProfileKind.teen,
+                    isBusy: _isBusy,
+                    error: _error,
                     onDone: () =>
                         _update((service) => service.completeStep(session)),
                     onMoreTime: () =>
@@ -77,13 +81,31 @@ class _RoutinePlayerScreenState extends ConsumerState<RoutinePlayerScreen> {
 
   Future<void> _update(
       Future<RoutineSession> Function(RoutineService service) action) async {
-    final service = ref.read(routineServiceProvider);
-    final updated = await action(service);
-    ref.read(currentRoutineSessionIdProvider.notifier).state = updated.id;
-    if (updated.status == RoutineSessionStatus.completed) {
-      await cancelRoutineReminders(ref, updated.routine.metadata.id);
+    if (_isBusy) return;
+    setState(() {
+      _isBusy = true;
+      _error = null;
+    });
+    try {
+      final service = ref.read(routineServiceProvider);
+      final updated = await action(service);
+      ref.read(currentRoutineSessionIdProvider.notifier).state = updated.id;
+      if (updated.status == RoutineSessionStatus.completed) {
+        await cancelRoutineReminders(ref, updated.routine.metadata.id);
+      }
+      if (mounted) setState(() => _session = updated);
+    } catch (error) {
+      // Deliberately keep _session untouched on failure: the step the child
+      // just finished stays shown as not-yet-saved rather than jumping to a
+      // half-updated state, and "Listo" can simply be tapped again -
+      // completeStep/completeSession are idempotent for the same session.
+      if (mounted) {
+        setState(() => _error =
+            'No pudimos guardar eso. Probá de nuevo en un momento.');
+      }
+    } finally {
+      if (mounted) setState(() => _isBusy = false);
     }
-    if (mounted) setState(() => _session = updated);
   }
 }
 
@@ -91,6 +113,8 @@ class _RoutineBody extends StatelessWidget {
   const _RoutineBody(
       {required this.session,
       required this.isTeen,
+      required this.isBusy,
+      required this.error,
       required this.onDone,
       required this.onMoreTime,
       required this.onPause,
@@ -101,6 +125,8 @@ class _RoutineBody extends StatelessWidget {
 
   final RoutineSession session;
   final bool isTeen;
+  final bool isBusy;
+  final String? error;
   final VoidCallback onDone;
   final VoidCallback onMoreTime;
   final VoidCallback onPause;
@@ -235,10 +261,18 @@ class _RoutineBody extends StatelessWidget {
                   child: HabitarSoftIllustration(label: 'shoes')),
             ]),
           ),
+        if (!isComplete && error != null) ...[
+          const SizedBox(height: 14),
+          HabitarConversationCard(
+            title: 'Uy, algo no salió',
+            body: error!,
+            color: HabitarColors.surfaceWarm,
+          ),
+        ],
         const SizedBox(height: 18),
         if (!isComplete) ...[
           FilledButton(
-              onPressed: isPaused ? onResume : onDone,
+              onPressed: isBusy ? null : (isPaused ? onResume : onDone),
               child:
                   Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                 Text(isPaused ? 'Volver cuando quieras' : 'Listo'),
@@ -247,13 +281,13 @@ class _RoutineBody extends StatelessWidget {
               ])),
           const SizedBox(height: 10),
           OutlinedButton.icon(
-              onPressed: onMoreTime,
+              onPressed: isBusy ? null : onMoreTime,
               icon: const Icon(Icons.schedule_rounded),
               label: const Text('Necesito más tiempo')),
           const SizedBox(height: 10),
           if (session.routine.canRequestHelp) ...[
             OutlinedButton.icon(
-                onPressed: onHelp,
+                onPressed: isBusy ? null : onHelp,
                 icon: const Icon(Icons.pan_tool_alt_rounded),
                 label: Text(session.helpRequested
                     ? 'Ayuda solicitada'
@@ -261,14 +295,17 @@ class _RoutineBody extends StatelessWidget {
             const SizedBox(height: 10),
           ],
           OutlinedButton.icon(
-              onPressed: isPaused ? onResume : onPause,
+              onPressed: isBusy ? null : (isPaused ? onResume : onPause),
               icon: const Icon(Icons.cloud_outlined),
               label: Text(isPaused ? 'Estoy listo' : 'Necesito una pausa')),
           const SizedBox(height: 8),
           if (session.routine.canPostpone)
             TextButton(
-                onPressed: onPostpone, child: const Text('5 minutos después')),
-          TextButton(onPressed: onSkip, child: const Text('Omitir este paso')),
+                onPressed: isBusy ? null : onPostpone,
+                child: const Text('5 minutos después')),
+          TextButton(
+              onPressed: isBusy ? null : onSkip,
+              child: const Text('Omitir este paso')),
         ],
       ],
     );

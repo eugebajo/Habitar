@@ -14,6 +14,7 @@ import '../../dependencies.dart';
 import '../../local_restore.dart';
 import '../../routine_today.dart';
 import '../../selected_profile.dart';
+import 'activity_feed_section.dart';
 
 class FamilyDashboardScreen extends ConsumerWidget {
   const FamilyDashboardScreen({super.key});
@@ -52,6 +53,13 @@ class FamilyDashboardScreen extends ConsumerWidget {
                 _AttentionList(requests: data.supportRequests),
                 const SizedBox(height: 24),
                 _ProgressCard(data: data),
+                const SizedBox(height: 24),
+                Text(
+                  'Actividad reciente',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 12),
+                RecentActivitySection(events: data.recentActivityEvents),
                 const SizedBox(height: 18),
                 _AdultTeamCard(
                   hasProfile: data.profile != null,
@@ -132,6 +140,9 @@ class FamilyDashboardScreen extends ConsumerWidget {
         await ref.read(supportRequestRepositoryProvider).requestsForProfile(
               profile.id,
             );
+    final recentActivityEvents = await ref
+        .read(familyActivityEventRepositoryProvider)
+        .recentEventsForFamily(profile.familyId);
 
     assert(() {
       // Development-only diagnostics. Do not log tokens or secrets.
@@ -150,6 +161,7 @@ class FamilyDashboardScreen extends ConsumerWidget {
       totalScheduledSteps: totalScheduledSteps,
       supportRequests: supportRequests,
       overridesToday: overrides,
+      recentActivityEvents: recentActivityEvents,
     );
   }
 }
@@ -1116,6 +1128,7 @@ class _DashboardData {
     required this.totalScheduledSteps,
     required this.supportRequests,
     required this.overridesToday,
+    required this.recentActivityEvents,
   });
 
   const _DashboardData.empty()
@@ -1125,7 +1138,8 @@ class _DashboardData {
         sessionsToday = const [],
         totalScheduledSteps = 0,
         supportRequests = const [],
-        overridesToday = const [];
+        overridesToday = const [],
+        recentActivityEvents = const [];
 
   final SelectedHabitarProfile? profile;
   final List<Routine> scheduledRoutines;
@@ -1134,6 +1148,7 @@ class _DashboardData {
   final int totalScheduledSteps;
   final List<SupportRequest> supportRequests;
   final List<RoutineOverride> overridesToday;
+  final List<FamilyActivityEvent> recentActivityEvents;
 }
 
 /// A single pending routine for today, together with its steps and its
