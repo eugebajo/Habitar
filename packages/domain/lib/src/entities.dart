@@ -162,6 +162,37 @@ class TeenProfile extends AppEntity {
   final bool privateReflectionEnabled;
 }
 
+/// A family-visible record of something a child/teen did, shown in the
+/// adult "Actividad reciente" feed. Immutable once created: there is no
+/// update path, only creation (by the backend, never by Flutter directly)
+/// and reads scoped to family members.
+class FamilyActivityEvent extends AppEntity {
+  const FamilyActivityEvent({
+    required super.metadata,
+    required this.familyId,
+    required this.profileId,
+    required this.kind,
+    required this.profileDisplayName,
+    required this.routineTitle,
+    this.routineId,
+    this.sessionId,
+    this.createdBy,
+  });
+
+  final String familyId;
+  final String profileId;
+  final String? routineId;
+  final String? sessionId;
+
+  /// Currently always 'routine_completed'. Kept as a string (not an enum)
+  /// because the backend, not Flutter, is the source of truth for which
+  /// kinds exist.
+  final String kind;
+  final String profileDisplayName;
+  final String routineTitle;
+  final String? createdBy;
+}
+
 class AdultProfile extends AppEntity {
   const AdultProfile({
     required super.metadata,

@@ -172,18 +172,24 @@ class RoutineService {
   Future<RoutineSession> completeStep(RoutineSession session) async {
     final stepId = session.activeStep?.metadata.id;
     final updated = engine.completeActiveStep(session, DateTime.now());
+    if (updated.status == RoutineSessionStatus.completed) {
+      // The final step: go through completeSession, not save(). On Supabase
+      // this is the only path allowed to flip session_status to 'completed'
+      // and the only one that records a family_activity_events row - see
+      // RoutineSessionRepository.completeSession.
+      final completed = await sessionRepository.completeSession(updated);
+      _debugLog(
+        'FINAL STEP COMPLETED: session_id=${completed.id} step_id=${stepId ?? 'none'} completed_count=${completed.completedStepIds.length} total_steps=${completed.steps.length}',
+      );
+      _debugLog(
+        'SESSION COMPLETED: session_id=${completed.id} status=${completed.status.name} persisted YES',
+      );
+      return completed;
+    }
     await sessionRepository.save(updated);
     _debugLog(
       'STEP COMPLETED: session_id=${updated.id} step_id=${stepId ?? 'none'} persisted YES',
     );
-    if (updated.status == RoutineSessionStatus.completed) {
-      _debugLog(
-        'FINAL STEP COMPLETED: session_id=${updated.id} step_id=${stepId ?? 'none'} completed_count=${updated.completedStepIds.length} total_steps=${updated.steps.length}',
-      );
-      _debugLog(
-        'SESSION COMPLETED: session_id=${updated.id} status=${updated.status.name} persisted YES',
-      );
-    }
     return updated;
   }
 

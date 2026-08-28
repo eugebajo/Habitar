@@ -899,6 +899,94 @@ class LocalRoutineSessionRepository implements RoutineSessionRepository {
     await store.put(LocalStoreCollections.routineSessions, session.id,
         _routineSessionToJson(session));
   }
+
+  @override
+  Future<RoutineSession> completeSession(RoutineSession session) async {
+    await save(session);
+    await _recordActivityEventIfAbsent(session);
+    return session;
+  }
+
+  Future<void> _recordActivityEventIfAbsent(RoutineSession session) async {
+    final existingEvents =
+        await store.list(LocalStoreCollections.familyActivityEvents);
+    final alreadyRecorded = existingEvents.any((record) =>
+        record['session_id'] == session.id &&
+        record['kind'] == 'routine_completed');
+    if (alreadyRecorded) {
+      return;
+    }
+    final profile = await _profileSummaryFor(session.routine.profileId);
+    if (profile == null) {
+      // No profile/family context to attribute the event to. This should
+      // not happen in practice - every routine's profile is created before
+      // the routine itself - but skip rather than write a broken row.
+      return;
+    }
+    final now = DateTime.now();
+    final event = FamilyActivityEvent(
+      metadata: EntityMetadata(
+        id: _uuid.v4(),
+        createdAt: session.completedAt ?? now,
+        updatedAt: session.completedAt ?? now,
+        ownerId: profile.familyId,
+      ),
+      familyId: profile.familyId,
+      profileId: session.routine.profileId,
+      routineId: session.routine.metadata.id,
+      sessionId: session.id,
+      kind: 'routine_completed',
+      profileDisplayName: profile.displayName,
+      routineTitle: session.routine.title,
+    );
+    await store.put(LocalStoreCollections.familyActivityEvents,
+        event.metadata.id, _familyActivityEventToJson(event));
+  }
+
+  Future<({String familyId, String displayName})?> _profileSummaryFor(
+      String profileId) async {
+    final childRecords = await store.list(LocalStoreCollections.childProfiles);
+    for (final record in childRecords) {
+      if (_metadataId(record) == profileId) {
+        return (
+          familyId: record['family_id'] as String,
+          displayName: record['display_name'] as String,
+        );
+      }
+    }
+    final teenRecords = await store.list(LocalStoreCollections.teenProfiles);
+    for (final record in teenRecords) {
+      if (_metadataId(record) == profileId) {
+        return (
+          familyId: record['family_id'] as String,
+          displayName: record['display_name'] as String,
+        );
+      }
+    }
+    return null;
+  }
+}
+
+class LocalFamilyActivityEventRepository
+    implements FamilyActivityEventRepository {
+  LocalFamilyActivityEventRepository(this.store);
+
+  final LocalStore store;
+
+  @override
+  Future<List<FamilyActivityEvent>> recentEventsForFamily(
+    String familyId, {
+    int limit = 20,
+  }) async {
+    final records =
+        await store.list(LocalStoreCollections.familyActivityEvents);
+    final events = records
+        .map(_familyActivityEventFromJson)
+        .where((event) => event.familyId == familyId)
+        .toList()
+      ..sort((a, b) => b.metadata.createdAt.compareTo(a.metadata.createdAt));
+    return events.take(limit).toList(growable: false);
+  }
 }
 
 class LocalRoutineOverrideRepository implements RoutineOverrideRepository {
@@ -1352,6 +1440,31 @@ ChildProfile _childProfileFromJson(Map<String, Object?> json) => ChildProfile(
       familyId: json['family_id'] as String,
       displayName: json['display_name'] as String,
       age: json['age'] as int,
+    );
+
+Map<String, Object?> _familyActivityEventToJson(FamilyActivityEvent event) => {
+      'metadata': _metadataToJson(event.metadata),
+      'family_id': event.familyId,
+      'profile_id': event.profileId,
+      'routine_id': event.routineId,
+      'session_id': event.sessionId,
+      'kind': event.kind,
+      'profile_display_name': event.profileDisplayName,
+      'routine_title': event.routineTitle,
+      'created_by': event.createdBy,
+    };
+
+FamilyActivityEvent _familyActivityEventFromJson(Map<String, Object?> json) =>
+    FamilyActivityEvent(
+      metadata: _metadataFromJson(_object(json['metadata'])),
+      familyId: json['family_id'] as String,
+      profileId: json['profile_id'] as String,
+      routineId: json['routine_id'] as String?,
+      sessionId: json['session_id'] as String?,
+      kind: json['kind'] as String? ?? 'routine_completed',
+      profileDisplayName: json['profile_display_name'] as String,
+      routineTitle: json['routine_title'] as String,
+      createdBy: json['created_by'] as String?,
     );
 
 Map<String, Object?> _adultProfileToJson(AdultProfile profile) => {

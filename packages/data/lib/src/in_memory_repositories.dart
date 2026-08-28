@@ -504,6 +504,25 @@ class InMemoryProfileRepository implements ProfileRepository {
         .where((profile) => profile.familyId == familyId)
         .toList(growable: false);
   }
+
+  /// Not part of [ProfileRepository]: used only by
+  /// [InMemoryRoutineSessionRepository] to resolve a routine's family/display
+  /// name when recording a family activity event, mirroring what
+  /// complete_routine_session resolves server-side on Supabase.
+  ({String familyId, String displayName})? summaryForProfileId(
+      String profileId) {
+    for (final child in _children) {
+      if (child.metadata.id == profileId) {
+        return (familyId: child.familyId, displayName: child.displayName);
+      }
+    }
+    for (final teen in _teens) {
+      if (teen.metadata.id == profileId) {
+        return (familyId: teen.familyId, displayName: teen.displayName);
+      }
+    }
+    return null;
+  }
 }
 
 class InMemoryAdultProfileRepository implements AdultProfileRepository {
@@ -828,7 +847,15 @@ RoutineStep _routineStepWithStatus(RoutineStep step, EntityStatus status) =>
     );
 
 class InMemoryRoutineSessionRepository implements RoutineSessionRepository {
+  InMemoryRoutineSessionRepository({
+    InMemoryProfileRepository? profileRepository,
+    InMemoryFamilyActivityEventRepository? activityEvents,
+  })  : _profileRepository = profileRepository,
+        _activityEvents = activityEvents;
+
   final Map<String, RoutineSession> _sessions = {};
+  final InMemoryProfileRepository? _profileRepository;
+  final InMemoryFamilyActivityEventRepository? _activityEvents;
 
   @override
   Future<RoutineSession?> activeSessionForProfile(String profileId) async {
@@ -885,6 +912,59 @@ class InMemoryRoutineSessionRepository implements RoutineSessionRepository {
   @override
   Future<void> save(RoutineSession session) async {
     _sessions[session.id] = session;
+  }
+
+  @override
+  Future<RoutineSession> completeSession(RoutineSession session) async {
+    _sessions[session.id] = session;
+    final activityEvents = _activityEvents;
+    final profileRepository = _profileRepository;
+    if (activityEvents == null || profileRepository == null) {
+      return session;
+    }
+    if (activityEvents.hasEventFor(session.id, 'routine_completed')) {
+      return session;
+    }
+    final summary =
+        profileRepository.summaryForProfileId(session.routine.profileId);
+    if (summary == null) {
+      return session;
+    }
+    final now = DateTime.now();
+    activityEvents.events.add(FamilyActivityEvent(
+      metadata: EntityMetadata(
+        id: _uuid.v4(),
+        createdAt: session.completedAt ?? now,
+        updatedAt: session.completedAt ?? now,
+        ownerId: summary.familyId,
+      ),
+      familyId: summary.familyId,
+      profileId: session.routine.profileId,
+      routineId: session.routine.metadata.id,
+      sessionId: session.id,
+      kind: 'routine_completed',
+      profileDisplayName: summary.displayName,
+      routineTitle: session.routine.title,
+    ));
+    return session;
+  }
+}
+
+class InMemoryFamilyActivityEventRepository
+    implements FamilyActivityEventRepository {
+  final List<FamilyActivityEvent> events = [];
+
+  bool hasEventFor(String sessionId, String kind) => events
+      .any((event) => event.sessionId == sessionId && event.kind == kind);
+
+  @override
+  Future<List<FamilyActivityEvent>> recentEventsForFamily(
+    String familyId, {
+    int limit = 20,
+  }) async {
+    final filtered = events.where((event) => event.familyId == familyId).toList()
+      ..sort((a, b) => b.metadata.createdAt.compareTo(a.metadata.createdAt));
+    return filtered.take(limit).toList(growable: false);
   }
 }
 

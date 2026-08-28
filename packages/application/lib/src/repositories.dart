@@ -252,6 +252,19 @@ abstract interface class RoutineRepository {
 abstract interface class RoutineSessionRepository {
   Future<void> save(RoutineSession session);
 
+  /// Marks [session] (already advanced past its last step by the routine
+  /// engine, i.e. `session.status == RoutineSessionStatus.completed`) as
+  /// completed and records a family activity event for it, atomically.
+  ///
+  /// This is a distinct method from [save] - and not just [save] called with
+  /// a completed session - because on Supabase the two paths are backed by
+  /// different privileges: [save] is an ordinary authenticated upsert, while
+  /// completion goes through complete_routine_session, a SECURITY DEFINER
+  /// RPC that is the only path allowed to set session_status to 'completed'
+  /// and the only one that ever writes to family_activity_events. Calling
+  /// this twice for the same session must not create a second event.
+  Future<RoutineSession> completeSession(RoutineSession session);
+
   Future<RoutineSession?> activeSessionForProfile(String profileId);
 
   Future<RoutineSession?> activeSessionForRoutineToday({
@@ -270,6 +283,16 @@ abstract interface class RoutineSessionRepository {
   });
 
   Future<RoutineSession?> byId(String sessionId);
+}
+
+/// Read-only from Flutter's perspective, mirroring the backend: on Supabase
+/// family_activity_events grants SELECT only, with no insert/update/delete -
+/// rows are written exclusively by [RoutineSessionRepository.completeSession].
+abstract interface class FamilyActivityEventRepository {
+  Future<List<FamilyActivityEvent>> recentEventsForFamily(
+    String familyId, {
+    int limit = 20,
+  });
 }
 
 abstract interface class RoutineOverrideRepository {

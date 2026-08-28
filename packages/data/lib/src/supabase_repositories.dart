@@ -813,6 +813,51 @@ class SupabaseRoutineSessionRepository implements RoutineSessionRepository {
     }
   }
 
+  @override
+  Future<RoutineSession> completeSession(RoutineSession session) async {
+    // Step 1: persist every step-tracking field a normal save() would write,
+    // except session_status/completed_at - those two can only be set by the
+    // complete_routine_session RPC (0012 blocks setting session_status to
+    // 'completed' via a direct write). Leaving session_status untouched here
+    // keeps this update inside what 0007/0012 already allow a family adult
+    // to do directly.
+    try {
+      _debugLog('COMPLETE SESSION STEP UPDATE: START session_id=${session.id}');
+      await client.from('routine_sessions').update({
+        'active_step_index': session.activeStepIndex,
+        'completed_step_ids': session.completedStepIds,
+        'skipped_step_ids': session.skippedStepIds,
+        'extra_minutes_by_step_id': session.extraMinutesByStepId,
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      }).eq('id', session.id);
+      _debugLog('COMPLETE SESSION STEP UPDATE: OK');
+    } on PostgrestException catch (error) {
+      _debugLog('COMPLETE SESSION STEP UPDATE: ERROR');
+      _logPostgrestError(error);
+      rethrow;
+    }
+
+    // Step 2: atomically flip session_status to 'completed', set
+    // completed_at, and record exactly one family_activity_events row.
+    try {
+      _debugLog('COMPLETE_ROUTINE_SESSION RPC: START session_id=${session.id}');
+      final result = await client.rpc('complete_routine_session', params: {
+        'target_session_id': session.id,
+      }) as Map<String, dynamic>;
+      _debugLog('COMPLETE_ROUTINE_SESSION RPC: OK');
+      final completedAt = result['completed_at'] as String?;
+      return session.copyWith(
+        status: RoutineSessionStatus.completed,
+        completedAt:
+            completedAt == null ? null : DateTime.parse(completedAt).toLocal(),
+      );
+    } on PostgrestException catch (error) {
+      _debugLog('COMPLETE_ROUTINE_SESSION RPC: ERROR');
+      _logPostgrestError(error);
+      rethrow;
+    }
+  }
+
   Future<RoutineSession> _sessionFromRow(Map<String, dynamic> row) async {
     final routineId = row['routine_id'] as String;
     final routine =
@@ -853,6 +898,47 @@ class SupabaseRoutineSessionRepository implements RoutineSessionRepository {
           : DateTime.parse(row['completed_at'] as String).toLocal(),
     );
   }
+}
+
+class SupabaseFamilyActivityEventRepository
+    implements FamilyActivityEventRepository {
+  const SupabaseFamilyActivityEventRepository(this.client);
+
+  final SupabaseClient client;
+
+  @override
+  Future<List<FamilyActivityEvent>> recentEventsForFamily(
+    String familyId, {
+    int limit = 20,
+  }) async {
+    final rows = await client
+        .from('family_activity_events')
+        .select()
+        .eq('family_id', familyId)
+        .order('created_at', ascending: false)
+        .limit(limit);
+    return rows.map(_familyActivityEventFromRow).toList(growable: false);
+  }
+}
+
+FamilyActivityEvent _familyActivityEventFromRow(Map<String, dynamic> row) {
+  final createdAt = DateTime.parse(row['created_at'] as String).toLocal();
+  return FamilyActivityEvent(
+    metadata: EntityMetadata(
+      id: row['id'] as String,
+      createdAt: createdAt,
+      updatedAt: createdAt,
+      ownerId: row['created_by'] as String? ?? row['family_id'] as String,
+    ),
+    familyId: row['family_id'] as String,
+    profileId: row['profile_id'] as String,
+    routineId: row['routine_id'] as String?,
+    sessionId: row['session_id'] as String?,
+    kind: row['kind'] as String,
+    profileDisplayName: row['profile_display_name'] as String,
+    routineTitle: row['routine_title'] as String,
+    createdBy: row['created_by'] as String?,
+  );
 }
 
 class _UtcDateRange {

@@ -16,8 +16,22 @@ final routineRepositoryProvider =
     Provider<RoutineRepository>((ref) => InMemoryRoutineRepository());
 final adultProfileRepositoryProvider =
     Provider<AdultProfileRepository>((ref) => InMemoryAdultProfileRepository());
+final familyActivityEventRepositoryProvider =
+    Provider<FamilyActivityEventRepository>(
+        (ref) => InMemoryFamilyActivityEventRepository());
+
 final routineSessionRepositoryProvider = Provider<RoutineSessionRepository>(
-    (ref) => InMemoryRoutineSessionRepository());
+    (ref) {
+  final profileRepository = ref.watch(profileRepositoryProvider);
+  final activityEvents = ref.watch(familyActivityEventRepositoryProvider);
+  return InMemoryRoutineSessionRepository(
+    profileRepository:
+        profileRepository is InMemoryProfileRepository ? profileRepository : null,
+    activityEvents: activityEvents is InMemoryFamilyActivityEventRepository
+        ? activityEvents
+        : null,
+  );
+});
 final routineOverrideRepositoryProvider = Provider<RoutineOverrideRepository>(
     (ref) => InMemoryRoutineOverrideRepository());
 final habitRepositoryProvider =

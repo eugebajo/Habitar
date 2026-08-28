@@ -32,4 +32,5 @@ class LocalStoreCollections {
   static const authState = 'auth_state';
   static const pendingFamilyBootstrap = 'pending_family_bootstrap';
   static const syncQueue = 'sync_queue';
+  static const familyActivityEvents = 'family_activity_events';
 }

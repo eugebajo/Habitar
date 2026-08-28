@@ -48,6 +48,9 @@ Future<List<Override>> buildProductionOverrides() async {
     routineSessionRepositoryProvider.overrideWithValue(supabaseClient == null
         ? LocalRoutineSessionRepository(store)
         : SupabaseRoutineSessionRepository(supabaseClient)),
+    familyActivityEventRepositoryProvider.overrideWithValue(supabaseClient == null
+        ? LocalFamilyActivityEventRepository(store)
+        : SupabaseFamilyActivityEventRepository(supabaseClient)),
     routineOverrideRepositoryProvider.overrideWithValue(supabaseClient == null
         ? LocalRoutineOverrideRepository(store)
         : SupabaseRoutineOverrideRepository(supabaseClient)),
