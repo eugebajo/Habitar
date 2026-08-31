@@ -8,14 +8,30 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $repoRoot
 $buildStartedAt = Get-Date
 
-$defaultJavaHome = "C:\Program Files\Android\Android Studio\jbr"
-if (-not $env:JAVA_HOME -and (Test-Path $defaultJavaHome)) {
-    $env:JAVA_HOME = $defaultJavaHome
+# Clear out any previous AAB (including a stray diagnostic build with a
+# placeholder key) before doing anything else, so a failed or aborted run
+# never leaves a stale/bad artifact sitting where the real one is expected.
+$relativeBundlePath = "apps/mobile/build/app/outputs/bundle/release/app-release.aab"
+$bundlePath = Join-Path $repoRoot $relativeBundlePath
+$bundleDir = Split-Path -Parent $bundlePath
+if (Test-Path $bundleDir) {
+    Get-ChildItem -LiteralPath $bundleDir -Filter "*.aab" -ErrorAction SilentlyContinue |
+        Remove-Item -Force
 }
 
-if ($env:JAVA_HOME) {
-    $env:Path = "$env:JAVA_HOME\bin;$env:Path"
+$defaultJavaHome = "C:\Program Files\Android\Android Studio\jbr"
+if (-not $env:JAVA_HOME) {
+    if (Test-Path $defaultJavaHome) {
+        $env:JAVA_HOME = $defaultJavaHome
+        Write-Host "JAVA_HOME not set - defaulting to Android Studio's JBR: $defaultJavaHome"
+    } else {
+        throw "JAVA_HOME is not set and the Android Studio JBR was not found at $defaultJavaHome. Set JAVA_HOME manually before building."
+    }
+} else {
+    Write-Host "JAVA_HOME: $env:JAVA_HOME"
 }
+
+$env:Path = "$env:JAVA_HOME\bin;$env:Path"
 
 $flutter = "C:\Users\eugen\flutter\bin\flutter.bat"
 if (-not (Test-Path $flutter)) {
@@ -54,6 +70,15 @@ $expectedProjectRef = "frmgwpbstezqjwbcshbw"
 
 if (-not $supabaseUrl -or -not $supabaseAnonKey) {
     throw "Release AAB requires non-empty SUPABASE_URL and SUPABASE_ANON_KEY values."
+}
+
+if ($supabaseAnonKey.Length -lt 20) {
+    throw "SUPABASE_ANON_KEY is only $($supabaseAnonKey.Length) characters long - too short to be a real key. Check the value before building a release."
+}
+
+$placeholderPattern = '(?i)(placeholder|test|reemplazar)'
+if ($supabaseAnonKey -match $placeholderPattern) {
+    throw "SUPABASE_ANON_KEY looks like a placeholder (matched '$($Matches[0])'). Set the real publishable key before building a release."
 }
 
 if ($supabaseAnonKey -eq "change-me" -or $supabaseAnonKey -match "process\.env") {
@@ -102,12 +127,6 @@ try {
     throw "Supabase Auth settings endpoint is not reachable with the provided release config."
 }
 
-$relativeBundlePath = "apps/mobile/build/app/outputs/bundle/release/app-release.aab"
-$bundlePath = Join-Path $repoRoot $relativeBundlePath
-if (Test-Path $bundlePath) {
-    Remove-Item -LiteralPath $bundlePath -Force
-}
-
 & $flutter analyze apps/mobile
 if ($LASTEXITCODE -ne 0) {
     throw "flutter analyze failed with exit code $LASTEXITCODE."
@@ -126,7 +145,11 @@ try {
     $buildArgs += "--dart-define=SUPABASE_ANON_KEY=$supabaseAnonKey"
     & $flutter @buildArgs
     if ($LASTEXITCODE -ne 0) {
-        throw "flutter build appbundle failed with exit code $LASTEXITCODE."
+        $buildFailureMessage = "flutter build appbundle failed with exit code $LASTEXITCODE. " +
+            "If the Gradle output above mentions compileFlutterBuildRelease or an OutOfMemoryError, " +
+            "close other memory-heavy apps and retry, or lower org.gradle.jvmargs in " +
+            "apps/mobile/android/gradle.properties (currently -Xmx8G)."
+        throw $buildFailureMessage
     }
 } finally {
     Pop-Location
@@ -143,4 +166,5 @@ if ($bundle.LastWriteTime -lt $buildStartedAt) {
 
 Write-Host ""
 Write-Host "Release bundle:"
-Write-Host $relativeBundlePath
+Write-Host "  path: $relativeBundlePath"
+Write-Host "  last_write_time: $($bundle.LastWriteTime)"
