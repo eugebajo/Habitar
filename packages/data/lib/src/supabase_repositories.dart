@@ -824,6 +824,16 @@ class SupabaseRoutineSessionRepository implements RoutineSessionRepository {
     try {
       _debugLog('COMPLETE SESSION STEP UPDATE: START session_id=${session.id}');
       await client.from('routine_sessions').update({
+        // Re-stamp owner on every write, same as save() above. Without this,
+        // a session whose owner is null (the adult who started it left the
+        // family - see migration 0013) or belongs to a different adult than
+        // whoever is completing it now fails the "owner = auth.uid()" with
+        // check in 0007/0012's routine_sessions policies forever, since this
+        // is a plain update() and Postgres re-checks the *resulting* row -
+        // an owner this statement doesn't touch stays whatever it already
+        // was. Setting it here heals both cases in the same statement that
+        // needs it to pass.
+        'owner': _currentUserId(client),
         'active_step_index': session.activeStepIndex,
         'completed_step_ids': session.completedStepIds,
         'skipped_step_ids': session.skippedStepIds,

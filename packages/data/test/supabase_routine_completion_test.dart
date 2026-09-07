@@ -8,12 +8,17 @@
 //
 // What this fake can and cannot prove: it reimplements
 // complete_routine_session's role/membership check and its
-// resolve-on-the-server behavior, so it is a faithful regression test for
-// those. It does NOT run real Postgres RLS - "an adult from another family
-// cannot read events" here proves the repository's query filters by
-// family_id correctly, not that Postgres would refuse a mismatched request
-// at the database layer. That guarantee lives in the RLS policy itself
-// (reviewed in 0011_family_activity_events.sql, checked manually via
+// resolve-on-the-server behavior, plus the routine_sessions UPDATE policy's
+// using()/with check() split (family membership gates whether the row is
+// touched at all; the *resulting* row's owner must equal the caller, mirrored
+// in the PATCH handler below), so it is a faithful regression test for those.
+// It does NOT run real Postgres RLS - "an adult from another family cannot
+// read events" here proves the repository's query filters by family_id
+// correctly, not that Postgres would refuse a mismatched request at the
+// database layer. That guarantee lives in the RLS policies themselves
+// (0007_role_permissions_hardening.sql, 0011_family_activity_events.sql,
+// 0012_routine_sessions_completion_lockdown.sql, 0013_decouple_owner_from_
+// auth_users.sql, checked manually via
 // supabase/0008_0012_routine_sessions_activity_test.sql).
 
 import 'dart:convert';
@@ -204,6 +209,83 @@ void main() {
     expect(server.familyActivityEvents, hasLength(1));
   });
 
+  test(
+      'a session owned by a different adult can still be completed by '
+      'another authorized adult, and owner gets re-stamped to whoever '
+      'actually finished it', () async {
+    server.seedFamily(
+      familyId: 'family-a',
+      profileId: 'profile-nico',
+      profileDisplayName: 'Nico',
+    );
+    server.seedMember(familyId: 'family-a', userId: 'adult-1', role: 'parent');
+    server.seedMember(
+        familyId: 'family-a', userId: 'adult-2', role: 'caregiver');
+    server.seedRoutine(
+      routineId: 'routine-1',
+      profileId: 'profile-nico',
+      title: 'Prepararse para la escuela',
+    );
+    // adult-1 started the session (or completed earlier steps of it);
+    // adult-2 is the one finishing it now. Regression coverage for
+    // completeSession's step-tracking update (supabase_repositories.dart) -
+    // before it re-stamped owner, this update()'s with check evaluated the
+    // *unchanged* owner column ('adult-1') against auth.uid() ('adult-2'),
+    // which is never true, so Postgres rejected it every time.
+    server.seedSession(
+      sessionId: 'session-1',
+      routineId: 'routine-1',
+      ownerId: 'adult-1',
+    );
+    await signInAs('adult-2');
+
+    final session = buildSession(
+      sessionId: 'session-1',
+      routineId: 'routine-1',
+      routineTitle: 'Prepararse para la escuela',
+      profileId: 'profile-nico',
+    );
+
+    final completed = await sessionRepository.completeSession(session);
+
+    expect(completed.status, RoutineSessionStatus.completed);
+    expect(server.routineSessions['session-1']!['owner'], 'adult-2');
+  });
+
+  test(
+      'a session whose owner was set to null (the adult who started it left '
+      'the family, migration 0013) can still be completed', () async {
+    server.seedFamily(
+      familyId: 'family-a',
+      profileId: 'profile-nico',
+      profileDisplayName: 'Nico',
+    );
+    server.seedMember(familyId: 'family-a', userId: 'adult-2', role: 'owner');
+    server.seedRoutine(
+      routineId: 'routine-1',
+      profileId: 'profile-nico',
+      title: 'Prepararse para la escuela',
+    );
+    server.seedSession(
+      sessionId: 'session-1',
+      routineId: 'routine-1',
+      ownerId: null,
+    );
+    await signInAs('adult-2');
+
+    final session = buildSession(
+      sessionId: 'session-1',
+      routineId: 'routine-1',
+      routineTitle: 'Prepararse para la escuela',
+      profileId: 'profile-nico',
+    );
+
+    final completed = await sessionRepository.completeSession(session);
+
+    expect(completed.status, RoutineSessionStatus.completed);
+    expect(server.routineSessions['session-1']!['owner'], 'adult-2');
+  });
+
   test('recentEventsForFamily only returns events for the requested family',
       () async {
     server.seedFamily(
@@ -349,10 +431,19 @@ class _FakeRoutineCompletionServer extends http.BaseClient {
     };
   }
 
-  void seedSession({required String sessionId, required String routineId}) {
+  void seedSession({
+    required String sessionId,
+    required String routineId,
+    // Nullable and defaulting to null (not to whoever seeds it) on purpose:
+    // most tests don't care who owns the session, but the ones that do are
+    // specifically about migration 0013's on-delete-set-null behavior, where
+    // null is exactly the state a departed adult's sessions end up in.
+    String? ownerId,
+  }) {
     routineSessions[sessionId] = {
       'id': sessionId,
       'routine_id': routineId,
+      'owner': ownerId,
       'session_status': 'running',
       'completed_at': null,
       'updated_at': _now(),
@@ -361,6 +452,23 @@ class _FakeRoutineCompletionServer extends http.BaseClient {
       'skipped_step_ids': <String>[],
       'extra_minutes_by_step_id': <String, Object?>{},
     };
+  }
+
+  /// Mirrors the family-membership + role half of the routine_sessions RLS
+  /// policies (using()/with check() both require this - see
+  /// 0007_role_permissions_hardening.sql:71-91 and
+  /// 0012_routine_sessions_completion_lockdown.sql:65-87). Shared by the
+  /// PATCH handler and the RPC so both enforce it the same way.
+  bool _isAuthorizedAdult(String routineId, String userId) {
+    final routine = routines[routineId];
+    if (routine == null) return false;
+    final profile = profiles[routine['profile_id']];
+    if (profile == null) return false;
+    final familyId = profile['family_id'];
+    return familyMembers.values.any((member) =>
+        member['family_id'] == familyId &&
+        member['user_id'] == userId &&
+        const {'owner', 'parent', 'caregiver'}.contains(member['role']));
   }
 
   @override
@@ -402,6 +510,32 @@ class _FakeRoutineCompletionServer extends http.BaseClient {
       }
       final body = jsonDecode((request as http.Request).body)
           as Map<String, dynamic>;
+
+      // Mirrors public.routine_sessions RLS for UPDATE (0007/0012): using()
+      // only checks family membership + role - a non-member's update simply
+      // matches zero rows, PostgREST reports that as a normal empty success,
+      // not an error. with check() additionally requires the *resulting*
+      // row's owner to equal the caller; Postgres evaluates this against
+      // whatever the row ends up holding, so a column this PATCH doesn't
+      // touch keeps its stale (possibly null, possibly someone else's)
+      // value - exactly the case migration 0013 and this fake exist to
+      // exercise.
+      final routineId = row['routine_id'] as String;
+      if (!_isAuthorizedAdult(routineId, currentUserId)) {
+        return _empty(request, 200);
+      }
+      final resultingOwner =
+          body.containsKey('owner') ? body['owner'] : row['owner'];
+      if (resultingOwner != currentUserId) {
+        return _json(request, 403, {
+          'code': '42501',
+          'message':
+              'new row violates row-level security policy for table "routine_sessions"',
+          'details': null,
+          'hint': null,
+        });
+      }
+
       row.addAll(body);
       return _empty(request, 200);
     }
@@ -462,11 +596,7 @@ class _FakeRoutineCompletionServer extends http.BaseClient {
     }
     final familyId = profile['family_id'] as String;
 
-    final allowed = familyMembers.values.any((member) =>
-        member['family_id'] == familyId &&
-        member['user_id'] == currentUserId &&
-        const {'owner', 'parent', 'caregiver'}.contains(member['role']));
-    if (!allowed) {
+    if (!_isAuthorizedAdult(session['routine_id'] as String, currentUserId)) {
       throw const _RpcException('SESSION_COMPLETION_NOT_ALLOWED');
     }
 
