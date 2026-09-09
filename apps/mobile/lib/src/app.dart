@@ -20,6 +20,7 @@ import 'features/onboarding/onboarding_screen.dart';
 import 'features/profiles/profiles_screen.dart';
 import 'features/profile_setup/profile_setup_screen.dart';
 import 'features/portal/portal_screens.dart';
+import 'features/account/account_screen.dart';
 import 'features/routine_player/routine_player_screen.dart';
 import 'features/rewards/rewards_screen.dart';
 import 'features/routine_setup/routine_setup_screen.dart';
@@ -89,6 +90,7 @@ final appRouter = GoRouter(
         path: '/settings',
         builder: (context, state) =>
             const AdultSectionScreen(kind: 'settings')),
+    GoRoute(path: '/account', builder: (context, state) => const AccountScreen()),
     GoRoute(
         path: '/habits', builder: (context, state) => const HabitSetupScreen()),
     GoRoute(

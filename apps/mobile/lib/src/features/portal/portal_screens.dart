@@ -31,13 +31,7 @@ class AdultSectionScreen extends StatelessWidget {
           actionPath: '/habits',
           actionLabel: 'Crear hábito',
         ),
-      'settings' => _GenericAdultSection(
-          title: 'Configuración',
-          subtitle: 'Ajustá accesibilidad, privacidad y experiencia sensorial.',
-          icon: Icons.tune_rounded,
-          actionPath: '/privacy',
-          actionLabel: 'Privacidad',
-        ),
+      'settings' => const _SettingsSection(),
       _ => _GenericAdultSection(
           title: 'Habitar',
           subtitle: 'Un espacio familiar para avanzar paso a paso.',
@@ -46,6 +40,37 @@ class AdultSectionScreen extends StatelessWidget {
           actionLabel: 'Ir al inicio',
         ),
     };
+  }
+}
+
+class _SettingsSection extends StatelessWidget {
+  const _SettingsSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return AdultPage(
+      title: 'Configuración',
+      subtitle: 'Ajustá accesibilidad, privacidad y experiencia sensorial.',
+      action: FilledButton.icon(
+        onPressed: () => context.go('/privacy'),
+        icon: const Icon(Icons.add_rounded),
+        label: const Text('Privacidad'),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          FilledButton(
+            onPressed: () => context.go('/account'),
+            child: const Text('Cuenta'),
+          ),
+          const SizedBox(height: 8),
+          FilledButton(
+            onPressed: () => context.go('/notifications'),
+            child: const Text('Notificaciones'),
+          ),
+        ],
+      ),
+    );
   }
 }
 
