@@ -178,6 +178,12 @@ begin
   where status = 'deleted'
     and deleted_at is not null
     and deleted_at < now() - interval '30 days'
+    -- Salvaguarda adicional: asegurar que NO exista ninguna fila en
+    -- public.family_members para esta familia. Una familia "viva" siempre
+    -- tiene al menos un adulto; delete_family deja la familia sin filas en
+    -- family_members, por eso exigir este anti-join protege contra un
+    -- update manual o una migracion futura que pudiera marcar status/deleted_at
+    -- sin pasar por delete_family.
     and not exists (
       select 1
       from public.family_members
@@ -352,6 +358,13 @@ begin
   -- role='owner' en esa fila. El MISMO orden (por user_id, no "primero la
   -- del que llama") en las dos ramas del if evita ademas un deadlock entre
   -- dos llamadas concurrentes con destinos cruzados.
+  -- Lock both involved family_members rows in a stable order by user_id.
+  -- Additionally lock the caller's own row explicitly to prevent two
+  -- concurrent transfers from the same owner from racing: without locking
+  -- the caller's row two concurrent transfers could both read role='owner'
+  -- and proceed, potentially leaving two owners or none. The order by
+  -- user_id is kept identical in both branches to avoid deadlocks when two
+  -- sessions attempt cross transfers.
   if current_user_id < new_owner_user_id then
     perform 1 from public.family_members
     where family_id = target_family_id and user_id = current_user_id
@@ -367,6 +380,15 @@ begin
     where family_id = target_family_id and user_id = current_user_id
     for update;
   end if;
+
+  -- Extra safeguard: re-lock the caller's family_members row explicitly with
+  -- FOR UPDATE to ensure the caller's state (role) is observed under lock.
+  -- This is redundant if the caller's row was already locked above, but
+  -- being explicit makes the intention clear and robust across minor
+  -- refactorings of the lock ordering logic.
+  perform 1 from public.family_members
+  where family_id = target_family_id and user_id = current_user_id
+  for update;
 
   select *
   into current_membership
