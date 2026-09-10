@@ -21,6 +21,7 @@ class AppRestoreResult {
     this.profileKind,
     this.activeSessionId,
     this.pendingInvitation,
+    this.departureNotices = const [],
   });
 
   final AppRestoreDestination destination;
@@ -29,6 +30,12 @@ class AppRestoreResult {
   final ProfileKind? profileKind;
   final String? activeSessionId;
   final PendingFamilyInvitation? pendingInvitation;
+
+  /// Notices waiting for the signed-in adult because a family they
+  /// belonged to was deleted by someone else while they weren't using the
+  /// app - see FamilyRepository.departureNotices. Always empty when
+  /// destination is onboarding (no signed-in user to owe a notice to).
+  final List<FamilyDepartureNotice> departureNotices;
 }
 
 class AppRestoreService {
@@ -60,6 +67,20 @@ class AppRestoreService {
     }
 
     _debugLog('RESTORE:');
+
+    // Best-effort: a family this adult belonged to may have been deleted
+    // by its owner (see delete_family in
+    // supabase/migrations/0014_family_deletion.sql) while they weren't
+    // using the app. Fetching this never blocks restore - if it fails for
+    // any reason, the notice just doesn't show this launch; the row stays
+    // in the table for the next one.
+    var departureNotices = const <FamilyDepartureNotice>[];
+    try {
+      departureNotices = await familyRepository.departureNotices(user.metadata.id);
+    } catch (_) {
+      // ignore - see comment above.
+    }
+
     final family = await _familyForUser(user);
     if (family == null) {
       final invitations =
@@ -71,11 +92,14 @@ class AppRestoreService {
         return AppRestoreResult(
           destination: AppRestoreDestination.invitation,
           pendingInvitation: invitations.first,
+          departureNotices: departureNotices,
         );
       }
       _debugLog('destination: register');
-      return const AppRestoreResult(
-          destination: AppRestoreDestination.register);
+      return AppRestoreResult(
+        destination: AppRestoreDestination.register,
+        departureNotices: departureNotices,
+      );
     }
 
     _debugLog('membership found: YES');
@@ -93,6 +117,7 @@ class AppRestoreService {
         profileId: profile.metadata.id,
         profileKind: ProfileKind.child,
         activeSessionId: session?.id,
+        departureNotices: departureNotices,
       );
     }
 
@@ -110,6 +135,7 @@ class AppRestoreService {
         profileId: profile.metadata.id,
         profileKind: ProfileKind.teen,
         activeSessionId: session?.id,
+        departureNotices: departureNotices,
       );
     }
 
@@ -117,7 +143,8 @@ class AppRestoreService {
     _debugLog('destination: profileSetup');
     return AppRestoreResult(
         destination: AppRestoreDestination.profileSetup,
-        familyId: family.metadata.id);
+        familyId: family.metadata.id,
+        departureNotices: departureNotices);
   }
 
   Future<Family?> _familyForUser(User user) async {

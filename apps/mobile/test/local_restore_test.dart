@@ -265,6 +265,58 @@ void main() {
     expect(profiles.single.metadata.id, child.metadata.id);
   });
 
+  test('restore carries pending departure notices for the signed-in adult',
+      () async {
+    final authRepository = InMemoryAuthRepository();
+    final familyRepository = InMemoryFamilyRepository();
+    final owner = await authRepository.registerAdult(
+      displayName: 'Dueña',
+      email: 'duena@example.com',
+      password: 'demo',
+    );
+    final family = await familyRepository.createFamily(
+      ownerUserId: owner.metadata.id,
+      name: 'Familia que se borra',
+    );
+    final created = await familyRepository.createInvitationWithCode(
+      familyId: family.metadata.id,
+      email: 'invitado@example.com',
+      role: FamilyMemberRole.parent,
+      invitedByUserId: owner.metadata.id,
+      invitedByUserEmail: owner.email,
+    );
+    final invited = await authRepository.registerAdult(
+      displayName: 'Invitado',
+      email: 'invitado@example.com',
+      password: 'demo',
+    );
+    await familyRepository.acceptInvitationByCode(
+      code: created.code,
+      userId: invited.metadata.id,
+      userEmail: invited.email,
+    );
+    await familyRepository.deleteFamily(
+      familyId: family.metadata.id,
+      userId: owner.metadata.id,
+    );
+    await authRepository.signIn(email: invited.email, password: 'demo');
+
+    final service = AppRestoreService(
+      authRepository: authRepository,
+      familyRepository: familyRepository,
+      profileRepository: InMemoryProfileRepository(),
+      sessionRepository: InMemoryRoutineSessionRepository(),
+    );
+
+    final result = await service.restore();
+
+    // No family and no pending invitation left for the departed adult -
+    // same destination as any other adult with neither.
+    expect(result.destination, AppRestoreDestination.register);
+    expect(result.departureNotices, hasLength(1));
+    expect(result.departureNotices.single.familyName, 'Familia que se borra');
+  });
+
   test('restore lets adult without membership and without invitation register',
       () async {
     final authRepository = InMemoryAuthRepository();
