@@ -194,6 +194,64 @@ abstract interface class FamilyRepository {
     required String invitationId,
     required String userId,
   });
+
+  /// Marks [familyId] as deleted (a 30-day grace period precedes physical
+  /// purge - see purge_expired_deleted_families in
+  /// supabase/migrations/0014_family_deletion.sql) and immediately revokes
+  /// every adult's access by removing their family_members rows - not just
+  /// hiding it in the UI. Every other adult in the family (never [userId])
+  /// gets a [FamilyDepartureNotice] to see next time they load the app. Only
+  /// the family's 'owner' may call this. [userId] identifies the caller - on
+  /// Supabase the RPC re-derives the real caller from auth.uid() regardless
+  /// of what's passed (same reasoning as [createInvitationWithCode]'s
+  /// invitedByUserEmail: local/in-memory backends have no ambient auth
+  /// context to look it up from). Throws [FamilyLifecycleException] with
+  /// code 'FAMILY_DELETE_FORBIDDEN' otherwise.
+  Future<void> deleteFamily({required String familyId, required String userId});
+
+  /// Promotes [newOwnerUserId] - an existing adult in [userId]'s own family -
+  /// to 'owner', and demotes [userId] to 'parent', atomically. The family is
+  /// derived server-side from [userId]'s own membership, not passed: an
+  /// adult belongs to at most one family. Throws [FamilyLifecycleException]
+  /// with code 'TRANSFER_FORBIDDEN' ([userId] isn't an 'owner') or
+  /// 'TRANSFER_TARGET_NOT_MEMBER' (the target isn't in the same family).
+  Future<void> transferFamilyOwnership({
+    required String userId,
+    required String newOwnerUserId,
+  });
+
+  /// Deletes [userId]'s own account. If they're the only adult in their
+  /// family, this deletes the family too (see [deleteFamily]). If they're an
+  /// 'owner' with other adults still in the family, throws
+  /// [FamilyLifecycleException] with code
+  /// 'OWNER_MUST_TRANSFER_OR_DELETE_FAMILY' instead of choosing for them -
+  /// the caller must [transferFamilyOwnership] or explicitly [deleteFamily]
+  /// first.
+  Future<void> deleteMyAccount({required String userId});
+
+  /// Notices left for [userId] when a family they belonged to was deleted by
+  /// someone else (see [deleteFamily]).
+  Future<List<FamilyDepartureNotice>> departureNotices(String userId);
+
+  /// Dismisses (deletes) a departure notice, meant to be called right after
+  /// showing it once.
+  Future<void> dismissDepartureNotice({
+    required String noticeId,
+    required String userId,
+  });
+}
+
+/// Errors from the family-lifecycle RPCs backing [FamilyRepository]'s
+/// deleteFamily/transferFamilyOwnership/deleteMyAccount/departureNotices -
+/// see supabase/migrations/0014_family_deletion.sql for every code these can
+/// carry.
+class FamilyLifecycleException implements Exception {
+  const FamilyLifecycleException(this.code);
+
+  final String code;
+
+  @override
+  String toString() => 'FamilyLifecycleException($code)';
 }
 
 abstract interface class AdultProfileRepository {

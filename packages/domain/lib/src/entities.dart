@@ -589,3 +589,22 @@ class AuditLog extends AppEntity {
   final String action;
   final String targetType;
 }
+
+/// A notice that a family the caller belonged to was deleted by another
+/// adult. Deliberately carries no data about a child - see
+/// departed_family_notices in supabase/migrations/0014_family_deletion.sql:
+/// just enough to show "the family you were part of was deleted" and let the
+/// caller create a new one. Not an [AppEntity]: it has no owner/status/
+/// family_id of its own, it exists precisely because the family it refers to
+/// no longer does.
+class FamilyDepartureNotice {
+  const FamilyDepartureNotice({
+    required this.id,
+    required this.familyName,
+    required this.deletedAt,
+  });
+
+  final String id;
+  final String familyName;
+  final DateTime deletedAt;
+}

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:habitar_domain/domain.dart';
 
 import '../../dependencies.dart';
 
@@ -66,11 +67,17 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                   ]),
                   builder: (context, snapshot) {
                     if (!snapshot.hasData) return const CircularProgressIndicator();
-                    final members = snapshot.data![0] as List;
-                    final user = snapshot.data![1];
-                    final myId = (user as dynamic).metadata?.id ?? (user as dynamic).metadataId ?? null;
-                    final myMembership = members.cast<dynamic>().firstWhere((m) => m.userId == myId, orElse: () => null);
-                    final amOwner = myMembership != null && myMembership.role == 'owner' || (myMembership?.role is Enum && myMembership.role.name == 'owner');
+                    final members = snapshot.data![0] as List<FamilyMember>;
+                    final user = snapshot.data![1] as User?;
+                    final myId = user?.metadata.id;
+                    FamilyMember? myMembership;
+                    for (final m in members) {
+                      if (m.userId == myId) {
+                        myMembership = m;
+                        break;
+                      }
+                    }
+                    final amOwner = myMembership != null && myMembership.role == FamilyMemberRole.owner;
 
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -81,7 +88,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                         for (final m in members)
                           ListTile(
                             title: Text((m.displayName ?? m.email ?? m.userId).toString()),
-                            subtitle: Text((m.role is Enum) ? (m.role.name) : m.role.toString()),
+                            subtitle: Text(m.role.name),
                           ),
                         const SizedBox(height: 16),
                         ElevatedButton(
@@ -136,7 +143,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                             onPressed: _loading ? null : () async {
                               // Transfer owner
                               final options = members.where((m) => m.userId != myId).toList();
-                              final selected = await showDialog<dynamic>(
+                              final selected = await showDialog<FamilyMember?>(
                                 context: context,
                                 builder: (context) => SimpleDialog(
                                   title: const Text('Transferir mi rol de dueño/a'),
@@ -156,7 +163,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                                 if (email != null) {
                                   await authRepo.signIn(email: email, password: password);
                                 }
-                                await familyRepo.transferFamilyOwnership(userId: (current as dynamic).metadata.id, newOwnerUserId: selected.userId);
+                                await familyRepo.transferFamilyOwnership(userId: (current as User).metadata.id, newOwnerUserId: selected.userId);
                                 if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Propiedad transferida')));
                               });
                             },

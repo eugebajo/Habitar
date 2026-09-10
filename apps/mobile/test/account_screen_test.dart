@@ -2,12 +2,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:habitar_application/application.dart';
 import 'package:habitar_data/data.dart';
-import 'package:habitar_domain/domain.dart';
-
+// import 'package:habitar_domain/domain.dart'; // unused in this test
 import 'package:habitar_mobile/src/features/account/account_screen.dart';
 import 'package:habitar_mobile/src/dependencies.dart';
+// Removed duplicate import of 'package:flutter_riverpod/flutter_riverpod.dart'
 
 void main() {
   testWidgets('Account screen shows account actions for owner', (tester) async {
@@ -21,7 +20,7 @@ void main() {
         overrides: [
           authRepositoryProvider.overrideWithValue(auth),
           familyRepositoryProvider.overrideWithValue(familyRepo),
-          currentFamilyIdProvider.overrideWithValue(family.metadata.id),
+          currentFamilyIdProvider.overrideWith((ref) => family.metadata.id),
         ],
         child: const MaterialApp(home: AccountScreen()),
       ),

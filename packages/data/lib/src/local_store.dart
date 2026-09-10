@@ -33,4 +33,5 @@ class LocalStoreCollections {
   static const pendingFamilyBootstrap = 'pending_family_bootstrap';
   static const syncQueue = 'sync_queue';
   static const familyActivityEvents = 'family_activity_events';
+  static const departedFamilyNotices = 'departed_family_notices';
 }

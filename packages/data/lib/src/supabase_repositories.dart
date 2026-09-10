@@ -244,6 +244,105 @@ class SupabaseFamilyRepository implements FamilyRepository {
       throw FamilyInvitationException(error.message);
     }
   }
+
+  @override
+  Future<void> deleteFamily({
+    required String familyId,
+    required String userId,
+  }) async {
+    // userId isn't sent to the RPC - delete_family authorizes against
+    // auth.uid() regardless of what the client passes (same reasoning as
+    // createInvitationWithCode's invitedByUserEmail). This check only
+    // catches a caller passing a stale/wrong id for itself before wasting a
+    // round trip.
+    final currentUserId = _currentUserId(client);
+    if (userId != currentUserId) {
+      throw StateError('Cannot delete a family for another user.');
+    }
+    try {
+      _debugLog('FAMILY DELETE: START family_id=$familyId');
+      await client.rpc(
+        'delete_family',
+        params: {'target_family_id': familyId},
+      );
+      _debugLog('FAMILY DELETE RESULT: OK');
+    } on PostgrestException catch (error) {
+      _debugLog('FAMILY DELETE RESULT: ERROR');
+      _logPostgrestError(error);
+      throw FamilyLifecycleException(error.message);
+    }
+  }
+
+  @override
+  Future<void> transferFamilyOwnership({
+    required String userId,
+    required String newOwnerUserId,
+  }) async {
+    final currentUserId = _currentUserId(client);
+    if (userId != currentUserId) {
+      throw StateError('Cannot transfer ownership for another user.');
+    }
+    try {
+      _debugLog('FAMILY OWNERSHIP TRANSFER: START');
+      await client.rpc(
+        'transfer_family_ownership',
+        params: {'new_owner_user_id': newOwnerUserId},
+      );
+      _debugLog('FAMILY OWNERSHIP TRANSFER RESULT: OK');
+    } on PostgrestException catch (error) {
+      _debugLog('FAMILY OWNERSHIP TRANSFER RESULT: ERROR');
+      _logPostgrestError(error);
+      throw FamilyLifecycleException(error.message);
+    }
+  }
+
+  @override
+  Future<void> deleteMyAccount({required String userId}) async {
+    final currentUserId = _currentUserId(client);
+    if (userId != currentUserId) {
+      throw StateError('Cannot delete another user\'s account.');
+    }
+    try {
+      _debugLog('ACCOUNT DELETE: START');
+      await client.rpc('delete_my_account');
+      _debugLog('ACCOUNT DELETE RESULT: OK');
+    } on PostgrestException catch (error) {
+      _debugLog('ACCOUNT DELETE RESULT: ERROR');
+      _logPostgrestError(error);
+      throw FamilyLifecycleException(error.message);
+    }
+  }
+
+  @override
+  Future<List<FamilyDepartureNotice>> departureNotices(String userId) async {
+    // RLS already scopes this to the caller's own rows (user_id = auth.uid())
+    // regardless of userId - see 0014_family_deletion.sql. Not filtered by
+    // userId here on purpose, same as other reads in this class.
+    final rows = await client
+        .from('departed_family_notices')
+        .select()
+        .order('created_at', ascending: false);
+    return rows.map(_familyDepartureNoticeFromRow).toList(growable: false);
+  }
+
+  @override
+  Future<void> dismissDepartureNotice({
+    required String noticeId,
+    required String userId,
+  }) async {
+    await client
+        .from('departed_family_notices')
+        .delete()
+        .eq('id', noticeId);
+  }
+}
+
+FamilyDepartureNotice _familyDepartureNoticeFromRow(Map<String, dynamic> row) {
+  return FamilyDepartureNotice(
+    id: row['id'] as String,
+    familyName: row['family_name'] as String,
+    deletedAt: DateTime.parse(row['deleted_at'] as String),
+  );
 }
 
 class SupabaseProfileRepository implements ProfileRepository {

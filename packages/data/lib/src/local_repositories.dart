@@ -279,6 +279,146 @@ class LocalFamilyRepository implements FamilyRepository {
     return member;
   }
 
+  @override
+  Future<void> deleteFamily({
+    required String familyId,
+    required String userId,
+  }) async {
+    final members = await membersForFamily(familyId);
+    final isOwner = members.any((m) => m.userId == userId && m.role == FamilyMemberRole.owner);
+    if (!isOwner) {
+      throw const FamilyLifecycleException('FAMILY_DELETE_FORBIDDEN');
+    }
+    final familyRecord = await store.get(LocalStoreCollections.families, familyId);
+    final familyName = familyRecord == null ? 'Familia' : (familyRecord['name'] as String? ?? 'Familia');
+
+    // notify other adults
+    for (final m in members.where((m) => m.userId != userId)) {
+      final id = _uuid.v4();
+      await store.put(LocalStoreCollections.departedFamilyNotices, id, {
+        'id': id,
+        'user_id': m.userId,
+        'family_name': familyName,
+        'deleted_at': DateTime.now().toIso8601String(),
+        'created_at': DateTime.now().toIso8601String(),
+      });
+    }
+
+    // remove family and members
+    await store.delete(LocalStoreCollections.families, familyId);
+    final memberRecords = await store.list(LocalStoreCollections.familyMembers);
+    for (final record in memberRecords) {
+      if (record['family_id'] == familyId) {
+        final id = _metadataId(record);
+        if (id != null) await store.delete(LocalStoreCollections.familyMembers, id);
+      }
+    }
+  }
+
+  @override
+  Future<void> transferFamilyOwnership({
+    required String userId,
+    required String newOwnerUserId,
+  }) async {
+    final memberRecords = await store.list(LocalStoreCollections.familyMembers);
+    String? ownerId;
+    String? targetId;
+    String? familyId;
+    for (final record in memberRecords) {
+      final member = _familyMemberFromJson(record);
+      if (member.userId == userId && member.role == FamilyMemberRole.owner) {
+        ownerId = _metadataId(record);
+        familyId = member.familyId;
+      }
+      if (member.userId == newOwnerUserId) {
+        targetId = _metadataId(record);
+        familyId ??= member.familyId;
+      }
+    }
+    if (ownerId == null || targetId == null || familyId == null) {
+      if (ownerId == null) throw const FamilyLifecycleException('TRANSFER_FORBIDDEN');
+      throw const FamilyLifecycleException('TRANSFER_TARGET_NOT_MEMBER');
+    }
+    // update target -> owner
+    final targetRecord = await store.get(LocalStoreCollections.familyMembers, targetId);
+    if (targetRecord != null) {
+      final tm = _familyMemberFromJson(targetRecord);
+      final updated = _familyMemberToJson(FamilyMember(
+        metadata: tm.metadata,
+        familyId: tm.familyId,
+        userId: tm.userId,
+        role: FamilyMemberRole.owner,
+        email: tm.email,
+        displayName: tm.displayName,
+      ));
+      await store.put(LocalStoreCollections.familyMembers, targetId, updated);
+    }
+    // update owner -> parent
+    final ownerRecord = await store.get(LocalStoreCollections.familyMembers, ownerId);
+    if (ownerRecord != null) {
+      final om = _familyMemberFromJson(ownerRecord);
+      final updated = _familyMemberToJson(FamilyMember(
+        metadata: om.metadata,
+        familyId: om.familyId,
+        userId: om.userId,
+        role: FamilyMemberRole.parent,
+        email: om.email,
+        displayName: om.displayName,
+      ));
+      await store.put(LocalStoreCollections.familyMembers, ownerId, updated);
+    }
+  }
+
+  @override
+  Future<void> deleteMyAccount({required String userId}) async {
+    final allMembers = (await store.list(LocalStoreCollections.familyMembers)).map(_familyMemberFromJson).toList();
+    final ownerMembership = allMembers.where((m) => m.userId == userId && m.role == FamilyMemberRole.owner);
+    if (ownerMembership.isNotEmpty) {
+      final familyId = ownerMembership.first.familyId;
+      final otherMembers = allMembers.where((m) => m.familyId == familyId && m.userId != userId);
+      if (otherMembers.isNotEmpty) {
+        throw const FamilyLifecycleException('OWNER_MUST_TRANSFER_OR_DELETE_FAMILY');
+      }
+      await deleteFamily(familyId: familyId, userId: userId);
+      return;
+    }
+    // not an owner: remove their membership
+    final memberRecords = await store.list(LocalStoreCollections.familyMembers);
+    for (final record in memberRecords) {
+      final m = _familyMemberFromJson(record);
+      if (m.userId == userId) {
+        final id = _metadataId(record);
+        if (id != null) await store.delete(LocalStoreCollections.familyMembers, id);
+      }
+    }
+  }
+
+  @override
+  Future<List<FamilyDepartureNotice>> departureNotices(String userId) async {
+    final records = await store.list(LocalStoreCollections.departedFamilyNotices);
+    final notices = <FamilyDepartureNotice>[];
+    for (final r in records) {
+      if ((r['user_id'] as String?) != userId) continue;
+      notices.add(FamilyDepartureNotice(
+        id: r['id'] as String,
+        familyName: r['family_name'] as String,
+        deletedAt: DateTime.parse(r['deleted_at'] as String),
+      ));
+    }
+    return notices;
+  }
+
+  @override
+  Future<void> dismissDepartureNotice({required String noticeId, required String userId}) async {
+    final records = await store.list(LocalStoreCollections.departedFamilyNotices);
+    for (final r in records) {
+      if ((r['id'] as String?) == noticeId && (r['user_id'] as String?) == userId) {
+        final id = _metadataId(r);
+        if (id != null) await store.delete(LocalStoreCollections.departedFamilyNotices, id);
+      }
+    }
+  }
+
   AdultInvitation _acceptedInvitation(
     AdultInvitation invitation,
     String userId,

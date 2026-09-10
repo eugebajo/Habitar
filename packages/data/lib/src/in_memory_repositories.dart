@@ -61,6 +61,10 @@ class InMemoryFamilyRepository implements FamilyRepository {
   final List<FamilyMember> _members = [];
   final List<AdultInvitation> _invitations = [];
   final Map<String, String> _invitationCodes = {};
+  // Keyed by userId, not exposed on FamilyDepartureNotice itself - on
+  // Supabase, RLS already scopes departed_family_notices to the caller, so
+  // the domain entity has no reason to carry whose notice it is.
+  final Map<String, List<FamilyDepartureNotice>> _departureNoticesByUser = {};
 
   @override
   Future<Family> createFamily(
@@ -449,6 +453,113 @@ class InMemoryFamilyRepository implements FamilyRepository {
       expiresAt: invitation.expiresAt,
       invitedByUserId: invitation.invitedByUserId,
       acceptedByUserId: acceptedByUserId ?? invitation.acceptedByUserId,
+    );
+  }
+
+  @override
+  Future<void> deleteFamily({
+    required String familyId,
+    required String userId,
+  }) async {
+    final isOwner = _members.any((member) =>
+        member.familyId == familyId &&
+        member.userId == userId &&
+        member.role == FamilyMemberRole.owner);
+    if (!isOwner) {
+      throw const FamilyLifecycleException('FAMILY_DELETE_FORBIDDEN');
+    }
+    final familyEntries = _familiesByOwner.entries
+        .where((entry) => entry.value.metadata.id == familyId)
+        .toList(growable: false);
+    final familyName =
+        familyEntries.isEmpty ? 'Familia' : familyEntries.first.value.name;
+
+    // Notify every other adult before cutting their access, same order as
+    // delete_family in 0014_family_deletion.sql - never the one deleting.
+    final departingMembers = _members
+        .where((member) =>
+            member.familyId == familyId && member.userId != userId)
+        .toList(growable: false);
+    for (final member in departingMembers) {
+      _departureNoticesByUser.putIfAbsent(member.userId, () => []).add(
+            FamilyDepartureNotice(
+              id: _uuid.v4(),
+              familyName: familyName,
+              deletedAt: DateTime.now(),
+            ),
+          );
+    }
+
+    if (familyEntries.isNotEmpty) {
+      _familiesByOwner.remove(familyEntries.first.key);
+    }
+    _members.removeWhere((member) => member.familyId == familyId);
+  }
+
+  @override
+  Future<void> transferFamilyOwnership({
+    required String userId,
+    required String newOwnerUserId,
+  }) async {
+    final ownerIndex = _members.indexWhere((member) =>
+        member.userId == userId && member.role == FamilyMemberRole.owner);
+    if (ownerIndex < 0) {
+      throw const FamilyLifecycleException('TRANSFER_FORBIDDEN');
+    }
+    final familyId = _members[ownerIndex].familyId;
+    final targetIndex = _members.indexWhere((member) =>
+        member.familyId == familyId && member.userId == newOwnerUserId);
+    if (targetIndex < 0) {
+      throw const FamilyLifecycleException('TRANSFER_TARGET_NOT_MEMBER');
+    }
+    _members[targetIndex] =
+        _withRole(_members[targetIndex], FamilyMemberRole.owner);
+    _members[ownerIndex] =
+        _withRole(_members[ownerIndex], FamilyMemberRole.parent);
+  }
+
+  @override
+  Future<void> deleteMyAccount({required String userId}) async {
+    final ownerMembership = _members.where((member) =>
+        member.userId == userId && member.role == FamilyMemberRole.owner);
+    if (ownerMembership.isNotEmpty) {
+      final familyId = ownerMembership.first.familyId;
+      final otherMembers = _members.where((member) =>
+          member.familyId == familyId && member.userId != userId);
+      if (otherMembers.isNotEmpty) {
+        throw const FamilyLifecycleException(
+            'OWNER_MUST_TRANSFER_OR_DELETE_FAMILY');
+      }
+      // Sole adult of their family: deleting the personal account IS
+      // deleting the family - same rule as delete_my_account server-side.
+      await deleteFamily(familyId: familyId, userId: userId);
+    } else {
+      _members.removeWhere((member) => member.userId == userId);
+    }
+  }
+
+  @override
+  Future<List<FamilyDepartureNotice>> departureNotices(String userId) async {
+    return List.unmodifiable(_departureNoticesByUser[userId] ?? const []);
+  }
+
+  @override
+  Future<void> dismissDepartureNotice({
+    required String noticeId,
+    required String userId,
+  }) async {
+    _departureNoticesByUser[userId]
+        ?.removeWhere((notice) => notice.id == noticeId);
+  }
+
+  FamilyMember _withRole(FamilyMember member, FamilyMemberRole role) {
+    return FamilyMember(
+      metadata: member.metadata,
+      familyId: member.familyId,
+      userId: member.userId,
+      role: role,
+      email: member.email,
+      displayName: member.displayName,
     );
   }
 }
