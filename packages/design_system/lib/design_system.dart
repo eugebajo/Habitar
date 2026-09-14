@@ -33,6 +33,33 @@ class HabitarColors {
   static const supportRose = Color(0xFFEAA17E);
   static const lavender = Color(0xFFC7BDD9);
   static const danger = Color(0xFFC96055);
+
+  // ---------------------------------------------------------------------
+  // Paleta de docs/prototipo-habitar.md (seccion "Paleta"), agregada para
+  // el bloque 4 de la etapa 1 del rediseño. Verificacion hecha byte a
+  // byte contra los tokens de arriba antes de agregar nada nuevo: NINGUNO
+  // de los 13 colores de la spec coincide exactamente con un token
+  // existente - ni siquiera los verdes y el crema, que se habia dado por
+  // confirmado que coincidian sin cambios. El mas cercano es
+  // greenLight/#EAF3DE vs surfaceMist/#EAF3EA (difieren en el ultimo
+  // byte), y ninguno de los otros 12 llega ni a esa distancia. Por eso
+  // estos son TODOS tokens nuevos, no un alias de los de arriba - los de
+  // arriba se dejan intactos porque las pantallas actuales (61 usos de
+  // textTheme, mas los colores de esta clase) siguen dependiendo de
+  // ellos y esta etapa no toca pantallas individuales todavia.
+  static const cream = Color(0xFFFDFBF3);
+  static const white = Color(0xFFFFFFFF);
+  static const green = Color(0xFF3B6D11);
+  static const greenDark = Color(0xFF173404);
+  static const greenLight = Color(0xFFEAF3DE);
+  static const greenMedium = Color(0xFFC0DD97);
+  static const amber = Color(0xFFFAC775);
+  static const amberText = Color(0xFF412402);
+  static const amberLight = Color(0xFFFAEEDA);
+  static const amberLightText = Color(0xFF854F0B);
+  static const violet = Color(0xFFEEEDFE);
+  static const violetText = Color(0xFF26215C);
+  static const gray = Color(0xFF5F5E5A);
 }
 
 class HabitarSpacing {
@@ -50,6 +77,44 @@ class HabitarRadius {
   static const lg = 28.0;
   static const xl = 36.0;
   static const pill = 999.0;
+
+  // Radios de docs/prototipo-habitar.md (seccion "Formas"), bloque 4.
+  // Nuevos, sin tocar los de arriba por la misma razon que HabitarColors:
+  // las pantallas actuales siguen usando sm/md/lg/xl y esta etapa no las
+  // toca todavia.
+  /// Tarjetas del adulto: la spec da un rango de 12-14px - se fija el
+  /// techo del rango como valor unico a usar.
+  static const card = 14.0;
+
+  /// Botones primarios. La spec da un numero unico, sin rango.
+  static const button = 14.0;
+
+  /// Tarjetas grandes/focales del espacio del chico (tarjeta "Ahora" de
+  /// c-inicio, tarjeta del paso en c-paso) - rango 16-20px, se fija el
+  /// techo porque son los dos casos concretos que la spec describe con
+  /// numero exacto (ambas en 20px). Las tarjetas chicas dentro de
+  /// pantallas del chico (p.ej. la tarjeta "proxima rutina" del logro,
+  /// 14px en la spec) usan [card], no este token - no todo lo que
+  /// aparece en una pantalla del chico usa el radio "de chico".
+  static const childCard = 20.0;
+
+  /// Cuadrado de IconoRutina (38-40px de lado) - ver HabitarSpacing y el
+  /// componente IconoRutina en design_system.dart.
+  static const routineIcon = 10.0;
+}
+
+/// Alturas minimas de boton de docs/prototipo-habitar.md, bloque 4.
+/// Deliberadamente NO conectadas todavia a filledButtonTheme/
+/// outlinedButtonTheme de buildHabitarTheme() (que hoy usan 58/56px,
+/// heredados del theme viejo) - cambiar esos valores globales cambiaria
+/// la altura de cada boton de cada pantalla ya existente, que es
+/// exactamente lo que "no toques pantallas individuales todavia" pide
+/// evitar en esta etapa. Quedan definidas para que las etapas siguientes
+/// las usen al migrar cada pantalla, en vez de hardcodear 44/56 de nuevo
+/// en cada una.
+class HabitarButtonSize {
+  static const adultMinHeight = 44.0;
+  static const childMinHeight = 56.0;
 }
 
 class HabitarMotion {
