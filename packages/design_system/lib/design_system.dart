@@ -1085,3 +1085,221 @@ class EmptyState extends StatelessWidget {
         ),
       );
 }
+
+// ---------------------------------------------------------------------------
+// Bloque 3 de la etapa 1 del rediseño - los 4 componentes reutilizables de
+// docs/prototipo-habitar.md, seccion "Componentes reutilizables". Usan los
+// tokens nuevos de HabitarColors/HabitarRadius (bloque 4), no los viejos -
+// son componentes nuevos para pantallas que todavia no existen en la app,
+// no un reemplazo de HabitarPill/HabitarCard, que siguen sirviendo a las
+// pantallas actuales.
+// ---------------------------------------------------------------------------
+
+/// Barra de progreso por segmentos. Nunca muestra numeros ni porcentajes -
+/// ver docs/prototipo-habitar.md, correccion 3: esa restriccion es a
+/// proposito para el espacio del chico (Progreso, la pantalla del adulto,
+/// si puede mostrar numeros, pero con [ProgressRing] u otro componente, no
+/// con este). [total] segmentos en fila, cada uno `flex: 1`; los primeros
+/// [done] se pintan llenos.
+class SegmentedBar extends StatelessWidget {
+  const SegmentedBar({
+    super.key,
+    required this.total,
+    required this.done,
+    this.height = 4,
+  });
+
+  /// Cantidad total de segmentos (pasos de una rutina).
+  final int total;
+
+  /// Cuantos de esos segmentos ya estan completados. Se recorta a
+  /// `[0, total]` - un valor fuera de rango nunca desborda el widget ni
+  /// pinta de mas.
+  final int done;
+
+  /// 4px para el adulto, 6px para el chico (spec). El radio de cada
+  /// segmento se deriva de esto (2px o 3px) en vez de ser otro parametro -
+  /// evita que alguien pase una combinacion alto/radio que la spec no
+  /// contempla.
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    final radius = height >= 6 ? 3.0 : 2.0;
+    if (total <= 0) {
+      return SizedBox(height: height);
+    }
+    final clampedDone = done.clamp(0, total);
+    return Semantics(
+      label: 'Progreso: $clampedDone de $total pasos completados',
+      child: Row(
+        children: [
+          for (var i = 0; i < total; i++) ...[
+            if (i > 0) const SizedBox(width: 4),
+            Expanded(
+              child: Container(
+                height: height,
+                decoration: BoxDecoration(
+                  color: i < clampedDone
+                      ? HabitarColors.green
+                      : HabitarColors.greenMedium,
+                  borderRadius: BorderRadius.circular(radius),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Los tres estados de una rutina que puede mostrar [EstadoPill] - ver
+/// docs/prototipo-habitar.md, componente "EstadoPill".
+enum EstadoRutina { completada, enCurso, programada }
+
+/// Pastilla de estado de rutina. Mapeo fijo de color por estado - no
+/// parametrizable, a proposito: el mismo estado tiene que verse igual en
+/// toda la app (ver docs/design-system.md, principio de "Previsibilidad").
+class EstadoPill extends StatelessWidget {
+  const EstadoPill({super.key, required this.estado});
+
+  final EstadoRutina estado;
+
+  @override
+  Widget build(BuildContext context) {
+    final (label, background, foreground) = switch (estado) {
+      EstadoRutina.completada => (
+          'Completada',
+          HabitarColors.greenLight,
+          HabitarColors.green,
+        ),
+      EstadoRutina.enCurso => (
+          'En curso',
+          HabitarColors.green,
+          HabitarColors.white,
+        ),
+      // #EFEFEF es un gris puntual de este componente, no esta en la
+      // Paleta general de la spec - no se promueve a HabitarColors por
+      // eso (ver el comentario de bloque 4 sobre que cuenta como
+      // "paleta").
+      EstadoRutina.programada => (
+          'Programada',
+          const Color(0xFFEFEFEF),
+          HabitarColors.gray,
+        ),
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(HabitarRadius.pill),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontFamily: HabitarTypography.body,
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: foreground,
+        ),
+      ),
+    );
+  }
+}
+
+/// Interruptor booleano plano - ver docs/prototipo-habitar.md, componente
+/// "Toggle" (nombrado `HabitarToggle` aca para no chocar con
+/// `package:flutter/material.dart`'s `Switch`/`Toggle`-like widgets ni
+/// con el nombre generico "Toggle").
+class HabitarToggle extends StatelessWidget {
+  const HabitarToggle({super.key, required this.value, this.onChanged});
+
+  final bool value;
+
+  /// Si es null, el toggle se muestra pero no responde a toques - mismo
+  /// patron que los botones deshabilitados del resto del repo
+  /// (`onPressed: null`).
+  final ValueChanged<bool>? onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      toggled: value,
+      button: onChanged != null,
+      child: GestureDetector(
+        onTap: onChanged == null ? null : () => onChanged!(!value),
+        child: AnimatedContainer(
+          duration: HabitarMotion.gentle,
+          width: 44,
+          height: 24,
+          padding: const EdgeInsets.all(2),
+          decoration: BoxDecoration(
+            color: value ? HabitarColors.green : const Color(0xFFD1D1D1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: AnimatedAlign(
+            duration: HabitarMotion.gentle,
+            alignment: value ? Alignment.centerRight : Alignment.centerLeft,
+            child: Container(
+              width: 20,
+              height: 20,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Los tres momentos del dia que puede representar [IconoRutina] - ver
+/// docs/prototipo-habitar.md, componente "IconoRutina".
+enum MomentoRutina { manana, tarde, noche }
+
+/// Cuadrado redondeado con el icono de una rutina segun su momento del
+/// dia. Fondo e icono son un par fijo por [MomentoRutina] - igual que
+/// [EstadoPill], no parametrizable: el mismo momento tiene que verse
+/// igual en toda la app.
+class IconoRutina extends StatelessWidget {
+  const IconoRutina({super.key, required this.momento, this.size = 40});
+
+  final MomentoRutina momento;
+
+  /// 38-40px segun la spec. Default 40 (el tope del rango).
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final (background, foreground, icon) = switch (momento) {
+      MomentoRutina.manana => (
+          HabitarColors.amberLight,
+          HabitarColors.amberLightText,
+          Icons.wb_sunny_rounded,
+        ),
+      MomentoRutina.tarde => (
+          HabitarColors.amber,
+          HabitarColors.amberText,
+          Icons.backpack_rounded,
+        ),
+      MomentoRutina.noche => (
+          HabitarColors.violet,
+          HabitarColors.violetText,
+          Icons.nightlight_round,
+        ),
+    };
+    return Container(
+      width: size,
+      height: size,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(HabitarRadius.routineIcon),
+      ),
+      child: Icon(icon, color: foreground, size: size * .55),
+    );
+  }
+}
