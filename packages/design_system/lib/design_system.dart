@@ -290,7 +290,20 @@ ThemeData buildHabitarTheme({bool lowStimulation = false}) {
         minimumSize: const Size(0, 58),
         elevation: 7,
         shadowColor: HabitarColors.deepGreen.withValues(alpha: .22),
-        textStyle: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
+        // Bajado de 17 a 16: a 17px, Nunito w900 mide mas ancho que el
+        // Roboto w900 que tenia antes de la tipografia del bloque 1 - lo
+        // suficiente para que "Crear mi espacio" + icono desborde el
+        // FilledButton de onboarding_screen.dart a 390px de ancho (hallazgo
+        // real, no hipotetico - encontrado generando capturas para el
+        // reporte de este bloque). Se ajusta aca, en el theme, no en la
+        // pantalla - es exactamente el tipo de regresion que le
+        // corresponde a la tipografia arreglar, no a "tocar pantallas
+        // individuales".
+        textStyle: const TextStyle(
+          fontFamily: HabitarTypography.body,
+          fontSize: 16,
+          fontWeight: FontWeight.w900,
+        ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(HabitarRadius.md),
         ),
@@ -300,7 +313,11 @@ ThemeData buildHabitarTheme({bool lowStimulation = false}) {
       style: OutlinedButton.styleFrom(
         foregroundColor: HabitarColors.deepGreen,
         minimumSize: const Size(0, 56),
-        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+        textStyle: const TextStyle(
+          fontFamily: HabitarTypography.body,
+          fontSize: 16,
+          fontWeight: FontWeight.w800,
+        ),
         side: const BorderSide(color: HabitarColors.deepGreen, width: 1.2),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(HabitarRadius.md),
