@@ -1,6 +1,21 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
+/// Nombres de familia tipografica. Ver docs/prototipo-habitar.md, seccion
+/// "Tipografia" - Fraunces para titulos, Nunito para cuerpo e interfaz.
+/// Cargadas como assets locales en apps/mobile/assets/fonts/ (declaradas en
+/// apps/mobile/pubspec.yaml) en vez de via el paquete google_fonts: la app
+/// tiene que poder mostrar texto sin depender de la red (un chico abriendo
+/// su rutina no puede esperar un fetch de fuente), y evita el costo/latencia
+/// de un fetch en el primer arranque. El costo es que los .ttf viajan en el
+/// AAB - con solo los pesos que la escala de abajo realmente usa (3 de
+/// Fraunces, 5 de Nunito, ~305KB sin comprimir entre los 8) es un costo
+/// bajo comparado con depender de conectividad para texto.
+class HabitarTypography {
+  static const display = 'Fraunces';
+  static const body = 'Nunito';
+}
+
 class HabitarColors {
   static const ink = Color(0xFF243330);
   static const mutedInk = Color(0xFF65746F);
@@ -54,43 +69,111 @@ ThemeData buildHabitarTheme({bool lowStimulation = false}) {
     useMaterial3: true,
     colorScheme: colorScheme,
     scaffoldBackgroundColor: HabitarColors.surface,
-    fontFamily: 'Roboto',
+    // Nunito es la familia por default: cualquier TextStyle que no fije la
+    // suya (fontSize: hardcodeado incluido) la hereda vía el merge con
+    // DefaultTextStyle - es lo que ya hacia 'Roboto' antes de este cambio,
+    // asi que un TextStyle suelto sin fontFamily explicito sigue
+    // resolviendo bien sin tocar cada sitio de llamada. Los niveles de
+    // titulo (Fraunces) se fijan explicitamente mas abajo, uno por uno.
+    fontFamily: HabitarTypography.body,
     textTheme: const TextTheme(
+      // Escala nueva por HabitarTypography.md (docs/prototipo-habitar.md,
+      // seccion Tipografia): titulos de pantalla 22-28px serif, cuerpo
+      // 13-15px sans, etiquetas 10-12px con letter-spacing 0.06-0.1em.
+      // displayLarge no tiene uso real en apps/mobile hoy (0 ocurrencias
+      // verificadas) - se deja definido y coherente con la escala nueva
+      // por si alguna pantalla futura lo necesita, en vez de dejarlo con
+      // los valores viejos de Roboto.
       displayLarge: TextStyle(
-        fontSize: 48,
-        fontWeight: FontWeight.w900,
+        fontFamily: HabitarTypography.display,
+        fontSize: 32,
+        fontWeight: FontWeight.w700,
         color: HabitarColors.deepGreen,
-        height: 1.02,
+        height: 1.08,
       ),
+      // Titulo de pantalla principal (el <h1> de casi todos los headers) -
+      // tope del rango 22-28 de la spec. Antes: 36px Roboto w900.
       displaySmall: TextStyle(
-        fontSize: 36,
-        fontWeight: FontWeight.w900,
-        color: HabitarColors.deepGreen,
-        height: 1.05,
-      ),
-      headlineSmall: TextStyle(
+        fontFamily: HabitarTypography.display,
         fontSize: 28,
-        fontWeight: FontWeight.w900,
+        fontWeight: FontWeight.w600,
         color: HabitarColors.deepGreen,
         height: 1.12,
       ),
-      titleLarge: TextStyle(
-        fontSize: 22,
-        fontWeight: FontWeight.w800,
-        color: HabitarColors.ink,
-        height: 1.18,
+      // Titulo de tarjeta destacada. Antes: 28px Roboto w900.
+      headlineSmall: TextStyle(
+        fontFamily: HabitarTypography.display,
+        fontSize: 24,
+        fontWeight: FontWeight.w600,
+        color: HabitarColors.deepGreen,
+        height: 1.16,
       ),
+      // Titulo de item de lista / numero destacado - piso del rango 22-28.
+      // Antes: 22px Roboto w800.
+      titleLarge: TextStyle(
+        fontFamily: HabitarTypography.display,
+        fontSize: 22,
+        fontWeight: FontWeight.w600,
+        color: HabitarColors.ink,
+        height: 1.2,
+      ),
+      // Subtitulo de tarjeta ("Resumen semanal", titulo de _AttentionTile).
+      // La spec de docs/prototipo-habitar.md no define un registro propio
+      // para esto - queda serif, como ya proponia docs/design-system.md,
+      // porque en el uso real (family_dashboard_screen.dart,
+      // portal_screens.dart) funciona como encabezado corto de tarjeta,
+      // no como copy de lectura larga. Antes: 17px Roboto w800.
       titleMedium: TextStyle(
-        fontSize: 17,
-        fontWeight: FontWeight.w800,
+        fontFamily: HabitarTypography.display,
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
         color: HabitarColors.ink,
         height: 1.25,
       ),
-      bodyLarge:
-          TextStyle(fontSize: 17, height: 1.45, color: HabitarColors.ink),
-      bodyMedium:
-          TextStyle(fontSize: 15, height: 1.45, color: HabitarColors.ink),
-      labelLarge: TextStyle(fontWeight: FontWeight.w800, letterSpacing: 0),
+      // Cuerpo principal - tope del rango 13-15. Antes: 17px Roboto.
+      bodyLarge: TextStyle(
+        fontFamily: HabitarTypography.body,
+        fontSize: 15,
+        height: 1.45,
+        color: HabitarColors.ink,
+      ),
+      // Cuerpo secundario - piso del rango 13-15. Antes: 15px Roboto.
+      bodyMedium: TextStyle(
+        fontFamily: HabitarTypography.body,
+        fontSize: 13,
+        height: 1.45,
+        color: HabitarColors.ink,
+      ),
+      // Etiquetas uppercase (el texto en si no se transforma a mayusculas
+      // por el TextStyle - Flutter no tiene text-transform - hay que
+      // escribirlo en mayusculas en cada sitio de llamada, igual que ya
+      // hace 'AHORA' en la spec). letterSpacing en px absolutos, no em:
+      // ~0.08em de cada tamaño, dentro del rango 0.06-0.1em pedido.
+      labelLarge: TextStyle(
+        fontFamily: HabitarTypography.body,
+        fontSize: 12,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0.96,
+        color: HabitarColors.mutedInk,
+      ),
+      labelMedium: TextStyle(
+        fontFamily: HabitarTypography.body,
+        fontSize: 11,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0.88,
+        color: HabitarColors.mutedInk,
+      ),
+      // Piso del rango 10-12 - es el tamaño que usa la barra de navegacion
+      // inferior (ver HabitarBottomNav en adult_shell.dart, que fija su
+      // propio letterSpacing de 0.04em segun la spec de navegacion, no
+      // este de 0.08em general).
+      labelSmall: TextStyle(
+        fontFamily: HabitarTypography.body,
+        fontSize: 10,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0.8,
+        color: HabitarColors.mutedInk,
+      ),
     ),
     appBarTheme: const AppBarTheme(
       backgroundColor: HabitarColors.surface,
@@ -99,9 +182,10 @@ ThemeData buildHabitarTheme({bool lowStimulation = false}) {
       elevation: 0,
       scrolledUnderElevation: 0,
       titleTextStyle: TextStyle(
+        fontFamily: HabitarTypography.display,
         color: HabitarColors.deepGreen,
-        fontSize: 27,
-        fontWeight: FontWeight.w900,
+        fontSize: 22,
+        fontWeight: FontWeight.w600,
       ),
     ),
     cardTheme: CardThemeData(

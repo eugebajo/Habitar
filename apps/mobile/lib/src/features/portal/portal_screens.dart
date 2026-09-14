@@ -381,10 +381,9 @@ class _ProfileSelector extends ConsumerWidget {
               const SizedBox(width: 12),
               Expanded(
                   child: Text(name,
-                      style: const TextStyle(
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w900,
-                          color: HabitarColors.deepGreen,
-                          fontSize: 18))),
+                          color: HabitarColors.deepGreen))),
               const Icon(Icons.keyboard_arrow_down_rounded),
             ]),
           );
