@@ -58,6 +58,15 @@ class _RoutineSetupScreenState extends ConsumerState<RoutineSetupScreen> {
     super.initState();
     if (_isEditing) {
       _loadRoutine();
+    } else {
+      // Etapa 3: "crear una rutina" es la otra entrada donde se pide el
+      // permiso de notificaciones (la primera es Familia, ver
+      // profiles_screen.dart) - nunca al editar una ya existente, y nunca
+      // al arrancar la app.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ref.read(pushNotificationServiceProvider).requestPermissionIfNeeded(context);
+      });
     }
   }
 

@@ -34,4 +34,7 @@ class LocalStoreCollections {
   static const syncQueue = 'sync_queue';
   static const familyActivityEvents = 'family_activity_events';
   static const departedFamilyNotices = 'departed_family_notices';
+  static const deviceTokens = 'device_tokens';
+  static const pushNotificationPreferences = 'push_notification_preferences';
+  static const appFlags = 'app_flags';
 }

@@ -608,3 +608,89 @@ class FamilyDepartureNotice {
   final String familyName;
   final DateTime deletedAt;
 }
+
+/// Etapa 3 (notificaciones push). Un token de FCM para un dispositivo de un
+/// adulto - ver supabase/migrations/0015_device_tokens.sql. No es un
+/// [AppEntity]: no tiene owner/status propios, es un dato tecnico del
+/// dispositivo, no un dato familiar. Un mismo [userId] puede tener varios
+/// [DeviceToken] (uno por dispositivo instalado) - la clave unica real es
+/// [token] solo, nunca la combinacion con [userId] ni [platform] (ver el
+/// comentario de la tabla en la migracion para el porque).
+class DeviceToken {
+  const DeviceToken({
+    required this.id,
+    required this.userId,
+    required this.token,
+    required this.platform,
+  });
+
+  final String id;
+  final String userId;
+  final String token;
+
+  /// 'android' o 'ios' - ver el check constraint de device_tokens.platform.
+  final String platform;
+}
+
+/// Etapa 3 (notificaciones push). Preferencias de aviso push POR ADULTO -
+/// ver public.notification_preferences_by_user en
+/// supabase/migrations/0015_device_tokens.sql. NO confundir con
+/// [NotificationPreference] (arriba en este archivo), que es la intensidad
+/// de aviso LOCAL de un PERFIL DE CHICO - conceptos distintos, con tablas
+/// distintas, verificado antes de agregar esta clase.
+///
+/// El horario silencioso se guarda como hora/minuto separados (igual que
+/// [Routine.scheduledHour]/[scheduledMinute] en este mismo archivo, no como
+/// un tipo de hora aparte) para no introducir una segunda convencion de
+/// "hora del dia" en el dominio. Los cuatro campos de horario son
+/// opcionales, pero van todos juntos o ninguno - el check constraint de la
+/// tabla ya lo exige, y [hasQuietHours] expone esa misma regla del lado de
+/// Flutter.
+class PushNotificationPreference {
+  const PushNotificationPreference({
+    required this.userId,
+    required this.pushEnabled,
+    this.quietHoursStartHour,
+    this.quietHoursStartMinute,
+    this.quietHoursEndHour,
+    this.quietHoursEndMinute,
+  });
+
+  final String userId;
+  final bool pushEnabled;
+  final int? quietHoursStartHour;
+  final int? quietHoursStartMinute;
+  final int? quietHoursEndHour;
+  final int? quietHoursEndMinute;
+
+  bool get hasQuietHours =>
+      quietHoursStartHour != null &&
+      quietHoursStartMinute != null &&
+      quietHoursEndHour != null &&
+      quietHoursEndMinute != null;
+
+  PushNotificationPreference copyWith({
+    bool? pushEnabled,
+    int? quietHoursStartHour,
+    int? quietHoursStartMinute,
+    int? quietHoursEndHour,
+    int? quietHoursEndMinute,
+    bool clearQuietHours = false,
+  }) {
+    return PushNotificationPreference(
+      userId: userId,
+      pushEnabled: pushEnabled ?? this.pushEnabled,
+      quietHoursStartHour: clearQuietHours
+          ? null
+          : quietHoursStartHour ?? this.quietHoursStartHour,
+      quietHoursStartMinute: clearQuietHours
+          ? null
+          : quietHoursStartMinute ?? this.quietHoursStartMinute,
+      quietHoursEndHour:
+          clearQuietHours ? null : quietHoursEndHour ?? this.quietHoursEndHour,
+      quietHoursEndMinute: clearQuietHours
+          ? null
+          : quietHoursEndMinute ?? this.quietHoursEndMinute,
+    );
+  }
+}

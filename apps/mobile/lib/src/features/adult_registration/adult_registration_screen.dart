@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -160,6 +162,10 @@ class _AdultRegistrationScreenState
           );
       ref.read(currentFamilyIdProvider.notifier).state =
           result.family.metadata.id;
+      // Etapa 3: no se espera, ver el mismo comentario en login_screen.dart.
+      unawaited(ref
+          .read(pushNotificationServiceProvider)
+          .registerCurrentDevice(result.user.metadata.id));
       if (mounted) context.go(next ?? '/profile');
     } on EmailConfirmationRequiredException catch (error) {
       await _savePendingBootstrap(error.email);

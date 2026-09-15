@@ -16,6 +16,7 @@ enum AppRestoreDestination {
 class AppRestoreResult {
   const AppRestoreResult({
     required this.destination,
+    this.userId,
     this.familyId,
     this.profileId,
     this.profileKind,
@@ -25,6 +26,13 @@ class AppRestoreResult {
   });
 
   final AppRestoreDestination destination;
+
+  /// El auth.users.id del adulto ya logueado - null solo cuando
+  /// destination es onboarding (nadie logueado). Etapa 3: StartupScreen lo
+  /// usa para registrar el token de este dispositivo en cada arranque con
+  /// sesión activa, no solo en el momento del login (ver
+  /// PushNotificationService.registerCurrentDevice).
+  final String? userId;
   final String? familyId;
   final String? profileId;
   final ProfileKind? profileKind;
@@ -91,6 +99,7 @@ class AppRestoreService {
         _debugLog('destination: invitation');
         return AppRestoreResult(
           destination: AppRestoreDestination.invitation,
+          userId: user.metadata.id,
           pendingInvitation: invitations.first,
           departureNotices: departureNotices,
         );
@@ -98,6 +107,7 @@ class AppRestoreService {
       _debugLog('destination: register');
       return AppRestoreResult(
         destination: AppRestoreDestination.register,
+        userId: user.metadata.id,
         departureNotices: departureNotices,
       );
     }
@@ -113,6 +123,7 @@ class AppRestoreService {
       _debugLog('destination: dashboard');
       return AppRestoreResult(
         destination: AppRestoreDestination.dashboard,
+        userId: user.metadata.id,
         familyId: family.metadata.id,
         profileId: profile.metadata.id,
         profileKind: ProfileKind.child,
@@ -131,6 +142,7 @@ class AppRestoreService {
       _debugLog('destination: dashboard');
       return AppRestoreResult(
         destination: AppRestoreDestination.dashboard,
+        userId: user.metadata.id,
         familyId: family.metadata.id,
         profileId: profile.metadata.id,
         profileKind: ProfileKind.teen,
@@ -143,6 +155,7 @@ class AppRestoreService {
     _debugLog('destination: profileSetup');
     return AppRestoreResult(
         destination: AppRestoreDestination.profileSetup,
+        userId: user.metadata.id,
         familyId: family.metadata.id,
         departureNotices: departureNotices);
   }

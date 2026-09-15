@@ -435,3 +435,43 @@ abstract interface class SyncQueueRepository {
 
   Future<void> markFailed(String itemId, String error);
 }
+
+/// Etapa 3 (notificaciones push). Ver public.device_tokens en
+/// supabase/migrations/0015_device_tokens.sql - RLS ahi ya garantiza que un
+/// adulto autenticado solo puede tocar sus propios tokens, asi que esta
+/// interfaz nunca necesita pedir explicitamente "de qué usuario" para leer:
+/// el backend (o RLS, o el propio InMemory/Local) lo resuelve solo.
+abstract interface class DeviceTokenRepository {
+  /// Registra o actualiza el token de este dispositivo. Idempotente por
+  /// [token] (upsert) - llamarlo de nuevo con el mismo token y el mismo
+  /// usuario no crea una fila duplicada, solo refresca updated_at. Se
+  /// llama al iniciar sesión y cada vez que FCM rota el token mientras la
+  /// app esta abierta.
+  Future<void> registerToken({
+    required String userId,
+    required String token,
+    required String platform,
+  });
+
+  /// Borra un token puntual (por su valor, no por usuario) - se llama al
+  /// cerrar sesión, con el token de ESTE dispositivo. Deliberadamente no
+  /// hay un "deleteAllForUser": cerrar sesión en un dispositivo no debe
+  /// cortarle los avisos a los OTROS dispositivos de la misma cuenta.
+  Future<void> deleteToken(String token);
+}
+
+/// Etapa 3 (notificaciones push). Ver public.notification_preferences_by_user
+/// en supabase/migrations/0015_device_tokens.sql. NO confundir con
+/// [NotificationPreferenceRepository] (arriba en este archivo), que es la
+/// intensidad de aviso LOCAL de un PERFIL DE CHICO - conceptos distintos.
+abstract interface class PushNotificationPreferenceRepository {
+  /// Null si el adulto nunca configuro nada todavia - quien llama debe
+  /// tratar eso como "push habilitado, sin horario silencioso" (el mismo
+  /// default que resolve_routine_notification_recipients aplica del lado
+  /// del servidor).
+  Future<PushNotificationPreference?> forUser(String userId);
+
+  Future<PushNotificationPreference> save(
+    PushNotificationPreference preference,
+  );
+}

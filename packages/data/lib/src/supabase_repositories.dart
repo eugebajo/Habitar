@@ -1554,3 +1554,116 @@ RoutinePauseReason? _nullableRoutinePauseReason(String? value) {
     _ => null,
   };
 }
+
+class SupabaseDeviceTokenRepository implements DeviceTokenRepository {
+  const SupabaseDeviceTokenRepository(this.client);
+
+  final SupabaseClient client;
+
+  @override
+  Future<void> registerToken({
+    required String userId,
+    required String token,
+    required String platform,
+  }) async {
+    // upsert por token, no por (user_id, platform): unique(token) es la
+    // clave real de device_tokens (0015_device_tokens.sql) - dos
+    // dispositivos del mismo usuario y la misma plataforma (celular +
+    // tablet compartida, ambos Android) tienen que quedar como dos filas
+    // independientes, nunca pisarse.
+    await client.from('device_tokens').upsert(
+      {
+        'user_id': userId,
+        'token': token,
+        'platform': platform,
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      },
+      onConflict: 'token',
+    );
+  }
+
+  @override
+  Future<void> deleteToken(String token) async {
+    // RLS ya acota esto a las propias filas del usuario autenticado (ver
+    // la policy "adults manage their own device tokens") - no hace falta
+    // filtrar por user_id aca, y si el token fuera de otro usuario esto
+    // simplemente no borra nada en vez de fallar.
+    await client.from('device_tokens').delete().eq('token', token);
+  }
+}
+
+class SupabasePushNotificationPreferenceRepository
+    implements PushNotificationPreferenceRepository {
+  const SupabasePushNotificationPreferenceRepository(this.client);
+
+  final SupabaseClient client;
+
+  @override
+  Future<PushNotificationPreference?> forUser(String userId) async {
+    final rows = await client
+        .from('notification_preferences_by_user')
+        .select()
+        .eq('user_id', userId)
+        .limit(1);
+    if (rows.isEmpty) return null;
+    return _pushNotificationPreferenceFromRow(rows.first);
+  }
+
+  @override
+  Future<PushNotificationPreference> save(
+    PushNotificationPreference preference,
+  ) async {
+    await client.from('notification_preferences_by_user').upsert(
+      {
+        'user_id': preference.userId,
+        'push_enabled': preference.pushEnabled,
+        'quiet_hours_start': _timeOfDayToSql(
+          preference.quietHoursStartHour,
+          preference.quietHoursStartMinute,
+        ),
+        'quiet_hours_end': _timeOfDayToSql(
+          preference.quietHoursEndHour,
+          preference.quietHoursEndMinute,
+        ),
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      },
+      onConflict: 'user_id',
+    );
+    return preference;
+  }
+}
+
+/// 'HH:mm:ss' para la columna `time` de Postgres, o null si cualquiera de
+/// las dos partes falta - notification_preferences_quiet_hours_pair (0015)
+/// exige que las dos columnas de un horario vayan juntas o ninguna.
+String? _timeOfDayToSql(int? hour, int? minute) {
+  if (hour == null || minute == null) return null;
+  final h = hour.toString().padLeft(2, '0');
+  final m = minute.toString().padLeft(2, '0');
+  return '$h:$m:00';
+}
+
+PushNotificationPreference _pushNotificationPreferenceFromRow(
+  Map<String, dynamic> row,
+) {
+  final start = _timeOfDayFromSql(row['quiet_hours_start'] as String?);
+  final end = _timeOfDayFromSql(row['quiet_hours_end'] as String?);
+  return PushNotificationPreference(
+    userId: row['user_id'] as String,
+    pushEnabled: row['push_enabled'] as bool? ?? true,
+    quietHoursStartHour: start?.$1,
+    quietHoursStartMinute: start?.$2,
+    quietHoursEndHour: end?.$1,
+    quietHoursEndMinute: end?.$2,
+  );
+}
+
+(int, int)? _timeOfDayFromSql(String? value) {
+  if (value == null) return null;
+  final parts = value.split(':');
+  if (parts.length < 2) return null;
+  final hour = int.tryParse(parts[0]);
+  final minute = int.tryParse(parts[1]);
+  if (hour == null || minute == null) return null;
+  return (hour, minute);
+}

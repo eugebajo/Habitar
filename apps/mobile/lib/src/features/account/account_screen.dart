@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:habitar_application/application.dart';
 import 'package:habitar_domain/domain.dart';
 
@@ -309,6 +310,16 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                             title: Text((m.displayName ?? m.email ?? m.userId).toString()),
                             subtitle: Text(m.role.name),
                           ),
+                        const SizedBox(height: 16),
+                        // Etapa 3: acá, no en Ajustes - ver el comentario
+                        // al inicio de push_notification_settings_screen.dart
+                        // sobre por qué es una preferencia de la CUENTA,
+                        // no de un perfil de chico.
+                        OutlinedButton.icon(
+                          onPressed: () => context.go('/account/push-notifications'),
+                          icon: const Icon(Icons.notifications_outlined),
+                          label: const Text('Notificaciones'),
+                        ),
                         const SizedBox(height: 16),
                         ElevatedButton(
                           onPressed: _loading

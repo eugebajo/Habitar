@@ -83,6 +83,18 @@ abstract interface class LocalReminderScheduler {
   Future<void> schedule(LocalReminderRequest request);
 
   Future<void> cancel(String id);
+
+  /// Etapa 3 (notificaciones push): muestra una notificacion local YA, sin
+  /// programarla - distinto de [schedule], que la guarda para un momento
+  /// futuro. Se usa para re-mostrar un push de FCM que llega con la app en
+  /// primer plano, que Android no muestra solo (a diferencia de segundo
+  /// plano/cerrada, donde el sistema operativo ya lo hace).
+  Future<void> showNow({
+    required String id,
+    required String title,
+    required String body,
+    String channelId = 'routine_reminders',
+  });
 }
 
 abstract interface class NotificationPermissionGateway {
@@ -251,6 +263,7 @@ class RoutineReminderPlanner {
 
 class InMemoryReminderScheduler implements LocalReminderScheduler {
   final List<LocalReminderRequest> scheduled = [];
+  final List<String> shownNow = [];
 
   @override
   Future<void> cancel(String id) async {
@@ -261,5 +274,15 @@ class InMemoryReminderScheduler implements LocalReminderScheduler {
   Future<void> schedule(LocalReminderRequest request) async {
     scheduled.removeWhere((existing) => existing.id == request.id);
     scheduled.add(request);
+  }
+
+  @override
+  Future<void> showNow({
+    required String id,
+    required String title,
+    required String body,
+    String channelId = 'routine_reminders',
+  }) async {
+    shownNow.add(id);
   }
 }

@@ -5,6 +5,9 @@ import 'package:habitar_domain/domain.dart';
 import 'package:habitar_notifications/notifications.dart';
 import 'package:habitar_wearable_bridge/wearable_bridge.dart';
 
+import 'platform/push_messaging_gateway.dart';
+import 'push_notifications.dart';
+
 final localStoreProvider = Provider<LocalStore?>((ref) => null);
 final authRepositoryProvider =
     Provider<AuthRepository>((ref) => InMemoryAuthRepository());
@@ -55,6 +58,27 @@ final wearableGatewayRepositoryProvider = Provider<WearableGatewayRepository>(
     (ref) => InMemoryWearableGatewayRepository());
 final syncQueueRepositoryProvider =
     Provider<SyncQueueRepository>((ref) => InMemorySyncQueueRepository());
+
+// Etapa 3 (notificaciones push).
+final deviceTokenRepositoryProvider =
+    Provider<DeviceTokenRepository>((ref) => InMemoryDeviceTokenRepository());
+final pushNotificationPreferenceRepositoryProvider =
+    Provider<PushNotificationPreferenceRepository>(
+        (ref) => InMemoryPushNotificationPreferenceRepository());
+// NoOp por default: solo app_environment_io.dart lo reemplaza por el
+// gateway real de Firebase, y solo en Android/iOS - web y escritorio
+// (sin configuracion de Firebase) siguen con este, que nunca falla ni
+// entrega nada.
+final pushMessagingGatewayProvider =
+    Provider<PushMessagingGateway>((ref) => const NoOpPushMessagingGateway());
+final pushNotificationServiceProvider = Provider<PushNotificationService>((ref) {
+  return PushNotificationService(
+    gateway: ref.watch(pushMessagingGatewayProvider),
+    deviceTokenRepository: ref.watch(deviceTokenRepositoryProvider),
+    reminderScheduler: ref.watch(reminderSchedulerProvider),
+    localStore: ref.watch(localStoreProvider),
+  );
+});
 
 final adultRegistrationServiceProvider =
     Provider<AdultRegistrationService>((ref) {

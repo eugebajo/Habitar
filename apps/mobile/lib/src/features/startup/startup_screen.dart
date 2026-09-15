@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -30,6 +32,17 @@ class StartupScreen extends ConsumerWidget {
               await _showDepartureNotices(context, ref, result.departureNotices);
           if (navigatedAway) return;
           if (!context.mounted) return;
+        }
+        // Etapa 3: registra/refresca el token en cada arranque con sesión
+        // activa, no solo en el momento del login - cubre con mucho el
+        // caso más común, reabrir la app con una sesión ya iniciada de
+        // antes. No se espera - best-effort, nunca debe atrasar la
+        // navegación.
+        final userId = result.userId;
+        if (userId != null) {
+          unawaited(ref
+              .read(pushNotificationServiceProvider)
+              .registerCurrentDevice(userId));
         }
         final location = switch (result.destination) {
           AppRestoreDestination.onboarding => '/onboarding',

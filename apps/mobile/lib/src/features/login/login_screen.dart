@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -173,10 +175,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       _error = null;
     });
     try {
-      await ref.read(sessionServiceProvider).signIn(
+      final user = await ref.read(sessionServiceProvider).signIn(
             email: _emailController.text.trim(),
             password: _passwordController.text,
           );
+      // Etapa 3: no se espera - no hay motivo para atrasar la navegación
+      // por esto, y registerCurrentDevice ya es best-effort internamente
+      // (nunca lanza).
+      unawaited(ref
+          .read(pushNotificationServiceProvider)
+          .registerCurrentDevice(user.metadata.id));
       ref.invalidate(appRestoreProvider);
       if (mounted) context.go(next ?? '/');
     } catch (error) {

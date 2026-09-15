@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:habitar_notifications/notifications.dart';
 import 'package:timezone/data/latest.dart' as timezone_data;
@@ -19,18 +17,17 @@ class NativeReminderScheduler implements LocalReminderScheduler {
         iOS: DarwinInitializationSettings(),
       ),
     );
-    if (Platform.isAndroid) {
-      await notifications
-          .resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>()
-          ?.requestNotificationsPermission();
-    }
-    if (Platform.isIOS) {
-      await notifications
-          .resolvePlatformSpecificImplementation<
-              IOSFlutterLocalNotificationsPlugin>()
-          ?.requestPermissions(alert: true, badge: true, sound: true);
-    }
+    // Etapa 3: el permiso de notificaciones (POST_NOTIFICATIONS en
+    // Android, el mismo permiso del sistema operativo que gobierna tanto
+    // estos recordatorios locales como los avisos push - no son dos
+    // permisos distintos) ya NO se pide aca, en cada arranque de la app.
+    // Pedirlo antes de que el adulto entienda para que baja mucho la
+    // aceptacion - ver push_notifications.dart, que lo pide en el
+    // momento adecuado (primera vez que se entra a Familia o se crea una
+    // rutina), con una explicacion breve antes del dialogo del sistema.
+    // initialize() de arriba sigue funcionando sin el permiso concedido -
+    // programar una notificacion nunca falla por esto, solo no se
+    // muestra hasta que el permiso este otorgado.
     return NativeReminderScheduler._(notifications);
   }
 
@@ -70,6 +67,31 @@ class NativeReminderScheduler implements LocalReminderScheduler {
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
+    );
+  }
+
+  @override
+  Future<void> showNow({
+    required String id,
+    required String title,
+    required String body,
+    String channelId = 'routine_reminders',
+  }) async {
+    await _notifications.show(
+      _notificationId(id),
+      title,
+      body,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'push_notifications',
+          'Avisos de la familia',
+          channelDescription:
+              'Avisos push reenviados como notificacion local mientras la app esta abierta.',
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+        iOS: DarwinNotificationDetails(presentAlert: true, presentSound: true),
+      ),
     );
   }
 }

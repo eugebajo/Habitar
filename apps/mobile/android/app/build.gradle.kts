@@ -4,6 +4,10 @@ plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+    // Etapa 3 (notificaciones push): procesa google-services.json en este
+    // mismo directorio y genera la config que firebase_core lee en tiempo
+    // de ejecucion.
+    id("com.google.gms.google-services")
 }
 
 val keystorePropertiesFile = rootProject.file("key.properties")

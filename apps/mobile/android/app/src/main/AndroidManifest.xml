@@ -2,6 +2,17 @@
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.VIBRATE"/>
+    <!-- Etapa 3: sin este permiso, flutter_local_notifications no puede
+         re-registrar los recordatorios de rutina programados
+         (zonedSchedule via AlarmManager) despues de que el telefono
+         reinicia - Android borra todas las alarmas programadas en cada
+         reinicio, y el propio receiver del plugin
+         (ScheduledNotificationBootReceiver, ya incluido en su manifest,
+         fusionado automaticamente al build) solo se activa si esta
+         declarado. Sin este permiso, los recordatorios simplemente
+         desaparecian despues de reiniciar - bug preexistente, se cierra
+         aca. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
 
     <application
         android:label="Habitar"

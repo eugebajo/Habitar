@@ -21,6 +21,15 @@ class _ProfilesScreenState extends ConsumerState<ProfilesScreen> {
   void initState() {
     super.initState();
     _summariesFuture = _loadSummaries();
+    // Etapa 3: acá es "Familia" en la barra inferior (AdultShell) - una de
+    // las dos entradas donde se pide el permiso de notificaciones, nunca
+    // al arrancar la app. addPostFrameCallback porque
+    // requestPermissionIfNeeded muestra un diálogo, y eso necesita un
+    // BuildContext con el árbol ya montado.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref.read(pushNotificationServiceProvider).requestPermissionIfNeeded(context);
+    });
   }
 
   @override

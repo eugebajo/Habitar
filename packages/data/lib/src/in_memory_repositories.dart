@@ -1366,3 +1366,51 @@ class InMemorySyncQueueRepository implements SyncQueueRepository {
 
 bool _sameDay(DateTime a, DateTime b) =>
     a.year == b.year && a.month == b.month && a.day == b.day;
+
+class InMemoryDeviceTokenRepository implements DeviceTokenRepository {
+  // Keyed by token, no por usuario - unique(token) es la clave real, igual
+  // que en la migracion. Un mismo userId puede tener varias entradas.
+  final Map<String, DeviceToken> _byToken = {};
+
+  @override
+  Future<void> registerToken({
+    required String userId,
+    required String token,
+    required String platform,
+  }) async {
+    _byToken[token] = DeviceToken(
+      id: _byToken[token]?.id ?? _uuid.v4(),
+      userId: userId,
+      token: token,
+      platform: platform,
+    );
+  }
+
+  @override
+  Future<void> deleteToken(String token) async {
+    _byToken.remove(token);
+  }
+
+  /// Solo para tests - la interfaz real nunca expone tokens de otro
+  /// usuario (ver el comentario de seguridad en
+  /// resolve_routine_notification_recipients, 0015_device_tokens.sql).
+  List<DeviceToken> tokensForUser(String userId) =>
+      _byToken.values.where((t) => t.userId == userId).toList(growable: false);
+}
+
+class InMemoryPushNotificationPreferenceRepository
+    implements PushNotificationPreferenceRepository {
+  final Map<String, PushNotificationPreference> _byUser = {};
+
+  @override
+  Future<PushNotificationPreference?> forUser(String userId) async =>
+      _byUser[userId];
+
+  @override
+  Future<PushNotificationPreference> save(
+    PushNotificationPreference preference,
+  ) async {
+    _byUser[preference.userId] = preference;
+    return preference;
+  }
+}

@@ -21,6 +21,7 @@ import 'features/profiles/profiles_screen.dart';
 import 'features/profile_setup/profile_setup_screen.dart';
 import 'features/portal/portal_screens.dart';
 import 'features/account/account_screen.dart';
+import 'features/account/push_notification_settings_screen.dart';
 import 'features/routine_player/routine_player_screen.dart';
 import 'features/rewards/rewards_screen.dart';
 import 'features/routine_setup/routine_setup_screen.dart';
@@ -91,6 +92,9 @@ final appRouter = GoRouter(
         builder: (context, state) =>
             const AdultSectionScreen(kind: 'settings')),
     GoRoute(path: '/account', builder: (context, state) => const AccountScreen()),
+    GoRoute(
+        path: '/account/push-notifications',
+        builder: (context, state) => const PushNotificationSettingsScreen()),
     GoRoute(
         path: '/habits', builder: (context, state) => const HabitSetupScreen()),
     GoRoute(
@@ -169,6 +173,7 @@ class _HabitarMobileAppState extends ConsumerState<HabitarMobileApp> {
   void initState() {
     super.initState();
     _listenForPasswordRecovery();
+    _listenForPushNotifications();
   }
 
   @override
@@ -190,6 +195,21 @@ class _HabitarMobileAppState extends ConsumerState<HabitarMobileApp> {
     } catch (_) {
       // Supabase is not initialized in local-only development/test overrides.
     }
+  }
+
+  /// Etapa 3 (notificaciones push). Cablea los tres estados de recepción -
+  /// ver PushNotificationService.listenForMessages. Hoy el único tipo de
+  /// push que existe es 'routine_completed' (ver el payload que arma
+  /// supabase/functions/send-routine-notification/index.ts) y el destino
+  /// útil es el dashboard del adulto, donde Actividad reciente ya muestra
+  /// exactamente ese evento - no hay una pantalla de detalle de rutina a
+  /// la que navegar más profundo todavía.
+  void _listenForPushNotifications() {
+    ref.read(pushNotificationServiceProvider).listenForMessages(
+      onNotificationTapped: (data) {
+        appRouter.go('/dashboard');
+      },
+    );
   }
 
   @override

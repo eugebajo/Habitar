@@ -2091,3 +2091,83 @@ T _byName<T extends Enum>(List<T> values, String name) => values.byName(name);
 
 T? _nullableByName<T extends Enum>(List<T> values, String? name) =>
     name == null ? null : values.byName(name);
+
+class LocalDeviceTokenRepository implements DeviceTokenRepository {
+  LocalDeviceTokenRepository(this.store);
+
+  final LocalStore store;
+
+  @override
+  Future<void> registerToken({
+    required String userId,
+    required String token,
+    required String platform,
+  }) async {
+    // token es la clave del documento, no un id generado - unique(token)
+    // es la clave real (ver device_tokens en 0015_device_tokens.sql),
+    // guardar por token acá replica esa misma semantica de upsert.
+    await store.put(LocalStoreCollections.deviceTokens, token, {
+      'id': token,
+      'user_id': userId,
+      'token': token,
+      'platform': platform,
+    });
+  }
+
+  @override
+  Future<void> deleteToken(String token) async {
+    await store.delete(LocalStoreCollections.deviceTokens, token);
+  }
+}
+
+class LocalPushNotificationPreferenceRepository
+    implements PushNotificationPreferenceRepository {
+  LocalPushNotificationPreferenceRepository(this.store);
+
+  final LocalStore store;
+
+  @override
+  Future<PushNotificationPreference?> forUser(String userId) async {
+    final record = await store.get(
+        LocalStoreCollections.pushNotificationPreferences, userId);
+    return record == null ? null : _pushNotificationPreferenceFromJson(record);
+  }
+
+  @override
+  Future<PushNotificationPreference> save(
+    PushNotificationPreference preference,
+  ) async {
+    await store.put(
+      LocalStoreCollections.pushNotificationPreferences,
+      preference.userId,
+      _pushNotificationPreferenceToJson(preference),
+    );
+    return preference;
+  }
+}
+
+PushNotificationPreference _pushNotificationPreferenceFromJson(
+  Map<String, Object?> json,
+) {
+  return PushNotificationPreference(
+    userId: json['user_id'] as String,
+    pushEnabled: json['push_enabled'] as bool? ?? true,
+    quietHoursStartHour: json['quiet_hours_start_hour'] as int?,
+    quietHoursStartMinute: json['quiet_hours_start_minute'] as int?,
+    quietHoursEndHour: json['quiet_hours_end_hour'] as int?,
+    quietHoursEndMinute: json['quiet_hours_end_minute'] as int?,
+  );
+}
+
+Map<String, Object?> _pushNotificationPreferenceToJson(
+  PushNotificationPreference preference,
+) {
+  return {
+    'user_id': preference.userId,
+    'push_enabled': preference.pushEnabled,
+    'quiet_hours_start_hour': preference.quietHoursStartHour,
+    'quiet_hours_start_minute': preference.quietHoursStartMinute,
+    'quiet_hours_end_hour': preference.quietHoursEndHour,
+    'quiet_hours_end_minute': preference.quietHoursEndMinute,
+  };
+}

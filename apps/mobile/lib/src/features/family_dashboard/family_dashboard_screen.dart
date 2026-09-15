@@ -256,6 +256,12 @@ class _DashboardHeader extends ConsumerWidget {
   }
 
   Future<void> _signOut(BuildContext context, WidgetRef ref) async {
+    // Etapa 3: antes de signOut, no despues - deleteToken necesita la
+    // sesión todavía activa (RLS de device_tokens exige user_id =
+    // auth.uid()). unregisterCurrentDevice ya es best-effort por dentro,
+    // asi que una falla aca (sin red, lo que sea) nunca bloquea que la
+    // sesión efectivamente se cierre.
+    await ref.read(pushNotificationServiceProvider).unregisterCurrentDevice();
     await ref.read(sessionServiceProvider).signOut();
     ref.read(currentFamilyIdProvider.notifier).state = null;
     ref.read(currentProfileIdProvider.notifier).state = null;
