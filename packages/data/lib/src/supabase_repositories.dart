@@ -978,9 +978,18 @@ class SupabaseRoutineSessionRepository implements RoutineSessionRepository {
         await SupabaseRoutineRepository(client).stepsForRoutine(routineId);
     final createdAt = DateTime.parse(row['created_at'] as String).toLocal();
     final sessionDateValue = row['session_date'];
+    // Postgres 'date' columns come back as a bare "2026-01-05" string, with
+    // no time and no timezone marker - DateTime.parse reads that as *local*
+    // midnight, not UTC. Left as-is, that local value would later reach
+    // habitarFunctionalDate()/sameHabitarFunctionalDate() looking like a raw
+    // instant instead of an already-resolved functional date, and get the
+    // Asuncion offset applied to it a second time. Re-anchoring to
+    // DateTime.utc here keeps every sessionDate in the same canonical
+    // representation regardless of which repository loaded it - see the
+    // comment on habitarFunctionalDate in routine_engine.dart.
     final sessionDate = sessionDateValue == null
         ? habitarFunctionalDate(createdAt)
-        : DateTime.parse(sessionDateValue as String);
+        : _asUtcDateOnly(DateTime.parse(sessionDateValue as String));
     return RoutineSession(
       id: row['id'] as String,
       routine: routine,
@@ -1056,6 +1065,13 @@ class _UtcDateRange {
   final DateTime start;
   final DateTime end;
 }
+
+/// Drops any time-of-day/timezone from [value] and re-anchors it to UTC
+/// midnight, keeping only its year/month/day. Used to normalize a bare
+/// Postgres `date` value (parsed as local by DateTime.parse) into the same
+/// canonical shape habitarFunctionalDate() produces - see its comment.
+DateTime _asUtcDateOnly(DateTime value) =>
+    DateTime.utc(value.year, value.month, value.day);
 
 _UtcDateRange _asuncionUtcRange(DateTime date) {
   final functionalDate = habitarFunctionalDate(date);

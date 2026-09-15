@@ -168,7 +168,12 @@ void main() {
     );
     final restored = await sessionRepository.latestSessionForRoutineDate(
       routineId: routine.metadata.id,
-      localDate: DateTime.now(),
+      // habitarFunctionalDate(), not a raw DateTime.now(): every production
+      // call site pre-converts before calling into the repository (see the
+      // comment on habitarFunctionalDate in routine_engine.dart) - matching
+      // that convention here too, rather than relying on the function being
+      // able to make sense of a raw instant as well.
+      localDate: habitarFunctionalDate(),
     );
     final profileService = ProfileService(
       repository: profileRepository,
@@ -461,7 +466,7 @@ void main() {
     final utcEarlyMorning = DateTime.utc(2026, 1, 2, 3, 30);
     final functionalDate = habitarFunctionalDate(utcEarlyMorning);
 
-    expect(functionalDate, DateTime(2026, 1, 2));
+    expect(functionalDate, DateTime.utc(2026, 1, 2));
   });
 
   test('routine schedule distinguishes scheduled from pending', () {

@@ -11,11 +11,57 @@ const habitarFunctionalTimeZoneName = 'America/Asuncion';
 // timezone database based implementation.
 const _asuncionUtcOffset = Duration(hours: -3);
 
+// Every call site in this repo that needs "today" first calls
+// habitarFunctionalDate() to get the calendar day, then hands that value
+// to a repository method or to sameHabitarFunctionalDate for comparison -
+// which calls habitarFunctionalDate() again internally. That means this
+// function routinely receives its own output as input, not just raw
+// instants like DateTime.now() or a session's startedAt. It has to give
+// the same answer either way - see the two properties below.
+//
+// 1. TZ-independent output. The old version returned a *local* DateTime
+//    (DateTime(y, m, d), no .utc) - a value whose actual instant depends
+//    on whatever timezone the running process happens to be in. The same
+//    session, compared on a machine set to America/Asuncion vs. one set to
+//    UTC, produced DateTime objects for a nominally "identical" calendar
+//    day that did not represent the same instant. Returning DateTime.utc
+//    here instead makes the result a portable calendar-date value: its
+//    meaning no longer depends on the process's local timezone setting.
+// 2. Idempotent. Applying the Asuncion offset a second time to a value
+//    that is already a functional date silently rolls it back a day
+//    (e.g. midnight Jan 5 minus 3 hours lands on Jan 4). Combined with (1)
+//    being wrong, this is what made
+//    "schedule a routine, complete it, ask again the same day" resolve to
+//    two different days depending on the runner's timezone - it always
+//    passed on a machine set to America/Asuncion (where the double
+//    conversion happened to cancel out) and could fail anywhere else,
+//    including plain UTC. See habitar_functional_date_test.dart for the
+//    regression test and the routine_service/routine_reminders call sites
+//    for why the double call is unavoidable without a bigger refactor.
 DateTime habitarFunctionalDate([DateTime? instant]) {
-  final utc = (instant ?? DateTime.now()).toUtc();
+  final value = instant ?? DateTime.now();
+  if (_isAlreadyFunctionalDate(value)) {
+    return DateTime.utc(value.year, value.month, value.day);
+  }
+  final utc = value.toUtc();
   final asuncion = utc.add(_asuncionUtcOffset);
-  return DateTime(asuncion.year, asuncion.month, asuncion.day);
+  return DateTime.utc(asuncion.year, asuncion.month, asuncion.day);
 }
+
+// A value produced by habitarFunctionalDate is always UTC-flagged exact
+// midnight. A genuine instant - DateTime.now(), a session's startedAt, a
+// parsed Supabase timestamp - essentially never lands there by chance, so
+// this reliably tells "already converted" apart from "still needs
+// converting" without introducing a separate wrapper type for dates that
+// would have to be threaded through the entities, repositories and JSON
+// (de)serialization everywhere sessionDate/localDate are used.
+bool _isAlreadyFunctionalDate(DateTime value) =>
+    value.isUtc &&
+    value.hour == 0 &&
+    value.minute == 0 &&
+    value.second == 0 &&
+    value.millisecond == 0 &&
+    value.microsecond == 0;
 
 bool sameHabitarFunctionalDate(DateTime first, DateTime second) {
   final a = habitarFunctionalDate(first);
